@@ -40,7 +40,7 @@ export type AttackCategory =
   | 'aura';        // Smokescreen
 
 // ── Tipos de Inimigo e Direção ────────────────────────────────────
-export type EnemyType = 'rattata' | 'pidgey' | 'zubat' | 'geodude' | 'gastly';
+export type EnemyType = 'rattata' | 'pidgey' | 'zubat' | 'geodude' | 'gastly' | 'caterpie' | 'weedle';
 export type Direction = 'down' | 'downRight' | 'right' | 'upRight' | 'up' | 'upLeft' | 'left' | 'downLeft';
 
 // ── Held Items (expandido) ────────────────────────────────────────
@@ -81,6 +81,12 @@ export interface AttackPoolEntry {
 }
 
 // ── Configurações de Inimigos ─────────────────────────────────────
+export interface EnemyContactEffect {
+  readonly type: 'slow';
+  readonly durationMs: number;
+  readonly multiplier: number;
+}
+
 export interface EnemyConfig {
   readonly key: EnemyType;
   readonly name: string;
@@ -91,6 +97,7 @@ export interface EnemyConfig {
   readonly xpValue: number;
   readonly scale: number;
   readonly rangedAttack?: EnemyRangedConfig;
+  readonly contactEffect?: EnemyContactEffect;
 }
 
 export interface EnemyRangedConfig {

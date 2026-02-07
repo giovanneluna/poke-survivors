@@ -89,6 +89,7 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('atk-outrage', 'assets/attacks/outrage-sheet.png', { frameWidth: 48, frameHeight: 72 });
     this.load.spritesheet('atk-shadow-ball', 'assets/attacks/shadow-ball-sheet.png', { frameWidth: 64, frameHeight: 64 });
     this.load.spritesheet('atk-rock-slide', 'assets/attacks/rock-slide-sheet.png', { frameWidth: 48, frameHeight: 96 });
+    this.load.spritesheet('atk-rock-throw', 'assets/attacks/rock-throw-sheet.png', { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet('atk-hyper-voice', 'assets/attacks/hyper-voice-sheet.png', { frameWidth: 96, frameHeight: 28 });
   }
 
@@ -280,6 +281,12 @@ export class BootScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('atk-rock-slide', { start: 0, end: 15 }),
       frameRate: 18, repeat: -1,
     });
+    // Rock Throw (8 frames, looping) - Geodude projectile
+    this.anims.create({
+      key: 'anim-rock-throw',
+      frames: this.anims.generateFrameNumbers('atk-rock-throw', { start: 0, end: 7 }),
+      frameRate: 12, repeat: -1,
+    });
     // Hyper Voice / Supersonic (4 frames, play once)
     this.anims.create({
       key: 'anim-hyper-voice',
@@ -290,6 +297,8 @@ export class BootScene extends Phaser.Scene {
 
   private createWalkAnims(sprite: SpriteConfig): void {
     const directions: Direction[] = ['down', 'downRight', 'right', 'upRight', 'up', 'upLeft', 'left', 'downLeft'];
+    // FrameRate proporcional ao nº de frames para ciclos naturais (~0.5-0.8s)
+    const fps = Math.max(4, Math.min(10, sprite.frameCount * 2));
     for (const dir of directions) {
       const row = DIRECTION_ROW[dir];
       const startFrame = row * sprite.frameCount;
@@ -297,7 +306,7 @@ export class BootScene extends Phaser.Scene {
       this.anims.create({
         key: `${sprite.key}-${dir}`,
         frames: this.anims.generateFrameNumbers(sprite.key, { start: startFrame, end: endFrame }),
-        frameRate: 8,
+        frameRate: fps,
         repeat: -1,
       });
     }
@@ -367,11 +376,14 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xcc88ff, 0.4); g.fillCircle(5, 4, 2);
     g.generateTexture('shadow-ball', 12, 12);
 
-    // Rock Throw (Geodude) - pedra marrom
-    g.clear(); g.fillStyle(0x888888); g.fillCircle(5, 5, 5);
-    g.fillStyle(0xaaaaaa, 0.6); g.fillCircle(4, 3, 3);
-    g.fillStyle(0x666666, 0.5); g.fillCircle(6, 7, 2);
-    g.generateTexture('rock-throw', 10, 10);
+    // Rock Throw (Geodude) - pedra marrom grande e visível
+    g.clear();
+    g.fillStyle(0x8B7355); g.fillCircle(12, 13, 11);    // corpo da pedra
+    g.fillStyle(0xA08060); g.fillCircle(10, 10, 8);     // highlight
+    g.fillStyle(0x6B5335, 0.8); g.fillCircle(14, 16, 6); // sombra inferior
+    g.fillStyle(0xC0A080, 0.5); g.fillCircle(8, 8, 4);  // brilho
+    g.fillStyle(0x5A4025, 0.6); g.fillCircle(15, 14, 3); // crack detail
+    g.generateTexture('rock-projectile', 24, 24);
 
     // Supersonic wave (Zubat) - onda azul
     g.clear(); g.fillStyle(0x44aaff, 0.6); g.fillCircle(6, 6, 6);

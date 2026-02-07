@@ -184,8 +184,31 @@ export class TitleScene extends Phaser.Scene {
       });
     });
 
+    // ── Versão ───────────────────────────────────────────────────────
+    const versionBadge = this.add.graphics().setDepth(10);
+    const badgeW = 90;
+    const badgeH = 20;
+    const badgeX = width / 2 - badgeW / 2;
+    const badgeY = height - 38;
+    versionBadge.fillStyle(0xff6600, 0.25);
+    versionBadge.fillRoundedRect(badgeX, badgeY, badgeW, badgeH, 5);
+    versionBadge.lineStyle(1, 0xff6600, 0.6);
+    versionBadge.strokeRoundedRect(badgeX, badgeY, badgeW, badgeH, 5);
+
+    const versionText = this.add.text(width / 2, badgeY + badgeH / 2, 'BETA 0.05', {
+      fontSize: '11px',
+      color: '#ff8844',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(10);
+
+    this.tweens.add({
+      targets: versionText, alpha: 0.6, duration: 1500,
+      yoyo: true, repeat: -1, ease: 'Sine.InOut',
+    });
+
     // ── Créditos ─────────────────────────────────────────────────────
-    const credits = this.add.text(width / 2, height - 18, 'Desenvolvido por Giovanne  •  github.com/giovanneluna', {
+    const credits = this.add.text(width / 2, height - 12, 'Desenvolvido por Giovanne  •  github.com/giovanneluna', {
       fontSize: '10px',
       color: '#666666',
       fontFamily: 'monospace',

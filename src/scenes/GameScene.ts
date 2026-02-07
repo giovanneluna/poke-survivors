@@ -289,6 +289,9 @@ export class GameScene extends Phaser.Scene {
 
   // ── Colisões ────────────────────────────────────────────────────────
   private setupCollisions(): void {
+    // Inimigos não se empilham (separação física)
+    this.physics.add.collider(this.enemyGroup, this.enemyGroup);
+
     // Inimigo → jogador (corpo-a-corpo)
     this.physics.add.overlap(
       this.player as Phaser.GameObjects.GameObject, this.enemyGroup,
@@ -298,6 +301,10 @@ export class GameScene extends Phaser.Scene {
           const took = this.player.takeDamage(enemy.damage, this.time.now);
           if (took) {
             SoundManager.playPlayerHit();
+            // Efeito de contato (slow por Caterpie/Weedle)
+            if (enemy.contactEffect?.type === 'slow') {
+              this.player.applySlow(enemy.contactEffect.durationMs, this.time.now);
+            }
             this.emitStats();
             if (this.player.isDead()) this.gameOver();
           }
@@ -414,6 +421,15 @@ export class GameScene extends Phaser.Scene {
       const destroyed = dest.takeDamage(1);
       if (destroyed) this.onDestructibleDestroyed(dest);
     });
+
+    // FireSpin orbs destroem projéteis inimigos
+    this.physics.add.overlap(fireSpin.getOrbs(), this.enemyProjectiles, (_orbObj, projObj) => {
+      const proj = projObj as Phaser.Physics.Arcade.Sprite;
+      if (!proj.active) return;
+      this.enemyProjectiles.killAndHide(proj);
+      (proj.body as Phaser.Physics.Arcade.Body).enable = false;
+      this.playFireHit(proj.x, proj.y);
+    });
   }
 
   setupInfernoCollisions(inferno: Inferno): void {
@@ -461,6 +477,15 @@ export class GameScene extends Phaser.Scene {
       if (!dest.active) return;
       const destroyed = dest.takeDamage(2);
       if (destroyed) this.onDestructibleDestroyed(dest);
+    });
+
+    // FireBlast orbs destroem projéteis inimigos
+    this.physics.add.overlap(fireBlast.getOrbs(), this.enemyProjectiles, (_orbObj, projObj) => {
+      const proj = projObj as Phaser.Physics.Arcade.Sprite;
+      if (!proj.active) return;
+      this.enemyProjectiles.killAndHide(proj);
+      (proj.body as Phaser.Physics.Arcade.Body).enable = false;
+      this.playFireHit(proj.x, proj.y);
     });
   }
 

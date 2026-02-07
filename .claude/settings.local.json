@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(game-development)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

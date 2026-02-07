@@ -3,10 +3,17 @@ import { STARTERS } from '../config';
 import type { StarterConfig } from '../config';
 import { SoundManager } from '../audio/SoundManager';
 
+const TEST_MODE_PASSWORD = 'lulu';
+
 export class SelectScene extends Phaser.Scene {
   private selectedIndex = 0;
   private cards: Phaser.GameObjects.Container[] = [];
   private cardGraphics: Phaser.GameObjects.Graphics[] = [];
+  private passwordOverlay!: Phaser.GameObjects.Container;
+  private passwordInput = '';
+  private passwordDisplay!: Phaser.GameObjects.Text;
+  private passwordError!: Phaser.GameObjects.Text;
+  private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
 
   constructor() {
     super({ key: 'SelectScene' });
@@ -104,7 +111,7 @@ export class SelectScene extends Phaser.Scene {
 
     testBtn.on('pointerover', () => { testBtn.setColor('#ffffff'); SoundManager.playHover(); });
     testBtn.on('pointerout', () => testBtn.setColor('#44aaff'));
-    testBtn.on('pointerdown', () => { SoundManager.playClick(); this.scene.start('ShowcaseScene'); });
+    testBtn.on('pointerdown', () => { SoundManager.playClick(); this.showPasswordPrompt(); });
 
     // ── Botão "Voltar" ───────────────────────────────────────────────
     const backBtn = this.add.text(20, height - 25, '← Voltar', {
@@ -142,12 +149,13 @@ export class SelectScene extends Phaser.Scene {
     // ── Sprite do Pokémon ────────────────────────────────────────────
     const sprite = this.add.sprite(cx, cy - 60, starter.sprite.key);
     sprite.setScale(3);
-    sprite.play(`${starter.sprite.key}-down`);
 
     if (!starter.unlocked) {
-      // Silhueta preta
+      // Silhueta preta — frame estático para não gerar silhuetas estranhas
+      sprite.setFrame(0);
       sprite.setTint(0x000000);
     } else {
+      sprite.play(`${starter.sprite.key}-down`);
       // Flutuação animada
       this.tweens.add({
         targets: sprite,
@@ -338,6 +346,152 @@ export class SelectScene extends Phaser.Scene {
       g.fillStyle(0xffffff, selected ? 0.06 : 0.03);
       g.fillRoundedRect(x + 4, y + 2, w - 8, h * 0.3, { tl: 10, tr: 10, bl: 0, br: 0 });
     }
+  }
+
+  private showPasswordPrompt(): void {
+    const { width, height } = this.cameras.main;
+    this.passwordInput = '';
+
+    this.passwordOverlay = this.add.container(0, 0).setDepth(100);
+
+    // Fundo escuro
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8);
+    bg.setInteractive(); // Bloqueia cliques nos elementos abaixo
+    this.passwordOverlay.add(bg);
+
+    // Caixa do prompt
+    const boxW = 300;
+    const boxH = 200;
+    const boxGfx = this.add.graphics();
+    boxGfx.fillStyle(0x1a1a2e, 0.98);
+    boxGfx.fillRoundedRect(width / 2 - boxW / 2, height / 2 - boxH / 2, boxW, boxH, 12);
+    boxGfx.lineStyle(2, 0x44aaff, 0.8);
+    boxGfx.strokeRoundedRect(width / 2 - boxW / 2, height / 2 - boxH / 2, boxW, boxH, 12);
+    this.passwordOverlay.add(boxGfx);
+
+    // Ícone de cadeado
+    const lockIcon = this.add.text(width / 2, height / 2 - 70, '🔒', {
+      fontSize: '28px',
+    }).setOrigin(0.5);
+    this.passwordOverlay.add(lockIcon);
+
+    // Título
+    const title = this.add.text(width / 2, height / 2 - 42, 'MODO TESTE', {
+      fontSize: '16px', color: '#44aaff', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5);
+    this.passwordOverlay.add(title);
+
+    // Label
+    const label = this.add.text(width / 2, height / 2 - 18, 'Digite a senha:', {
+      fontSize: '12px', color: '#888888', fontFamily: 'monospace',
+    }).setOrigin(0.5);
+    this.passwordOverlay.add(label);
+
+    // Campo de input visual
+    const inputW = 200;
+    const inputH = 32;
+    const inputGfx = this.add.graphics();
+    inputGfx.fillStyle(0x0a0a1a, 0.9);
+    inputGfx.fillRoundedRect(width / 2 - inputW / 2, height / 2 - inputH / 2 + 5, inputW, inputH, 6);
+    inputGfx.lineStyle(1, 0x44aaff, 0.5);
+    inputGfx.strokeRoundedRect(width / 2 - inputW / 2, height / 2 - inputH / 2 + 5, inputW, inputH, 6);
+    this.passwordOverlay.add(inputGfx);
+
+    // Texto mascarado (dots)
+    this.passwordDisplay = this.add.text(width / 2, height / 2 + 5, '|', {
+      fontSize: '18px', color: '#ffffff', fontFamily: 'monospace',
+    }).setOrigin(0.5);
+    this.passwordOverlay.add(this.passwordDisplay);
+
+    // Cursor piscante
+    this.tweens.add({
+      targets: this.passwordDisplay, alpha: 0.5, duration: 500,
+      yoyo: true, repeat: -1, ease: 'Sine.InOut',
+    });
+
+    // Mensagem de erro (inicialmente invisível)
+    this.passwordError = this.add.text(width / 2, height / 2 + 34, '', {
+      fontSize: '11px', color: '#ff4444', fontFamily: 'monospace',
+    }).setOrigin(0.5);
+    this.passwordOverlay.add(this.passwordError);
+
+    // Hint
+    const hint = this.add.text(width / 2, height / 2 + 55, 'Enter para confirmar  •  Esc para cancelar', {
+      fontSize: '9px', color: '#555555', fontFamily: 'monospace',
+    }).setOrigin(0.5);
+    this.passwordOverlay.add(hint);
+
+    // Captura de teclas via DOM (mais confiável para texto)
+    this.keydownHandler = (event: KeyboardEvent) => {
+      if (!this.passwordOverlay?.visible) return;
+
+      if (event.key === 'Escape') {
+        this.hidePasswordPrompt();
+        return;
+      }
+
+      if (event.key === 'Enter') {
+        if (this.passwordInput === TEST_MODE_PASSWORD) {
+          SoundManager.playStart();
+          this.hidePasswordPrompt();
+          this.cameras.main.fade(400, 0, 0, 0, false, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
+            if (progress >= 1) this.scene.start('ShowcaseScene');
+          });
+        } else {
+          SoundManager.playClick();
+          this.passwordError.setText('Senha incorreta!');
+          this.passwordInput = '';
+          this.passwordDisplay.setText('|');
+
+          // Shake na caixa
+          this.tweens.add({
+            targets: this.passwordOverlay, x: 5, duration: 40,
+            yoyo: true, repeat: 3,
+            onComplete: () => { this.passwordOverlay.x = 0; },
+          });
+        }
+        return;
+      }
+
+      if (event.key === 'Backspace') {
+        this.passwordInput = this.passwordInput.slice(0, -1);
+      } else if (event.key.length === 1 && this.passwordInput.length < 20) {
+        this.passwordInput += event.key;
+        this.passwordError.setText('');
+      }
+
+      const masked = '•'.repeat(this.passwordInput.length);
+      this.passwordDisplay.setText(masked.length > 0 ? masked : '|');
+
+      // Parar blink quando há texto, restaurar quando vazio
+      if (this.passwordInput.length > 0) {
+        this.passwordDisplay.setAlpha(1);
+        this.tweens.killTweensOf(this.passwordDisplay);
+      } else {
+        this.tweens.add({
+          targets: this.passwordDisplay, alpha: 0.5, duration: 500,
+          yoyo: true, repeat: -1, ease: 'Sine.InOut',
+        });
+      }
+    };
+
+    window.addEventListener('keydown', this.keydownHandler);
+  }
+
+  private hidePasswordPrompt(): void {
+    if (this.keydownHandler) {
+      window.removeEventListener('keydown', this.keydownHandler);
+      this.keydownHandler = null;
+    }
+    if (this.passwordOverlay) {
+      this.passwordOverlay.destroy(true);
+    }
+    this.passwordInput = '';
+  }
+
+  shutdown(): void {
+    this.hidePasswordPrompt();
   }
 
   private drawStartButton(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, hover: boolean): void {

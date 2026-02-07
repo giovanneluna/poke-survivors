@@ -124,9 +124,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (!formConfig) return null;
     if (formIndex(targetForm) <= formIndex(this.stats.form)) return null;
 
-    // Atualiza sprite
+    // Atualiza sprite (setFrame(0) garante frame correto do novo spritesheet)
     this.spriteConfig = formConfig.sprite;
     this.setTexture(formConfig.sprite.key);
+    this.setFrame(0);
 
     // Ajusta scale baseado no Pokémon (Charizard é maior)
     const scaleMap: Record<PokemonForm, number> = { base: 1.5, stage1: 1.6, stage2: 1.8 };

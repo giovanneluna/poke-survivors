@@ -5,7 +5,7 @@ import type { Player } from '../entities/Player';
 
 /**
  * Fire Spin: orbes de fogo que orbitam o jogador.
- * Equivalente ao "King Bible" do Vampire Survivors.
+ * Padrão VS Bible: ativo por X segundos, depois cooldown, depois ativo novamente.
  */
 export class FireSpin implements Attack {
   readonly type = 'fireSpin' as const;
@@ -17,8 +17,14 @@ export class FireSpin implements Attack {
   private orbCount = 2;
   private radius = 65;
   private damage: number;
-  private readonly rotationSpeed = 3; // radianos por segundo
+  private readonly rotationSpeed = 3;
   private angle = 0;
+
+  // ── Ciclo ativo/cooldown (VS Bible pattern) ─────────────────────
+  private state: 'active' | 'cooldown' = 'active';
+  private stateTimer = 0;
+  private activeDuration = 4000;
+  private cooldownDuration = 3000;
 
   constructor(scene: Phaser.Scene, player: Player) {
     this.scene = scene;
@@ -30,7 +36,6 @@ export class FireSpin implements Attack {
   }
 
   private createOrbs(): void {
-    // Limpa orbes existentes
     this.orbs.clear(true, true);
 
     for (let i = 0; i < this.orbCount; i++) {
@@ -48,6 +53,41 @@ export class FireSpin implements Attack {
 
       this.orbs.add(orb);
     }
+
+    // Se criando durante cooldown, esconder imediatamente
+    if (this.state === 'cooldown') {
+      this.hideOrbs();
+    }
+  }
+
+  private hideOrbs(): void {
+    const children = this.orbs.getChildren();
+    for (const child of children) {
+      const orb = child as Phaser.Physics.Arcade.Sprite;
+      orb.setVisible(false);
+      orb.setActive(false);
+      const body = orb.body as Phaser.Physics.Arcade.Body;
+      body.enable = false;
+    }
+  }
+
+  private showOrbs(): void {
+    const children = this.orbs.getChildren();
+    for (const child of children) {
+      const orb = child as Phaser.Physics.Arcade.Sprite;
+      orb.setVisible(true);
+      orb.setActive(true);
+      orb.setAlpha(0);
+      const body = orb.body as Phaser.Physics.Arcade.Body;
+      body.enable = true;
+      // Fade in suave
+      this.scene.tweens.add({
+        targets: orb,
+        alpha: 0.9,
+        duration: 200,
+        ease: 'Sine.InOut',
+      });
+    }
   }
 
   getDamage(): number {
@@ -59,16 +99,51 @@ export class FireSpin implements Attack {
   }
 
   update(_time: number, delta: number): void {
-    this.angle += this.rotationSpeed * (delta / 1000);
+    this.stateTimer += delta;
 
-    const children = this.orbs.getChildren();
-    const total = children.length;
+    if (this.state === 'active') {
+      // Girar orbs em torno do player
+      this.angle += this.rotationSpeed * (delta / 1000);
 
-    for (let i = 0; i < total; i++) {
-      const orb = children[i] as Phaser.Physics.Arcade.Sprite;
-      const orbAngle = this.angle + (i * (Math.PI * 2) / total);
-      orb.x = this.player.x + Math.cos(orbAngle) * this.radius;
-      orb.y = this.player.y + Math.sin(orbAngle) * this.radius;
+      const children = this.orbs.getChildren();
+      const total = children.length;
+
+      for (let i = 0; i < total; i++) {
+        const orb = children[i] as Phaser.Physics.Arcade.Sprite;
+        const orbAngle = this.angle + (i * (Math.PI * 2) / total);
+        orb.x = this.player.x + Math.cos(orbAngle) * this.radius;
+        orb.y = this.player.y + Math.sin(orbAngle) * this.radius;
+      }
+
+      // Transição para cooldown
+      if (this.stateTimer >= this.activeDuration) {
+        this.state = 'cooldown';
+        this.stateTimer = 0;
+        // Fade out rápido antes de esconder
+        const orbChildren = this.orbs.getChildren();
+        for (const child of orbChildren) {
+          const orb = child as Phaser.Physics.Arcade.Sprite;
+          this.scene.tweens.add({
+            targets: orb,
+            alpha: 0,
+            duration: 200,
+            ease: 'Sine.InOut',
+            onComplete: () => {
+              orb.setVisible(false);
+              orb.setActive(false);
+              const body = orb.body as Phaser.Physics.Arcade.Body;
+              body.enable = false;
+            },
+          });
+        }
+      }
+    } else {
+      // Cooldown: orbs invisíveis, sem colisão
+      if (this.stateTimer >= this.cooldownDuration) {
+        this.state = 'active';
+        this.stateTimer = 0;
+        this.showOrbs();
+      }
     }
   }
 
@@ -77,6 +152,8 @@ export class FireSpin implements Attack {
     this.damage += 3;
     this.orbCount++;
     this.radius += 8;
+    this.activeDuration += 500;
+    this.cooldownDuration = Math.max(1000, this.cooldownDuration - 300);
     this.createOrbs();
   }
 

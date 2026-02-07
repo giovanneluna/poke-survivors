@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { EnemyConfig, Direction, SpriteConfig, EnemyRangedConfig } from '../types';
+import type { EnemyConfig, Direction, SpriteConfig, EnemyRangedConfig, EnemyContactEffect } from '../types';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private hp: number;
@@ -12,6 +12,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private readonly spriteConfig: SpriteConfig;
   private currentDir: Direction = 'down';
   readonly rangedAttack: EnemyRangedConfig | undefined;
+  readonly contactEffect: EnemyContactEffect | undefined;
   private lastAttackTime = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: EnemyConfig) {
@@ -26,6 +27,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.xpValue = config.xpValue;
     this.spriteConfig = config.sprite;
     this.rangedAttack = config.rangedAttack;
+    this.contactEffect = config.contactEffect;
 
     this.setScale(config.scale);
     this.setDepth(5);

@@ -33,7 +33,9 @@ Vampire Survivors clone com tema Pokémon. Phaser 3.90 + TypeScript + Vite.
 - **Pasta local:** `public/assets/pokemon/`
 - **Arquivos:**
   - `charmander-walk.png` (32x32, 4 frames, 8 dirs)
-  - `bulbasaur-walk.png` (48x40, 5 frames, 8 dirs)
+  - `charmeleon-walk.png` (24x32, 4 frames, 8 dirs)
+  - `charizard-walk.png` (40x48, 4 frames, 8 dirs)
+  - `bulbasaur-walk.png` (40x40, 6 frames, 8 dirs)
   - `squirtle-walk.png` (32x32, 4 frames, 8 dirs)
   - `rattata-walk.png` (48x40, 7 frames, 8 dirs)
   - `pidgey-walk.png` (32x32, 5 frames, 8 dirs)
@@ -43,7 +45,7 @@ Vampire Survivors clone com tema Pokémon. Phaser 3.90 + TypeScript + Vite.
 - **Como adicionar novo Pokémon:**
   1. Achar o dex number (ex: Pikachu = 0025)
   2. Baixar: `https://raw.githubusercontent.com/PMDCollab/SpriteCollab/master/sprite/0025/Walk-Anim.png`
-  3. Verificar frameWidth/frameHeight (abrir imagem, dividir largura por nFrames e altura por 8)
+  3. **OBRIGATÓRIO:** Baixar AnimData.xml: `curl "https://raw.githubusercontent.com/PMDCollab/SpriteCollab/master/sprite/{DEX}/AnimData.xml"` e usar FrameWidth/FrameHeight/Duration count da seção Walk (NÃO calcular manualmente pela imagem — os frames podem ter padding)
   4. Adicionar em `SPRITES` no `config.ts` e carregar no `BootScene`
 
 ### 2. Artwork Oficial (Title Screen) — PokeAPI
