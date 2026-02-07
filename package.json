@@ -1,0 +1,19 @@
+{
+  "name": "poke-survivors",
+  "version": "0.1.0",
+  "description": "Pokémon Vampire Survivors - Fan Game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vite": "^6.3.1"
+  }
+}
