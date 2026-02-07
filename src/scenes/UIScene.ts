@@ -18,12 +18,15 @@ export class UIScene extends Phaser.Scene {
   private hpBar!: Phaser.GameObjects.Graphics;
   private xpBar!: Phaser.GameObjects.Graphics;
   private levelText!: Phaser.GameObjects.Text;
+  private formText!: Phaser.GameObjects.Text;
+  private slotsText!: Phaser.GameObjects.Text;
   private killsText!: Phaser.GameObjects.Text;
   private timerText!: Phaser.GameObjects.Text;
   private itemsContainer!: Phaser.GameObjects.Container;
   private attacksContainer!: Phaser.GameObjects.Container;
   private levelUpContainer!: Phaser.GameObjects.Container;
   private gameOverContainer!: Phaser.GameObjects.Container;
+  private evolutionContainer!: Phaser.GameObjects.Container;
 
   private readonly textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
     fontSize: '14px',
@@ -48,6 +51,14 @@ export class UIScene extends Phaser.Scene {
       ...this.textStyle, fontSize: '16px', color: '#ffcc00',
     }).setDepth(100);
 
+    this.formText = this.add.text(70, 33, 'Charmander', {
+      ...this.textStyle, fontSize: '11px', color: '#ff8844',
+    }).setDepth(100);
+
+    this.slotsText = this.add.text(10, 48, '', {
+      ...this.textStyle, fontSize: '9px', color: '#aaaaaa',
+    }).setDepth(100);
+
     this.killsText = this.add.text(width - 10, 10, 'Kills: 0', {
       ...this.textStyle,
     }).setOrigin(1, 0).setDepth(100);
@@ -63,14 +74,30 @@ export class UIScene extends Phaser.Scene {
 
     this.levelUpContainer = this.add.container(0, 0).setDepth(200).setVisible(false);
     this.gameOverContainer = this.add.container(0, 0).setDepth(200).setVisible(false);
+    this.evolutionContainer = this.add.container(0, 0).setDepth(250).setVisible(false);
+
+    // ── Botão Mute ─────────────────────────────────────────────────
+    const muteBtn = this.add.text(width - 10, 30, SoundManager.isMuted() ? '🔇' : '🔊', {
+      fontSize: '18px',
+    }).setOrigin(1, 0).setDepth(100).setInteractive({ useHandCursor: true });
+
+    muteBtn.on('pointerdown', () => {
+      const nowMuted = !SoundManager.isMuted();
+      SoundManager.setMuted(nowMuted);
+      muteBtn.setText(nowMuted ? '🔇' : '🔊');
+    });
 
     const gameScene = this.scene.get('GameScene');
     gameScene.events.on('stats-update', (stats: StatsData) => this.updateHUD(stats));
     gameScene.events.on('level-up', (options: UpgradeOption[], level: number) => this.showLevelUp(options, level));
     gameScene.events.on('game-over', (data: GameOverData) => this.showGameOver(data));
+    gameScene.events.on('pokemon-evolved', (data: { fromName: string; toName: string; form: string; newSlots: number }) => {
+      this.showEvolutionOverlay(data.fromName, data.toName);
+    });
   }
 
   private updateHUD(stats: StatsData): void {
+    if (!this.cameras?.main) return;
     const { width, height } = this.cameras.main;
 
     // HP Bar
@@ -93,6 +120,11 @@ export class UIScene extends Phaser.Scene {
 
     // Textos
     this.levelText.setText(`Lv ${stats.level}`);
+    const formNames: Record<string, string> = { base: 'Charmander', stage1: 'Charmeleon', stage2: 'Charizard' };
+    this.formText.setText(formNames[stats.form] ?? 'Charmander');
+    const atkCount = stats.attacks?.length ?? 0;
+    const itemCount = stats.heldItems?.length ?? 0;
+    this.slotsText.setText(`Atk: ${atkCount}/${stats.attackSlots}  Item: ${itemCount}/${stats.passiveSlots}`);
     this.killsText.setText(`Kills: ${stats.kills}`);
     const minutes = Math.floor(stats.time / 60);
     const seconds = stats.time % 60;
@@ -110,21 +142,32 @@ export class UIScene extends Phaser.Scene {
       });
       this.itemsContainer.add(label);
 
-      const textureMap: Record<HeldItemType, string> = {
+      const textureMap: Partial<Record<HeldItemType, string>> = {
         charcoal: 'held-charcoal',
         wideLens: 'held-wide-lens',
         choiceSpecs: 'held-choice-specs',
+        quickClaw: 'held-quick-claw',
+        leftovers: 'held-leftovers',
+        dragonFang: 'held-dragon-fang',
+        sharpBeak: 'held-sharp-beak',
+        silkScarf: 'held-silk-scarf',
+        shellBell: 'held-shell-bell',
+        scopeLens: 'held-scope-lens',
+        razorClaw: 'held-razor-claw',
+        focusBand: 'held-focus-band',
+        metronome: 'held-metronome',
+        magnet: 'held-magnet',
       };
 
       stats.heldItems.forEach((item, i) => {
-        const icon = this.add.image(45 + i * 18, 5, textureMap[item]).setScale(1.2);
+        const icon = this.add.image(45 + i * 18, 5, textureMap[item] ?? 'held-charcoal').setScale(1.2);
         this.itemsContainer.add(icon);
       });
     }
 
-    // Attacks display (top-left, below level)
+    // Attacks display (top-left, below slots)
     this.attacksContainer.removeAll(true);
-    this.attacksContainer.setPosition(10, 50);
+    this.attacksContainer.setPosition(10, 62);
 
     if (stats.attacks) {
       stats.attacks.forEach((atk, i) => {
@@ -186,7 +229,7 @@ export class UIScene extends Phaser.Scene {
         this.levelUpContainer.add(evoTag);
       }
 
-      const icon = this.add.text(cx, cy - 40, option.icon, { fontSize: '28px' }).setOrigin(0.5);
+      const icon = this.add.image(cx, cy - 40, option.icon).setScale(2).setOrigin(0.5);
       this.levelUpContainer.add(icon);
 
       const name = this.add.text(cx, cy - 5, option.name, {
@@ -233,6 +276,50 @@ export class UIScene extends Phaser.Scene {
     this.levelUpContainer.setVisible(true);
   }
 
+  private showEvolutionOverlay(fromName: string, toName: string): void {
+    const { width, height } = this.cameras.main;
+    this.evolutionContainer.removeAll(true);
+
+    // Fundo semi-transparente
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.6);
+    this.evolutionContainer.add(bg);
+
+    // Texto de evolução
+    const text1 = this.add.text(width / 2, height / 2 - 30, `${fromName} está evoluindo...`, {
+      fontSize: '20px', color: '#FFdd44', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: 4,
+    }).setOrigin(0.5).setAlpha(0);
+    this.evolutionContainer.add(text1);
+
+    const text2 = this.add.text(width / 2, height / 2 + 10, `${toName}!`, {
+      fontSize: '28px', color: '#FFFFFF', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 5,
+    }).setOrigin(0.5).setAlpha(0);
+    this.evolutionContainer.add(text2);
+
+    // Slots info
+    const text3 = this.add.text(width / 2, height / 2 + 50, '+1 Slot de Ataque  •  +1 Slot de Item', {
+      fontSize: '12px', color: '#88ff88', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setAlpha(0);
+    this.evolutionContainer.add(text3);
+
+    this.evolutionContainer.setVisible(true);
+
+    // Animação de entrada
+    this.tweens.add({ targets: text1, alpha: 1, duration: 400, ease: 'Power2' });
+    this.tweens.add({ targets: text2, alpha: 1, y: height / 2 + 5, duration: 500, delay: 500, ease: 'Back.Out' });
+    this.tweens.add({ targets: text3, alpha: 1, duration: 300, delay: 800, ease: 'Power2' });
+
+    // Auto-fechar após 1.4s
+    this.time.delayedCall(1400, () => {
+      this.tweens.add({
+        targets: [bg, text1, text2, text3], alpha: 0, duration: 300,
+        onComplete: () => this.evolutionContainer.setVisible(false),
+      });
+    });
+  }
+
   private showGameOver(data: GameOverData): void {
     const { width, height } = this.cameras.main;
     this.gameOverContainer.removeAll(true);
@@ -269,11 +356,8 @@ export class UIScene extends Phaser.Scene {
     restartBtn.on('pointerout', () => restartBtn.setColor('#ffcc00'));
     restartBtn.on('pointerdown', () => {
       SoundManager.playClick();
-      this.gameOverContainer.setVisible(false);
-      this.scene.stop('UIScene');
-      this.scene.stop('GameScene');
+      // GameScene.create() relança UIScene automaticamente
       this.scene.start('GameScene');
-      this.scene.launch('UIScene');
     });
 
     this.gameOverContainer.add(restartBtn);
@@ -287,8 +371,6 @@ export class UIScene extends Phaser.Scene {
     menuBtn.on('pointerout', () => menuBtn.setColor('#888888'));
     menuBtn.on('pointerdown', () => {
       SoundManager.playClick();
-      this.gameOverContainer.setVisible(false);
-      this.scene.stop('UIScene');
       this.scene.stop('GameScene');
       this.scene.start('TitleScene');
     });

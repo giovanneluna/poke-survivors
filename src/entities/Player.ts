@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { PLAYER } from '../config';
-import type { PlayerState, Attack, AttackType, Direction, SpriteConfig, HeldItemType } from '../types';
+import { PLAYER, CHARMANDER_FORMS } from '../config';
+import type { PlayerState, Attack, AttackType, Direction, SpriteConfig, HeldItemType, PokemonForm, PokemonFormConfig } from '../types';
+import { formIndex } from '../types';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   readonly stats: PlayerState;
@@ -15,7 +16,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private lastDirection: Phaser.Math.Vector2 = new Phaser.Math.Vector2(0, 1);
   private currentDir: Direction = 'down';
   private invincibleUntil = 0;
-  private readonly spriteConfig: SpriteConfig;
+  private spriteConfig: SpriteConfig;
   private shadow: Phaser.GameObjects.Image;
   private slowUntil = 0;
   private readonly slowMultiplier = 0.4;
@@ -47,6 +48,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       xpToNext: PLAYER.baseXpToLevel,
       level: 1,
       kills: 0,
+      form: 'base',
+      attackSlots: 4,
+      passiveSlots: 4,
     };
 
     const keyboard = scene.input.keyboard as Phaser.Input.Keyboard.KeyboardPlugin;
@@ -87,12 +91,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   getLastDirection(): Phaser.Math.Vector2 { return this.lastDirection.clone(); }
 
-  takeDamage(amount: number, time: number): void {
-    if (time < this.invincibleUntil) return;
+  takeDamage(amount: number, time: number): boolean {
+    if (time < this.invincibleUntil) return false;
     this.stats.hp = Math.max(0, this.stats.hp - amount);
     this.invincibleUntil = time + PLAYER.invincibilityMs;
     this.setTint(0xff0000);
     this.scene.time.delayedCall(150, () => this.clearTint());
+    return true;
   }
 
   addXp(amount: number): boolean {
@@ -111,6 +116,43 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   heal(amount: number): void {
     this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + amount);
   }
+
+  // ── Evolução do Pokémon ────────────────────────────────────────────
+  evolve(targetForm: PokemonForm): PokemonFormConfig | null {
+    const formConfig = CHARMANDER_FORMS.find(f => f.form === targetForm);
+    if (!formConfig) return null;
+    if (formIndex(targetForm) <= formIndex(this.stats.form)) return null;
+
+    // Atualiza sprite
+    this.spriteConfig = formConfig.sprite;
+    this.setTexture(formConfig.sprite.key);
+
+    // Ajusta scale baseado no Pokémon (Charizard é maior)
+    const scaleMap: Record<PokemonForm, number> = { base: 1.5, stage1: 1.6, stage2: 1.8 };
+    this.setScale(scaleMap[targetForm]);
+
+    // Atualiza body size proporcionalmente
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    if (targetForm === 'stage2') {
+      body.setSize(20, 20);
+      body.setOffset(10, 24);
+    } else {
+      body.setSize(16, 16);
+      body.setOffset(8, 14);
+    }
+
+    // Atualiza stats
+    this.stats.form = targetForm;
+    this.stats.attackSlots = formConfig.maxAttackSlots;
+    this.stats.passiveSlots = formConfig.maxPassiveSlots;
+
+    // Inicia a animação de walk na direção atual
+    this.playWalkAnim(this.currentDir);
+
+    return formConfig;
+  }
+
+  getForm(): PokemonForm { return this.stats.form; }
 
   isDead(): boolean { return this.stats.hp <= 0; }
 

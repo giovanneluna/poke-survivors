@@ -28,7 +28,7 @@ export class Ember implements Attack {
     this.cooldown = ATTACKS.ember.baseCooldown;
 
     this.bullets = scene.physics.add.group({
-      defaultKey: 'ember-projectile',
+      defaultKey: 'atk-ember',
       maxSize: 40,
     });
 
@@ -60,16 +60,30 @@ export class Ember implements Attack {
 
     for (let i = 0; i < count; i++) {
       const target = sorted[i].enemy;
+
+      // Se o inimigo está muito perto, dano direto (evita bug de projétil sem velocidade)
+      if (sorted[i].dist < 20) {
+        const enemy = target as unknown as import('../entities/Enemy').Enemy;
+        if (typeof enemy.takeDamage === 'function') {
+          const killed = enemy.takeDamage(this.damage);
+          if (killed) {
+            this.scene.events.emit('cone-attack-kill', target.x, target.y, enemy.xpValue);
+          }
+        }
+        continue;
+      }
+
       const bullet = this.bullets.get(
         this.player.x,
         this.player.y,
-        'ember-projectile'
+        'atk-ember'
       ) as Phaser.Physics.Arcade.Sprite | null;
 
       if (!bullet) continue;
 
       bullet.setActive(true).setVisible(true).setScale(1.5);
       bullet.setDepth(8);
+      bullet.play('anim-ember');
 
       const body = bullet.body as Phaser.Physics.Arcade.Body;
       body.checkCollision.none = false;

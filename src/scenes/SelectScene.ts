@@ -90,7 +90,6 @@ export class SelectScene extends Phaser.Scene {
       this.cameras.main.fade(500, 0, 0, 0, false, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
         if (progress >= 1) {
           this.scene.start('GameScene');
-          this.scene.launch('UIScene');
         }
       });
     });

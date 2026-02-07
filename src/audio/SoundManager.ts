@@ -15,7 +15,7 @@ interface ToneStep {
 class SoundManagerImpl {
   private ctx: AudioContext | null = null;
   private muted = false;
-  private masterVolume = 0.15;
+  private masterVolume = 0.03;
 
   private getContext(): AudioContext {
     if (!this.ctx) {

@@ -44,15 +44,27 @@ export class Flamethrower implements Attack {
     const dir = this.player.getLastDirection();
     const dirAngleDeg = Phaser.Math.RadToDeg(Math.atan2(dir.y, dir.x));
 
-    // Efeito visual: partículas de fogo na direção
     const dirAngleRad = Math.atan2(dir.y, dir.x);
+
+    // Sprite animado de Flamethrower na direção do ataque
+    const offsetX = Math.cos(dirAngleRad) * 40;
+    const offsetY = Math.sin(dirAngleRad) * 40;
+    const flame = this.scene.add.sprite(
+      this.player.x + offsetX, this.player.y + offsetY, 'atk-flamethrower'
+    );
+    flame.setScale(1.2).setDepth(10).setAlpha(0.9);
+    flame.setRotation(dirAngleRad + Math.PI / 2);
+    flame.play('anim-flamethrower');
+    flame.once('animationcomplete', () => flame.destroy());
+
+    // Partículas complementares
     this.scene.add.particles(this.player.x, this.player.y, 'fire-particle', {
       speed: { min: 150, max: 250 },
       angle: { min: dirAngleDeg - this.coneAngleDeg / 2, max: dirAngleDeg + this.coneAngleDeg / 2 },
-      lifespan: 350,
-      quantity: 20,
-      scale: { start: 3, end: 0.5 },
-      tint: [0xff2200, 0xff6600, 0xffaa00, 0xffcc00],
+      lifespan: 300,
+      quantity: 12,
+      scale: { start: 2, end: 0.3 },
+      tint: [0xff2200, 0xff6600, 0xffaa00],
       emitting: false,
     }).explode();
 
@@ -69,22 +81,29 @@ export class Flamethrower implements Attack {
 
       if (dist > this.range) continue;
 
-      const angleToEnemy = Math.atan2(
-        enemySprite.y - this.player.y,
-        enemySprite.x - this.player.x
-      );
+      // Inimigos muito perto sempre são atingidos (evita bug de ângulo a dist ~0)
+      let inCone = dist < 25;
+      if (!inCone) {
+        const angleToEnemy = Math.atan2(
+          enemySprite.y - this.player.y,
+          enemySprite.x - this.player.x
+        );
+        const angleDiff = Math.abs(
+          Phaser.Math.Angle.ShortestBetween(
+            Phaser.Math.RadToDeg(dirAngleRad),
+            Phaser.Math.RadToDeg(angleToEnemy)
+          )
+        );
+        inCone = angleDiff <= this.coneAngleDeg / 2;
+      }
 
-      const angleDiff = Math.abs(
-        Phaser.Math.Angle.ShortestBetween(
-          Phaser.Math.RadToDeg(dirAngleRad),
-          Phaser.Math.RadToDeg(angleToEnemy)
-        )
-      );
-
-      if (angleDiff <= this.coneAngleDeg / 2) {
+      if (inCone) {
         const enemy = enemySprite as unknown as Enemy;
         if (typeof enemy.takeDamage === 'function') {
-          enemy.takeDamage(this.damage);
+          const killed = enemy.takeDamage(this.damage);
+          if (killed) {
+            this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          }
         }
       }
     }

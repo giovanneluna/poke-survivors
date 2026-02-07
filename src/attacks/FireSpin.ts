@@ -34,13 +34,17 @@ export class FireSpin implements Attack {
     this.orbs.clear(true, true);
 
     for (let i = 0; i < this.orbCount; i++) {
-      const orb = this.scene.physics.add.sprite(0, 0, 'fire-orb');
-      orb.setScale(2);
+      const orb = this.scene.physics.add.sprite(0, 0, 'atk-fire-range');
+      orb.setScale(1);
       orb.setDepth(9);
       orb.setAlpha(0.9);
+      orb.play('anim-fire-orb');
 
       const body = orb.body as Phaser.Physics.Arcade.Body;
-      body.setCircle(6);
+      body.setCircle(12);
+      body.setOffset(8, 8);
+      body.pushable = false;
+      body.immovable = true;
 
       this.orbs.add(orb);
     }

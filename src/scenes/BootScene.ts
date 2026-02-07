@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ENEMIES, STARTERS } from '../config';
+import { ENEMIES, STARTERS, CHARMANDER_FORMS } from '../config';
 import type { SpriteConfig, Direction } from '../types';
 import { DIRECTION_ROW } from '../types';
 
@@ -25,14 +25,71 @@ export class BootScene extends Phaser.Scene {
     for (const starter of STARTERS) {
       this.loadSpritesheet(starter.sprite);
     }
+    // Carrega formas evolutivas (Charmeleon, Charizard)
+    for (const form of CHARMANDER_FORMS) {
+      if (form.form !== 'base') this.loadSpritesheet(form.sprite);
+    }
     for (const config of Object.values(ENEMIES)) {
       this.loadSpritesheet(config.sprite);
     }
 
-    // Artwork oficial dos starters (para Title Screen)
+    // Artwork oficial dos starters + evoluções (para Title Screen / evolução)
     this.load.image('art-charmander', 'assets/artwork/charmander.png');
     this.load.image('art-squirtle', 'assets/artwork/squirtle.png');
     this.load.image('art-bulbasaur', 'assets/artwork/bulbasaur.png');
+    this.load.image('art-charmeleon', 'assets/artwork/charmeleon.png');
+    this.load.image('art-charizard', 'assets/artwork/charizard.png');
+
+    // Sprites de itens reais do Pokemon (para upgrades/UI)
+    this.load.image('item-flame-orb', 'assets/items/flame-orb.png');
+    this.load.image('item-pp-up', 'assets/items/pp-up.png');
+    this.load.image('item-leftovers', 'assets/items/leftovers.png');
+    this.load.image('item-quick-claw', 'assets/items/quick-claw.png');
+    this.load.image('item-magnet', 'assets/items/magnet.png');
+    this.load.image('item-charcoal', 'assets/items/charcoal.png');
+    this.load.image('item-wide-lens', 'assets/items/wide-lens.png');
+    this.load.image('item-choice-specs', 'assets/items/choice-specs.png');
+    this.load.image('item-fire-stone', 'assets/items/fire-stone.png');
+    this.load.image('item-dragon-fang', 'assets/items/dragon-fang.png');
+    this.load.image('item-sharp-beak', 'assets/items/sharp-beak.png');
+    this.load.image('item-scope-lens', 'assets/items/scope-lens.png');
+    this.load.image('item-razor-claw', 'assets/items/razor-claw.png');
+    this.load.image('item-shell-bell', 'assets/items/shell-bell.png');
+    this.load.image('item-focus-band', 'assets/items/focus-band.png');
+    this.load.image('item-silk-scarf', 'assets/items/silk-scarf.png');
+    this.load.image('item-metronome', 'assets/items/metronome.png');
+
+    // Spritesheets de ataques (pokemonAutoChess)
+    this.load.spritesheet('atk-ember', 'assets/attacks/ember-sheet.png', { frameWidth: 26, frameHeight: 26 });
+    this.load.spritesheet('atk-fire-range', 'assets/attacks/fire-range-sheet.png', { frameWidth: 40, frameHeight: 40 });
+    this.load.spritesheet('atk-fire-hit', 'assets/attacks/fire-hit-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-flamethrower', 'assets/attacks/flamethrower-sheet.png', { frameWidth: 80, frameHeight: 96 });
+    this.load.spritesheet('atk-fire-blast', 'assets/attacks/fire-blast-sheet.png', { frameWidth: 72, frameHeight: 73 });
+    this.load.spritesheet('atk-blast-burn', 'assets/attacks/blast-burn-sheet.png', { frameWidth: 80, frameHeight: 80 });
+
+    // Novos spritesheets de ataques
+    this.load.spritesheet('atk-scratch', 'assets/attacks/scratch-sheet.png', { frameWidth: 64, frameHeight: 56 });
+    this.load.spritesheet('atk-slash', 'assets/attacks/slash-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-fury-swipes', 'assets/attacks/fury-swipes-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-night-slash', 'assets/attacks/night-slash-sheet.png', { frameWidth: 56, frameHeight: 64 });
+    this.load.spritesheet('atk-fire-fang', 'assets/attacks/fire-fang-sheet.png', { frameWidth: 80, frameHeight: 64 });
+    this.load.spritesheet('atk-blaze-kick', 'assets/attacks/blaze-kick-sheet.png', { frameWidth: 64, frameHeight: 72 });
+    this.load.spritesheet('atk-dragon-breath', 'assets/attacks/dragon-breath-sheet.png', { frameWidth: 32, frameHeight: 74 });
+    this.load.spritesheet('atk-dragon-claw', 'assets/attacks/dragon-claw-sheet.png', { frameWidth: 96, frameHeight: 78 });
+    this.load.spritesheet('atk-dragon-pulse', 'assets/attacks/dragon-pulse-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-dragon-rush', 'assets/attacks/dragon-rush-sheet.png', { frameWidth: 65, frameHeight: 64 });
+    this.load.spritesheet('atk-draco-meteor', 'assets/attacks/draco-meteor-sheet.png', { frameWidth: 96, frameHeight: 58 });
+    this.load.spritesheet('atk-smokescreen', 'assets/attacks/smokescreen-sheet.png', { frameWidth: 45, frameHeight: 45 });
+    this.load.spritesheet('atk-flame-charge', 'assets/attacks/flame-charge-sheet.png', { frameWidth: 20, frameHeight: 96 });
+    this.load.spritesheet('atk-flare-blitz', 'assets/attacks/flare-blitz-sheet.png', { frameWidth: 96, frameHeight: 83 });
+    this.load.spritesheet('atk-air-slash', 'assets/attacks/air-slash-sheet.png', { frameWidth: 48, frameHeight: 48 });
+    this.load.spritesheet('atk-aerial-ace', 'assets/attacks/aerial-ace-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-hurricane', 'assets/attacks/hurricane-sheet.png', { frameWidth: 56, frameHeight: 80 });
+    this.load.spritesheet('atk-heat-wave', 'assets/attacks/heat-wave-sheet.png', { frameWidth: 96, frameHeight: 82 });
+    this.load.spritesheet('atk-outrage', 'assets/attacks/outrage-sheet.png', { frameWidth: 48, frameHeight: 72 });
+    this.load.spritesheet('atk-shadow-ball', 'assets/attacks/shadow-ball-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-rock-slide', 'assets/attacks/rock-slide-sheet.png', { frameWidth: 30, frameHeight: 96 });
+    this.load.spritesheet('atk-hyper-voice', 'assets/attacks/hyper-voice-sheet.png', { frameWidth: 96, frameHeight: 28 });
   }
 
   private loadSpritesheet(sprite: SpriteConfig): void {
@@ -46,11 +103,189 @@ export class BootScene extends Phaser.Scene {
     for (const starter of STARTERS) {
       this.createWalkAnims(starter.sprite);
     }
+    // Cria anims das formas evolutivas
+    for (const form of CHARMANDER_FORMS) {
+      if (form.form !== 'base') this.createWalkAnims(form.sprite);
+    }
     for (const config of Object.values(ENEMIES)) {
       this.createWalkAnims(config.sprite);
     }
+    this.createAttackAnims();
     this.generateTextures();
     this.scene.start('TitleScene');
+  }
+
+  private createAttackAnims(): void {
+    // Ember projectile animation (9 frames, looping)
+    this.anims.create({
+      key: 'anim-ember',
+      frames: this.anims.generateFrameNumbers('atk-ember', { start: 0, end: 8 }),
+      frameRate: 15, repeat: -1,
+    });
+    // Fire range projectile (16 frames, looping) - used for Fire Spin orbs
+    this.anims.create({
+      key: 'anim-fire-orb',
+      frames: this.anims.generateFrameNumbers('atk-fire-range', { start: 0, end: 15 }),
+      frameRate: 20, repeat: -1,
+    });
+    // Fire hit impact (4 frames, play once)
+    this.anims.create({
+      key: 'anim-fire-hit',
+      frames: this.anims.generateFrameNumbers('atk-fire-hit', { start: 0, end: 3 }),
+      frameRate: 12, repeat: 0,
+    });
+    // Flamethrower cone (16 frames, play once)
+    this.anims.create({
+      key: 'anim-flamethrower',
+      frames: this.anims.generateFrameNumbers('atk-flamethrower', { start: 0, end: 15 }),
+      frameRate: 24, repeat: 0,
+    });
+    // Fire Blast expanding star (12 frames, looping for pulse)
+    this.anims.create({
+      key: 'anim-fire-blast',
+      frames: this.anims.generateFrameNumbers('atk-fire-blast', { start: 0, end: 11 }),
+      frameRate: 15, repeat: 0,
+    });
+    // Blast Burn explosion (15 frames, play once)
+    this.anims.create({
+      key: 'anim-blast-burn',
+      frames: this.anims.generateFrameNumbers('atk-blast-burn', { start: 0, end: 14 }),
+      frameRate: 18, repeat: 0,
+    });
+
+    // ── Novos ataques animados ─────────────────────────────────────
+    // Scratch (8 frames, play once)
+    this.anims.create({
+      key: 'anim-scratch',
+      frames: this.anims.generateFrameNumbers('atk-scratch', { start: 0, end: 7 }),
+      frameRate: 20, repeat: 0,
+    });
+    // Slash (4 frames, play once)
+    this.anims.create({
+      key: 'anim-slash',
+      frames: this.anims.generateFrameNumbers('atk-slash', { start: 0, end: 3 }),
+      frameRate: 16, repeat: 0,
+    });
+    // Fury Swipes (10 frames, play once)
+    this.anims.create({
+      key: 'anim-fury-swipes',
+      frames: this.anims.generateFrameNumbers('atk-fury-swipes', { start: 0, end: 9 }),
+      frameRate: 22, repeat: 0,
+    });
+    // Night Slash (15 frames, play once)
+    this.anims.create({
+      key: 'anim-night-slash',
+      frames: this.anims.generateFrameNumbers('atk-night-slash', { start: 0, end: 14 }),
+      frameRate: 24, repeat: 0,
+    });
+    // Fire Fang (10 frames, play once)
+    this.anims.create({
+      key: 'anim-fire-fang',
+      frames: this.anims.generateFrameNumbers('atk-fire-fang', { start: 0, end: 9 }),
+      frameRate: 18, repeat: 0,
+    });
+    // Blaze Kick (15 frames, play once)
+    this.anims.create({
+      key: 'anim-blaze-kick',
+      frames: this.anims.generateFrameNumbers('atk-blaze-kick', { start: 0, end: 14 }),
+      frameRate: 22, repeat: 0,
+    });
+    // Dragon Breath (9 frames, play once)
+    this.anims.create({
+      key: 'anim-dragon-breath',
+      frames: this.anims.generateFrameNumbers('atk-dragon-breath', { start: 0, end: 8 }),
+      frameRate: 16, repeat: 0,
+    });
+    // Dragon Claw (10 frames, play once)
+    this.anims.create({
+      key: 'anim-dragon-claw',
+      frames: this.anims.generateFrameNumbers('atk-dragon-claw', { start: 0, end: 9 }),
+      frameRate: 20, repeat: 0,
+    });
+    // Dragon Pulse (6 frames, looping projectile)
+    this.anims.create({
+      key: 'anim-dragon-pulse',
+      frames: this.anims.generateFrameNumbers('atk-dragon-pulse', { start: 0, end: 5 }),
+      frameRate: 15, repeat: -1,
+    });
+    // Dragon Rush (7 frames, play once)
+    this.anims.create({
+      key: 'anim-dragon-rush',
+      frames: this.anims.generateFrameNumbers('atk-dragon-rush', { start: 0, end: 6 }),
+      frameRate: 18, repeat: 0,
+    });
+    // Draco Meteor (16 frames, play once)
+    this.anims.create({
+      key: 'anim-draco-meteor',
+      frames: this.anims.generateFrameNumbers('atk-draco-meteor', { start: 0, end: 15 }),
+      frameRate: 20, repeat: 0,
+    });
+    // Smokescreen (12 frames, looping aura)
+    this.anims.create({
+      key: 'anim-smokescreen',
+      frames: this.anims.generateFrameNumbers('atk-smokescreen', { start: 0, end: 11 }),
+      frameRate: 12, repeat: -1,
+    });
+    // Flame Charge (16 frames, play once)
+    this.anims.create({
+      key: 'anim-flame-charge',
+      frames: this.anims.generateFrameNumbers('atk-flame-charge', { start: 0, end: 15 }),
+      frameRate: 24, repeat: 0,
+    });
+    // Flare Blitz (15 frames, play once)
+    this.anims.create({
+      key: 'anim-flare-blitz',
+      frames: this.anims.generateFrameNumbers('atk-flare-blitz', { start: 0, end: 14 }),
+      frameRate: 22, repeat: 0,
+    });
+    // Air Slash (8 frames, looping projectile)
+    this.anims.create({
+      key: 'anim-air-slash',
+      frames: this.anims.generateFrameNumbers('atk-air-slash', { start: 0, end: 7 }),
+      frameRate: 16, repeat: -1,
+    });
+    // Aerial Ace (4 frames, looping projectile)
+    this.anims.create({
+      key: 'anim-aerial-ace',
+      frames: this.anims.generateFrameNumbers('atk-aerial-ace', { start: 0, end: 3 }),
+      frameRate: 14, repeat: -1,
+    });
+    // Hurricane (16 frames, looping vortex)
+    this.anims.create({
+      key: 'anim-hurricane',
+      frames: this.anims.generateFrameNumbers('atk-hurricane', { start: 0, end: 15 }),
+      frameRate: 18, repeat: -1,
+    });
+    // Heat Wave (11 frames, play once)
+    this.anims.create({
+      key: 'anim-heat-wave',
+      frames: this.anims.generateFrameNumbers('atk-heat-wave', { start: 0, end: 10 }),
+      frameRate: 18, repeat: 0,
+    });
+    // Outrage (13 frames, looping berserk aura)
+    this.anims.create({
+      key: 'anim-outrage',
+      frames: this.anims.generateFrameNumbers('atk-outrage', { start: 0, end: 12 }),
+      frameRate: 16, repeat: -1,
+    });
+    // Shadow Ball (16 frames, looping projectile)
+    this.anims.create({
+      key: 'anim-shadow-ball',
+      frames: this.anims.generateFrameNumbers('atk-shadow-ball', { start: 0, end: 15 }),
+      frameRate: 18, repeat: -1,
+    });
+    // Rock Slide (16 frames, looping projectile)
+    this.anims.create({
+      key: 'anim-rock-slide',
+      frames: this.anims.generateFrameNumbers('atk-rock-slide', { start: 0, end: 15 }),
+      frameRate: 18, repeat: -1,
+    });
+    // Hyper Voice / Supersonic (4 frames, play once)
+    this.anims.create({
+      key: 'anim-hyper-voice',
+      frames: this.anims.generateFrameNumbers('atk-hyper-voice', { start: 0, end: 3 }),
+      frameRate: 12, repeat: 0,
+    });
   }
 
   private createWalkAnims(sprite: SpriteConfig): void {
@@ -231,6 +466,147 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xcc66ff, 0.5); g.fillCircle(4, 4, 1.5); g.fillCircle(10, 4, 1.5);
     g.fillStyle(0x666666); g.fillRect(6, 4, 3, 1);
     g.generateTexture('held-choice-specs', 14, 10);
+
+    // Quick Claw
+    g.clear(); g.fillStyle(0xeeeeee); g.fillTriangle(6, 0, 11, 10, 1, 10);
+    g.fillStyle(0x44aaff, 0.6); g.fillTriangle(6, 2, 9, 9, 3, 9);
+    g.generateTexture('held-quick-claw', 12, 12);
+
+    // Leftovers
+    g.clear(); g.fillStyle(0x88aa44); g.fillRect(2, 2, 8, 8);
+    g.fillStyle(0xaacc66, 0.7); g.fillRect(3, 3, 6, 4);
+    g.fillStyle(0x666644); g.fillRect(2, 6, 8, 2);
+    g.generateTexture('held-leftovers', 12, 12);
+
+    // Dragon Fang
+    g.clear(); g.fillStyle(0x7744ff); g.fillTriangle(6, 0, 11, 12, 1, 12);
+    g.fillStyle(0x9966ff, 0.6); g.fillTriangle(6, 3, 9, 10, 3, 10);
+    g.generateTexture('held-dragon-fang', 12, 12);
+
+    // Sharp Beak
+    g.clear(); g.fillStyle(0x88ccff); g.fillTriangle(6, 0, 10, 12, 2, 12);
+    g.fillStyle(0xaaddff, 0.5); g.fillTriangle(6, 2, 8, 10, 4, 10);
+    g.fillStyle(0xffcc00); g.fillRect(4, 0, 4, 3);
+    g.generateTexture('held-sharp-beak', 12, 12);
+
+    // Silk Scarf
+    g.clear(); g.fillStyle(0xffffff); g.fillRect(1, 3, 10, 4);
+    g.fillStyle(0xeeeeee, 0.8); g.fillRect(2, 4, 8, 2);
+    g.fillStyle(0xdddddd); g.fillRect(0, 5, 3, 5); g.fillRect(9, 5, 3, 5);
+    g.generateTexture('held-silk-scarf', 12, 12);
+
+    // Shell Bell
+    g.clear(); g.fillStyle(0xffcc44); g.fillCircle(6, 6, 5);
+    g.fillStyle(0xffdd66, 0.6); g.fillCircle(5, 5, 3);
+    g.fillStyle(0xeeaa22); g.fillCircle(6, 8, 2);
+    g.generateTexture('held-shell-bell', 12, 12);
+
+    // Scope Lens
+    g.clear(); g.fillStyle(0xff44aa); g.fillCircle(6, 6, 5);
+    g.fillStyle(0xff66cc, 0.5); g.fillCircle(6, 6, 3);
+    g.fillStyle(0x333333); g.fillRect(0, 5, 12, 2);
+    g.fillStyle(0x333333); g.fillRect(5, 0, 2, 12);
+    g.generateTexture('held-scope-lens', 12, 12);
+
+    // Razor Claw
+    g.clear(); g.fillStyle(0xcc4444); g.fillTriangle(2, 0, 6, 12, 0, 8);
+    g.fillTriangle(6, 0, 10, 12, 4, 8);
+    g.fillTriangle(10, 0, 12, 10, 8, 8);
+    g.generateTexture('held-razor-claw', 12, 12);
+
+    // Focus Band
+    g.clear(); g.fillStyle(0xff8800); g.fillRect(0, 3, 12, 6);
+    g.fillStyle(0xffaa44, 0.7); g.fillRect(1, 4, 10, 4);
+    g.fillStyle(0xffcc00); g.fillCircle(6, 6, 2);
+    g.generateTexture('held-focus-band', 12, 12);
+
+    // Metronome
+    g.clear(); g.fillStyle(0xdddddd); g.fillRect(5, 0, 2, 10);
+    g.fillStyle(0xaaaaaa); g.fillRect(3, 8, 6, 4);
+    g.fillStyle(0x44aaff); g.fillCircle(6, 2, 2);
+    g.generateTexture('held-metronome', 12, 12);
+
+    // Magnet (held)
+    g.clear(); g.fillStyle(0xcc0000); g.fillRect(1, 1, 4, 8);
+    g.fillStyle(0x0000cc); g.fillRect(7, 1, 4, 8);
+    g.fillStyle(0xcccccc); g.fillRect(4, 1, 4, 3);
+    g.generateTexture('held-magnet', 12, 10);
+
+    // ── Texturas de ataques (procedurais) ──────────────────────────
+    // Slash arc (arco branco para Scratch/Slash/FurySwipes/NightSlash)
+    g.clear(); g.fillStyle(0xffffff, 0.9);
+    g.beginPath(); g.arc(16, 16, 14, -0.8, 0.8); g.lineTo(16, 16); g.closePath(); g.fill();
+    g.fillStyle(0xcccccc, 0.5);
+    g.beginPath(); g.arc(16, 16, 10, -0.6, 0.6); g.lineTo(16, 16); g.closePath(); g.fill();
+    g.generateTexture('slash-arc', 32, 32);
+
+    // Dragon claw (garras roxas para DragonClaw/DragonRush)
+    g.clear(); g.fillStyle(0x7744ff, 0.9);
+    g.fillTriangle(4, 0, 8, 20, 0, 20);
+    g.fillTriangle(12, 0, 16, 20, 8, 20);
+    g.fillTriangle(20, 0, 24, 20, 16, 20);
+    g.fillStyle(0x9966ff, 0.5);
+    g.fillTriangle(6, 4, 8, 16, 4, 16);
+    g.fillTriangle(14, 4, 16, 16, 12, 16);
+    g.generateTexture('dragon-claw', 24, 20);
+
+    // Fire fang (mordida flamejante)
+    g.clear(); g.fillStyle(0xff6600, 0.9);
+    g.fillTriangle(0, 0, 6, 12, 12, 0);
+    g.fillTriangle(10, 0, 16, 12, 22, 0);
+    g.fillStyle(0xffaa00, 0.6);
+    g.fillTriangle(2, 2, 6, 10, 10, 2);
+    g.generateTexture('fire-fang', 22, 12);
+
+    // Smoke cloud (para Smokescreen)
+    g.clear(); g.fillStyle(0x666666, 0.6);
+    g.fillCircle(8, 8, 7); g.fillCircle(14, 6, 5); g.fillCircle(6, 12, 6);
+    g.fillStyle(0x888888, 0.4);
+    g.fillCircle(10, 10, 4);
+    g.generateTexture('smoke-cloud', 20, 18);
+
+    // Wind blade (lâmina de ar para AirSlash/AerialAce)
+    g.clear(); g.fillStyle(0x88ccff, 0.9);
+    g.fillTriangle(0, 8, 20, 0, 20, 16);
+    g.fillStyle(0xaaddff, 0.6);
+    g.fillTriangle(4, 8, 18, 2, 18, 14);
+    g.generateTexture('wind-blade', 20, 16);
+
+    // Dragon energy (esfera para DragonBreath/DragonPulse)
+    g.clear(); g.fillStyle(0x7744ff); g.fillCircle(8, 8, 8);
+    g.fillStyle(0x9966ff, 0.7); g.fillCircle(7, 6, 5);
+    g.fillStyle(0xcc88ff, 0.4); g.fillCircle(6, 5, 3);
+    g.generateTexture('dragon-energy', 16, 16);
+
+    // Dragon particle (para trails dracônicos)
+    g.clear(); g.fillStyle(0x7744ff); g.fillCircle(3, 3, 3);
+    g.generateTexture('dragon-particle', 6, 6);
+
+    // Wind particle (para trails de vento)
+    g.clear(); g.fillStyle(0x88ccff, 0.7); g.fillCircle(3, 3, 3);
+    g.generateTexture('wind-particle', 6, 6);
+
+    // Meteor (para DracoMeteor)
+    g.clear(); g.fillStyle(0xff4400); g.fillCircle(10, 10, 10);
+    g.fillStyle(0xff8800, 0.7); g.fillCircle(8, 8, 6);
+    g.fillStyle(0xffcc00, 0.5); g.fillCircle(7, 7, 3);
+    g.generateTexture('meteor', 20, 20);
+
+    // Heat wave ring (para HeatWave)
+    g.clear(); g.lineStyle(4, 0xff4400, 0.8);
+    g.strokeCircle(16, 16, 14);
+    g.lineStyle(2, 0xffaa00, 0.5);
+    g.strokeCircle(16, 16, 12);
+    g.generateTexture('heat-ring', 32, 32);
+
+    // Tornado (para Hurricane)
+    g.clear(); g.fillStyle(0x88ccff, 0.7);
+    g.fillEllipse(10, 4, 16, 6);
+    g.fillStyle(0x66aadd, 0.6);
+    g.fillEllipse(10, 10, 12, 5);
+    g.fillStyle(0x4488bb, 0.5);
+    g.fillEllipse(10, 16, 8, 4);
+    g.generateTexture('tornado', 20, 20);
 
     // ── Shards para Title Screen ──────────────────────────────────
     // Shard vermelho (fogo)

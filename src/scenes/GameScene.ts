@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { GAME, ENEMIES, WAVES, SPAWN, XP_GEM, UPGRADE_DEFS, DESTRUCTIBLES, EVOLUTIONS } from '../config';
-import type { EnemyConfig, WaveConfig, UpgradeOption, PickupType, HeldItemType, DestructibleType } from '../types';
+import { GAME, ENEMIES, WAVES, SPAWN, XP_GEM, UPGRADE_DEFS, DESTRUCTIBLES, EVOLUTIONS, ATTACKS, CHARMANDER_FORMS } from '../config';
+import type { EnemyConfig, WaveConfig, UpgradeOption, PickupType, HeldItemType, DestructibleType, AttackType } from '../types';
+import { isFormUnlocked } from '../types';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { Destructible } from '../entities/Destructible';
@@ -11,6 +12,26 @@ import { Flamethrower } from '../attacks/Flamethrower';
 import { Inferno } from '../attacks/Inferno';
 import { FireBlast } from '../attacks/FireBlast';
 import { BlastBurn } from '../attacks/BlastBurn';
+import { Scratch } from '../attacks/Scratch';
+import { FireFang } from '../attacks/FireFang';
+import { DragonBreath } from '../attacks/DragonBreath';
+import { Smokescreen } from '../attacks/Smokescreen';
+import { FlameCharge } from '../attacks/FlameCharge';
+import { Slash } from '../attacks/Slash';
+import { DragonClaw } from '../attacks/DragonClaw';
+import { AirSlash } from '../attacks/AirSlash';
+import { FlareBlitz } from '../attacks/FlareBlitz';
+import { Hurricane } from '../attacks/Hurricane';
+import { Outrage } from '../attacks/Outrage';
+import { FurySwipes } from '../attacks/FurySwipes';
+import { BlazeKick } from '../attacks/BlazeKick';
+import { DragonPulse } from '../attacks/DragonPulse';
+import { NightSlash } from '../attacks/NightSlash';
+import { AerialAce } from '../attacks/AerialAce';
+import { FlareRush } from '../attacks/FlareRush';
+import { DragonRush } from '../attacks/DragonRush';
+import { HeatWave } from '../attacks/HeatWave';
+import { DracoMeteor } from '../attacks/DracoMeteor';
 import { SoundManager } from '../audio/SoundManager';
 
 export class GameScene extends Phaser.Scene {
@@ -31,6 +52,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Reset de estado (Phaser reutiliza a mesma instância da Scene)
+    this.isPaused = false;
+    this.gameTime = 0;
+    this.difficultyLevel = 0;
+
     this.physics.world.setBounds(0, 0, GAME.worldWidth, GAME.worldHeight);
     this.generateWorld();
 
@@ -42,7 +68,7 @@ export class GameScene extends Phaser.Scene {
     this.xpGems = this.physics.add.group({ defaultKey: 'xp-gem', maxSize: 300 });
     this.destructibles = this.physics.add.staticGroup();
     this.pickups = this.physics.add.group();
-    this.enemyProjectiles = this.physics.add.group({ defaultKey: 'shadow-ball', maxSize: 60 });
+    this.enemyProjectiles = this.physics.add.group({ defaultKey: 'atk-shadow-ball', maxSize: 60 });
 
     // ── Ataque inicial: Ember ──────────────────────────────────────
     const ember = new Ember(this, this.player, this.enemyGroup);
@@ -52,6 +78,10 @@ export class GameScene extends Phaser.Scene {
     // ── Câmera ─────────────────────────────────────────────────────
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
     this.cameras.main.setBounds(0, 0, GAME.worldWidth, GAME.worldHeight);
+
+    // ── Lançar UIScene (sempre após GameScene estar pronta) ──────
+    if (this.scene.isActive('UIScene')) this.scene.stop('UIScene');
+    this.scene.launch('UIScene');
 
     // ── Spawn de inimigos ──────────────────────────────────────────
     this.difficultyLevel = 0;
@@ -77,6 +107,14 @@ export class GameScene extends Phaser.Scene {
     this.events.on('upgrade-selected', (upgradeId: string) => {
       this.applyUpgrade(upgradeId);
       this.resumeGame();
+    });
+
+    // ── Kills de ataques em cone (Flamethrower, BlastBurn, Ember close-range)
+    this.events.on('cone-attack-kill', (x: number, y: number, xpValue: number) => {
+      this.player.stats.kills++;
+      SoundManager.playEnemyDeath();
+      this.spawnXpGem(x, y, xpValue);
+      this.emitStats();
     });
 
     this.gameTime = 0;
@@ -173,13 +211,23 @@ export class GameScene extends Phaser.Scene {
       if (attack) this.fireEnemyProjectile(enemy, attack.config);
     });
 
-    // Magnetismo XP
+    // Magnetismo XP + despawn de gems distantes
     this.xpGems.getChildren().forEach(child => {
       const gem = child as Phaser.Physics.Arcade.Sprite;
       if (!gem.active) return;
       const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, gem.x, gem.y);
       if (dist < this.player.stats.magnetRange) {
         this.physics.moveToObject(gem, this.player, XP_GEM.magnetSpeed);
+      } else if (dist > SPAWN.despawnDistance) {
+        // Reciclar gems que ficaram muito longe (libera pool)
+        this.xpGems.killAndHide(gem);
+        (gem.body as Phaser.Physics.Arcade.Body).enable = false;
+      } else {
+        // Gem fora do range magnético: garantir que está parada
+        const body = gem.body as Phaser.Physics.Arcade.Body;
+        if (body.velocity.lengthSq() > 0) {
+          body.setVelocity(0, 0);
+        }
       }
     });
 
@@ -198,12 +246,18 @@ export class GameScene extends Phaser.Scene {
     const proj = this.enemyProjectiles.get(enemy.x, enemy.y, config.projectileKey) as Phaser.Physics.Arcade.Sprite | null;
     if (!proj) return;
 
-    proj.setActive(true).setVisible(true).setScale(1.5).setDepth(7);
+    proj.setActive(true).setVisible(true).setScale(0.6).setDepth(7);
     proj.setData('damage', config.damage);
     proj.setData('homing', config.homing);
     proj.setData('speed', config.speed);
     proj.setData('effect', config.effect ?? null);
     proj.setData('effectDuration', config.effectDurationMs ?? 0);
+
+    // Animar projétil com sprite real
+    const animKey = config.projectileKey.replace('atk-', 'anim-');
+    if (this.anims.exists(animKey)) {
+      proj.play(animKey);
+    }
 
     const body = proj.body as Phaser.Physics.Arcade.Body;
     body.enable = true;
@@ -227,10 +281,12 @@ export class GameScene extends Phaser.Scene {
       (_player, enemyObj) => {
         const enemy = enemyObj as Enemy;
         if (enemy.active) {
-          this.player.takeDamage(enemy.damage, this.time.now);
-          SoundManager.playPlayerHit();
-          this.emitStats();
-          if (this.player.isDead()) this.gameOver();
+          const took = this.player.takeDamage(enemy.damage, this.time.now);
+          if (took) {
+            SoundManager.playPlayerHit();
+            this.emitStats();
+            if (this.player.isDead()) this.gameOver();
+          }
         }
       }
     );
@@ -243,21 +299,25 @@ export class GameScene extends Phaser.Scene {
         if (!proj.active) return;
 
         const dmg = proj.getData('damage') as number;
-        this.player.takeDamage(dmg, this.time.now);
-        SoundManager.playPlayerHit();
+        const took = this.player.takeDamage(dmg, this.time.now);
 
-        // Efeito especial (slow do Supersonic)
-        const effect = proj.getData('effect') as string | null;
-        if (effect === 'slow') {
-          const duration = proj.getData('effectDuration') as number;
-          this.player.applySlow(duration, this.time.now);
-        }
-
+        // Destruir projétil sempre (mesmo se invincível)
         this.enemyProjectiles.killAndHide(proj);
         (proj.body as Phaser.Physics.Arcade.Body).enable = false;
 
-        this.emitStats();
-        if (this.player.isDead()) this.gameOver();
+        if (took) {
+          SoundManager.playPlayerHit();
+
+          // Efeito especial (slow do Supersonic)
+          const effect = proj.getData('effect') as string | null;
+          if (effect === 'slow') {
+            const duration = proj.getData('effectDuration') as number;
+            this.player.applySlow(duration, this.time.now);
+          }
+
+          this.emitStats();
+          if (this.player.isDead()) this.gameOver();
+        }
       }
     );
 
@@ -267,8 +327,10 @@ export class GameScene extends Phaser.Scene {
       (_player, gemObj) => {
         const gem = gemObj as Phaser.Physics.Arcade.Sprite;
         if (!gem.active) return;
+        const body = gem.body as Phaser.Physics.Arcade.Body;
+        body.setVelocity(0, 0);
+        body.enable = false;
         this.xpGems.killAndHide(gem);
-        (gem.body as Phaser.Physics.Arcade.Body).enable = false;
         const xpAmount = gem.getData('xpValue') as number ?? 1;
         SoundManager.playXpPickup();
         const leveled = this.player.addXp(xpAmount);
@@ -294,10 +356,12 @@ export class GameScene extends Phaser.Scene {
       const bullet = bulletObj as Phaser.Physics.Arcade.Sprite;
       const enemy = enemyObj as Enemy;
       if (!bullet.active || !enemy.active) return;
+      const hitX = bullet.x; const hitY = bullet.y;
       ember.getBullets().killAndHide(bullet);
       const body = bullet.body as Phaser.Physics.Arcade.Body;
       body.checkCollision.none = true; body.enable = false;
       SoundManager.playHit();
+      this.playFireHit(hitX, hitY);
       const killed = enemy.takeDamage(ember.getDamage());
       if (killed) { SoundManager.playEnemyDeath(); this.player.stats.kills++; this.spawnXpGem(enemy.x, enemy.y, enemy.xpValue); }
     });
@@ -324,6 +388,7 @@ export class GameScene extends Phaser.Scene {
       const lastHit = hitCooldowns.get(enemyId) ?? 0;
       if (this.time.now - lastHit < 400) return;
       hitCooldowns.set(enemyId, this.time.now);
+      this.playFireHit(enemy.x, enemy.y);
       const killed = enemy.takeDamage(fireSpin.getDamage());
       if (killed) { this.player.stats.kills++; this.spawnXpGem(enemy.x, enemy.y, enemy.xpValue); hitCooldowns.delete(enemyId); }
     });
@@ -372,6 +437,7 @@ export class GameScene extends Phaser.Scene {
       const lastHit = hitCooldowns.get(enemyId) ?? 0;
       if (this.time.now - lastHit < 300) return;
       hitCooldowns.set(enemyId, this.time.now);
+      this.playFireHit(enemy.x, enemy.y);
       const killed = enemy.takeDamage(fireBlast.getDamage());
       if (killed) { this.player.stats.kills++; this.spawnXpGem(enemy.x, enemy.y, enemy.xpValue); hitCooldowns.delete(enemyId); }
     });
@@ -407,7 +473,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private dropHeldItem(x: number, y: number): void {
-    const items: HeldItemType[] = ['charcoal', 'wideLens', 'choiceSpecs'];
+    const items: HeldItemType[] = [
+      'charcoal', 'wideLens', 'choiceSpecs', 'dragonFang', 'sharpBeak',
+      'scopeLens', 'razorClaw', 'shellBell', 'focusBand', 'quickClaw', 'leftovers',
+    ];
     // Filtrar itens que o player já tem
     const available = items.filter(i => !this.player.hasHeldItem(i));
     if (available.length === 0) {
@@ -418,13 +487,24 @@ export class GameScene extends Phaser.Scene {
     const item = available[Phaser.Math.Between(0, available.length - 1)];
 
     // Cria pickup visual do held item
-    const textureMap: Record<HeldItemType, string> = {
+    const textureMap: Partial<Record<HeldItemType, string>> = {
       charcoal: 'held-charcoal',
       wideLens: 'held-wide-lens',
       choiceSpecs: 'held-choice-specs',
+      quickClaw: 'held-quick-claw',
+      leftovers: 'held-leftovers',
+      dragonFang: 'held-dragon-fang',
+      sharpBeak: 'held-sharp-beak',
+      silkScarf: 'held-silk-scarf',
+      shellBell: 'held-shell-bell',
+      scopeLens: 'held-scope-lens',
+      razorClaw: 'held-razor-claw',
+      focusBand: 'held-focus-band',
+      metronome: 'held-metronome',
+      magnet: 'held-magnet',
     };
 
-    const pickup = new Pickup(this, x, y, 'oranBerry', textureMap[item]);
+    const pickup = new Pickup(this, x, y, 'oranBerry', textureMap[item] ?? 'held-charcoal');
     pickup.setData('isHeldItem', true);
     pickup.setData('heldItemType', item);
     this.pickups.add(pickup);
@@ -552,6 +632,14 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  // ── Fire Hit Effect ──────────────────────────────────────────────────
+  playFireHit(x: number, y: number): void {
+    const hit = this.add.sprite(x, y, 'atk-fire-hit');
+    hit.setScale(1.5).setDepth(10);
+    hit.play('anim-fire-hit');
+    hit.once('animationcomplete', () => hit.destroy());
+  }
+
   // ── XP Gems ───────────────────────────────────────────────────────
   spawnXpGem(x: number, y: number, count: number): void {
     for (let i = 0; i < count; i++) {
@@ -563,6 +651,7 @@ export class GameScene extends Phaser.Scene {
       gem.setData('xpValue', 1);
       const body = gem.body as Phaser.Physics.Arcade.Body;
       body.enable = true;
+      body.reset(x + ox, y + oy);
       this.tweens.add({ targets: gem, y: gem.y - 10, scaleX: 1.5, scaleY: 1.5, duration: 150, yoyo: true, ease: 'Quad.Out' });
     }
   }
@@ -571,57 +660,162 @@ export class GameScene extends Phaser.Scene {
   private triggerLevelUp(): void {
     this.isPaused = true;
     this.physics.pause();
+
+    // Verificar evolução do Pokémon
+    const level = this.player.stats.level;
+    const evolutionForm = CHARMANDER_FORMS.find(f => f.level === level && f.form !== 'base');
+    if (evolutionForm && evolutionForm.form !== this.player.stats.form) {
+      this.triggerEvolution(evolutionForm.form);
+      return;
+    }
+
     SoundManager.playLevelUp();
     const options = this.generateUpgradeOptions();
     this.events.emit('level-up', options, this.player.stats.level);
+  }
+
+  private triggerEvolution(targetForm: import('../types').PokemonForm): void {
+    const formConfig = this.player.evolve(targetForm);
+    if (!formConfig) {
+      // Fallback: se evolução falhar, faz level up normal
+      SoundManager.playLevelUp();
+      const options = this.generateUpgradeOptions();
+      this.events.emit('level-up', options, this.player.stats.level);
+      return;
+    }
+
+    SoundManager.playEvolve();
+
+    // Flash de tela branca
+    this.cameras.main.flash(800, 255, 255, 255);
+    this.cameras.main.shake(500, 0.01);
+
+    // Partículas de evolução
+    const px = this.player.x;
+    const py = this.player.y;
+    this.add.particles(px, py, 'fire-particle', {
+      speed: { min: 40, max: 120 }, lifespan: 1000, quantity: 30,
+      scale: { start: 2.5, end: 0 },
+      tint: [0xFFFFFF, 0xFFDD44, 0xFF8800],
+      emitting: false,
+    }).explode();
+
+    // Notificação de evolução
+    const name = formConfig.name;
+    const prevName = targetForm === 'stage1' ? 'Charmander' : 'Charmeleon';
+    this.showPickupNotification(`${prevName} EVOLUIU PARA ${name.toUpperCase()}!`, 0xFFDD44);
+
+    // Emite evento para UIScene mostrar overlay de evolução
+    this.events.emit('pokemon-evolved', {
+      fromName: prevName,
+      toName: name,
+      form: targetForm,
+      newSlots: formConfig.maxAttackSlots,
+    });
+
+    // Após 1.5s, retomar jogo com level up normal
+    this.time.delayedCall(1500, () => {
+      SoundManager.playLevelUp();
+      const options = this.generateUpgradeOptions();
+      this.events.emit('level-up', options, this.player.stats.level);
+    });
   }
 
   private resumeGame(): void { this.isPaused = false; this.physics.resume(); }
 
   private generateUpgradeOptions(): UpgradeOption[] {
     const pool: UpgradeOption[] = [];
+    const playerForm = this.player.stats.form;
+    const currentAttackCount = this.player.getAllAttacks().length;
+    const maxSlots = this.player.stats.attackSlots;
+    const hasRoom = currentAttackCount < maxSlots;
 
-    // Evoluções disponíveis (prioridade máxima)
+    // Evoluções de arma disponíveis (prioridade máxima)
     for (const evo of EVOLUTIONS) {
       const attack = this.player.getAttack(evo.baseAttack);
-      if (attack && attack.level >= evo.requiredLevel && this.player.hasHeldItem(evo.requiredItem)) {
-        // Verificar se já evoluiu
-        if (!this.player.hasAttack(evo.evolvedAttack)) {
-          const evoDef = UPGRADE_DEFS[`evolve${evo.evolvedAttack.charAt(0).toUpperCase() + evo.evolvedAttack.slice(1)}` as keyof typeof UPGRADE_DEFS];
-          if (evoDef) pool.push(evoDef);
-        }
+      if (!attack || attack.level < evo.requiredLevel) continue;
+      if (!this.player.hasHeldItem(evo.requiredItem)) continue;
+      if (!isFormUnlocked(playerForm, evo.requiredForm)) continue;
+      if (this.player.hasAttack(evo.evolvedAttack)) continue;
+
+      const evoDef = UPGRADE_DEFS[`evolve${evo.evolvedAttack.charAt(0).toUpperCase() + evo.evolvedAttack.slice(1)}` as keyof typeof UPGRADE_DEFS];
+      if (evoDef) pool.push(evoDef);
+    }
+
+    // Novos ataques (só se tem slot livre e forma suficiente)
+    if (hasRoom) {
+      const newAttackMap: Partial<Record<AttackType, keyof typeof UPGRADE_DEFS>> = {
+        ember: 'newEmber', scratch: 'newScratch', fireSpin: 'newFireSpin',
+        smokescreen: 'newSmokescreen', dragonBreath: 'newDragonBreath',
+        fireFang: 'newFireFang', flameCharge: 'newFlameCharge',
+        slash: 'newSlash', flamethrower: 'newFlamethrower', dragonClaw: 'newDragonClaw',
+        airSlash: 'newAirSlash', flareBlitz: 'newFlareBlitz',
+        hurricane: 'newHurricane', outrage: 'newOutrage',
+        heatWave: 'newHeatWave', dracoMeteor: 'newDracoMeteor',
+      };
+      for (const [atkKey, defKey] of Object.entries(newAttackMap)) {
+        const atkType = atkKey as AttackType;
+        const config = ATTACKS[atkType];
+        if (!config) continue;
+        // Forma suficiente?
+        if (!isFormUnlocked(playerForm, config.minForm)) continue;
+        // Já tem o ataque ou sua evolução?
+        if (this.player.hasAttack(atkType)) continue;
+        // Verificar se já tem a versão evoluída
+        const evo = EVOLUTIONS.find(e => e.baseAttack === atkType);
+        if (evo && this.player.hasAttack(evo.evolvedAttack)) continue;
+        pool.push(UPGRADE_DEFS[defKey]);
       }
     }
 
-    // Novas armas
-    if (!this.player.hasAttack('fireSpin') && !this.player.hasAttack('fireBlast')) pool.push(UPGRADE_DEFS.newFireSpin);
-    if (!this.player.hasAttack('flamethrower') && !this.player.hasAttack('blastBurn')) pool.push(UPGRADE_DEFS.newFlamethrower);
-
-    // Upgrades de armas existentes (somente se não evoluída e abaixo do cap)
-    if (this.player.hasAttack('ember') && !this.player.hasAttack('inferno')) {
-      const atk = this.player.getAttack('ember');
-      if (atk && atk.level < 5) pool.push(UPGRADE_DEFS.upgradeEmber);
+    // Upgrades de ataques existentes (abaixo do nível máximo)
+    const upgradeMap: Partial<Record<AttackType, keyof typeof UPGRADE_DEFS>> = {
+      ember: 'upgradeEmber', scratch: 'upgradeScratch', fireSpin: 'upgradeFireSpin',
+      smokescreen: 'upgradeSmokescreen', dragonBreath: 'upgradeDragonBreath',
+      fireFang: 'upgradeFireFang', flameCharge: 'upgradeFlameCharge',
+      slash: 'upgradeSlash', flamethrower: 'upgradeFlame', dragonClaw: 'upgradeDragonClaw',
+      airSlash: 'upgradeAirSlash', flareBlitz: 'upgradeFlareBlitz',
+      hurricane: 'upgradeHurricane', outrage: 'upgradeOutrage',
+      heatWave: 'upgradeHeatWave', dracoMeteor: 'upgradeDracoMeteor',
+    };
+    for (const [atkKey, defKey] of Object.entries(upgradeMap)) {
+      const atkType = atkKey as AttackType;
+      const atk = this.player.getAttack(atkType);
+      if (!atk) continue;
+      const maxLevel = ATTACKS[atkType]?.maxLevel ?? 8;
+      if (atk.level >= maxLevel) continue;
+      // Não oferecer upgrade se já evoluiu para a forma evoluída
+      const evo = EVOLUTIONS.find(e => e.baseAttack === atkType);
+      if (evo && this.player.hasAttack(evo.evolvedAttack)) continue;
+      pool.push(UPGRADE_DEFS[defKey]);
     }
-    if (this.player.hasAttack('fireSpin') && !this.player.hasAttack('fireBlast')) {
-      const atk = this.player.getAttack('fireSpin');
-      if (atk && atk.level < 5) pool.push(UPGRADE_DEFS.upgradeFireSpin);
-    }
-    if (this.player.hasAttack('flamethrower') && !this.player.hasAttack('blastBurn')) {
-      const atk = this.player.getAttack('flamethrower');
-      if (atk && atk.level < 5) pool.push(UPGRADE_DEFS.upgradeFlame);
+
+    // Held Items (se não tem e tem slot de passiva livre)
+    const heldItemCount = this.player.getHeldItems().length;
+    const maxPassive = this.player.stats.passiveSlots;
+    if (heldItemCount < maxPassive) {
+      const items: { key: HeldItemType; defKey: keyof typeof UPGRADE_DEFS }[] = [
+        { key: 'charcoal', defKey: 'itemCharcoal' },
+        { key: 'wideLens', defKey: 'itemWideLens' },
+        { key: 'choiceSpecs', defKey: 'itemChoiceSpecs' },
+        { key: 'dragonFang', defKey: 'itemDragonFang' },
+        { key: 'sharpBeak', defKey: 'itemSharpBeak' },
+        { key: 'scopeLens', defKey: 'itemScopeLens' },
+        { key: 'razorClaw', defKey: 'itemRazorClaw' },
+        { key: 'shellBell', defKey: 'itemShellBell' },
+        { key: 'focusBand', defKey: 'itemFocusBand' },
+      ];
+      for (const { key, defKey } of items) {
+        if (!this.player.hasHeldItem(key)) pool.push(UPGRADE_DEFS[defKey]);
+      }
     }
 
-    // Held Items (se não tem)
-    if (!this.player.hasHeldItem('charcoal')) pool.push(UPGRADE_DEFS.itemCharcoal);
-    if (!this.player.hasHeldItem('wideLens')) pool.push(UPGRADE_DEFS.itemWideLens);
-    if (!this.player.hasHeldItem('choiceSpecs')) pool.push(UPGRADE_DEFS.itemChoiceSpecs);
-
-    // Stats
+    // Stats gerais (sempre disponíveis)
     pool.push(UPGRADE_DEFS.maxHpUp, UPGRADE_DEFS.speedUp, UPGRADE_DEFS.magnetUp);
 
     Phaser.Utils.Array.Shuffle(pool);
 
-    // Garante que evoluções apareçam quando disponíveis
+    // Garante que evoluções de arma apareçam quando disponíveis
     const evolutions = pool.filter(p => p.id.startsWith('evolve'));
     const nonEvolutions = pool.filter(p => !p.id.startsWith('evolve'));
 
@@ -643,11 +837,89 @@ export class GameScene extends Phaser.Scene {
         this.player.addAttack('flamethrower', ft);
         break;
       }
+      case 'newScratch': {
+        const s = new Scratch(this, this.player, this.enemyGroup);
+        this.player.addAttack('scratch', s);
+        break;
+      }
+      case 'newFireFang': {
+        const ff = new FireFang(this, this.player, this.enemyGroup);
+        this.player.addAttack('fireFang', ff);
+        break;
+      }
+      case 'newDragonBreath': {
+        const db = new DragonBreath(this, this.player, this.enemyGroup);
+        this.player.addAttack('dragonBreath', db);
+        break;
+      }
+      case 'newSmokescreen': {
+        const ss = new Smokescreen(this, this.player, this.enemyGroup);
+        this.player.addAttack('smokescreen', ss);
+        break;
+      }
+      case 'newFlameCharge': {
+        const fc = new FlameCharge(this, this.player, this.enemyGroup);
+        this.player.addAttack('flameCharge', fc);
+        break;
+      }
+      case 'newSlash': {
+        const sl = new Slash(this, this.player, this.enemyGroup);
+        this.player.addAttack('slash', sl);
+        break;
+      }
+      case 'newDragonClaw': {
+        const dc = new DragonClaw(this, this.player, this.enemyGroup);
+        this.player.addAttack('dragonClaw', dc);
+        break;
+      }
+      case 'newAirSlash': {
+        const as2 = new AirSlash(this, this.player, this.enemyGroup);
+        this.player.addAttack('airSlash', as2);
+        break;
+      }
+      case 'newFlareBlitz': {
+        const fb2 = new FlareBlitz(this, this.player, this.enemyGroup);
+        this.player.addAttack('flareBlitz', fb2);
+        break;
+      }
+      case 'newHurricane': {
+        const hu = new Hurricane(this, this.player, this.enemyGroup);
+        this.player.addAttack('hurricane', hu);
+        break;
+      }
+      case 'newOutrage': {
+        const ou = new Outrage(this, this.player, this.enemyGroup);
+        this.player.addAttack('outrage', ou);
+        break;
+      }
+      case 'newHeatWave': {
+        const hw = new HeatWave(this, this.player, this.enemyGroup);
+        this.player.addAttack('heatWave', hw);
+        break;
+      }
+      case 'newDracoMeteor': {
+        const dm = new DracoMeteor(this, this.player, this.enemyGroup);
+        this.player.addAttack('dracoMeteor', dm);
+        break;
+      }
 
       // Upgrades
       case 'upgradeEmber': this.player.getAttack('ember')?.upgrade(); break;
       case 'upgradeFireSpin': this.player.getAttack('fireSpin')?.upgrade(); break;
       case 'upgradeFlame': this.player.getAttack('flamethrower')?.upgrade(); break;
+      case 'upgradeScratch': this.player.getAttack('scratch')?.upgrade(); break;
+      case 'upgradeFireFang': this.player.getAttack('fireFang')?.upgrade(); break;
+      case 'upgradeDragonBreath': this.player.getAttack('dragonBreath')?.upgrade(); break;
+      case 'upgradeSmokescreen': this.player.getAttack('smokescreen')?.upgrade(); break;
+      case 'upgradeFlameCharge': this.player.getAttack('flameCharge')?.upgrade(); break;
+      case 'upgradeSlash': this.player.getAttack('slash')?.upgrade(); break;
+      case 'upgradeDragonClaw': this.player.getAttack('dragonClaw')?.upgrade(); break;
+      case 'upgradeAirSlash': this.player.getAttack('airSlash')?.upgrade(); break;
+      case 'upgradeFlareBlitz': this.player.getAttack('flareBlitz')?.upgrade(); break;
+      case 'upgradeHurricane': this.player.getAttack('hurricane')?.upgrade(); break;
+      case 'upgradeOutrage': this.player.getAttack('outrage')?.upgrade(); break;
+      case 'upgradeHeatWave': this.player.getAttack('heatWave')?.upgrade(); break;
+      case 'upgradeDracoMeteor': this.player.getAttack('dracoMeteor')?.upgrade(); break;
 
       // Stats
       case 'maxHpUp':
@@ -665,6 +937,12 @@ export class GameScene extends Phaser.Scene {
       case 'itemCharcoal': this.player.addHeldItem('charcoal'); break;
       case 'itemWideLens': this.player.addHeldItem('wideLens'); break;
       case 'itemChoiceSpecs': this.player.addHeldItem('choiceSpecs'); break;
+      case 'itemDragonFang': this.player.addHeldItem('dragonFang'); break;
+      case 'itemSharpBeak': this.player.addHeldItem('sharpBeak'); break;
+      case 'itemScopeLens': this.player.addHeldItem('scopeLens'); break;
+      case 'itemRazorClaw': this.player.addHeldItem('razorClaw'); break;
+      case 'itemShellBell': this.player.addHeldItem('shellBell'); break;
+      case 'itemFocusBand': this.player.addHeldItem('focusBand'); break;
 
       // EVOLUÇÕES
       case 'evolveInferno': {
@@ -694,6 +972,69 @@ export class GameScene extends Phaser.Scene {
         SoundManager.playEvolve();
         this.showPickupNotification('FLAMETHROWER EVOLUIU PARA BLAST BURN!', 0xff0000);
         this.cameras.main.flash(500, 255, 50, 0);
+        break;
+      }
+      case 'evolveFurySwipes': {
+        this.player.removeAttack('scratch');
+        const fs2 = new FurySwipes(this, this.player, this.enemyGroup);
+        this.player.addAttack('furySwipes', fs2);
+        SoundManager.playEvolve();
+        this.showPickupNotification('SCRATCH EVOLUIU PARA FURY SWIPES!', 0xcccccc);
+        this.cameras.main.flash(500, 200, 200, 200);
+        break;
+      }
+      case 'evolveBlazeKick': {
+        this.player.removeAttack('fireFang');
+        const bk = new BlazeKick(this, this.player, this.enemyGroup);
+        this.player.addAttack('blazeKick', bk);
+        SoundManager.playEvolve();
+        this.showPickupNotification('FIRE FANG EVOLUIU PARA BLAZE KICK!', 0xff6600);
+        this.cameras.main.flash(500, 255, 100, 0);
+        break;
+      }
+      case 'evolveFlareRush': {
+        this.player.removeAttack('flameCharge');
+        const fr = new FlareRush(this, this.player, this.enemyGroup);
+        this.player.addAttack('flareRush', fr);
+        SoundManager.playEvolve();
+        this.showPickupNotification('FLAME CHARGE EVOLUIU PARA FLARE RUSH!', 0xff4400);
+        this.cameras.main.flash(500, 255, 80, 0);
+        break;
+      }
+      case 'evolveDragonPulse': {
+        this.player.removeAttack('dragonBreath');
+        const dp = new DragonPulse(this, this.player, this.enemyGroup);
+        this.player.addAttack('dragonPulse', dp);
+        SoundManager.playEvolve();
+        this.showPickupNotification('DRAGON BREATH EVOLUIU PARA DRAGON PULSE!', 0x7744ff);
+        this.cameras.main.flash(500, 120, 70, 255);
+        break;
+      }
+      case 'evolveNightSlash': {
+        this.player.removeAttack('slash');
+        const ns = new NightSlash(this, this.player, this.enemyGroup);
+        this.player.addAttack('nightSlash', ns);
+        SoundManager.playEvolve();
+        this.showPickupNotification('SLASH EVOLUIU PARA NIGHT SLASH!', 0x444466);
+        this.cameras.main.flash(500, 70, 70, 100);
+        break;
+      }
+      case 'evolveDragonRush': {
+        this.player.removeAttack('dragonClaw');
+        const dr = new DragonRush(this, this.player, this.enemyGroup);
+        this.player.addAttack('dragonRush', dr);
+        SoundManager.playEvolve();
+        this.showPickupNotification('DRAGON CLAW EVOLUIU PARA DRAGON RUSH!', 0x7744ff);
+        this.cameras.main.flash(500, 120, 70, 255);
+        break;
+      }
+      case 'evolveAerialAce': {
+        this.player.removeAttack('airSlash');
+        const aa = new AerialAce(this, this.player, this.enemyGroup);
+        this.player.addAttack('aerialAce', aa);
+        SoundManager.playEvolve();
+        this.showPickupNotification('AIR SLASH EVOLUIU PARA AERIAL ACE!', 0x88ccff);
+        this.cameras.main.flash(500, 140, 200, 255);
         break;
       }
     }

@@ -1,10 +1,45 @@
 import type Phaser from 'phaser';
 
-// ── Tipos de Ataque e Inimigo ──────────────────────────────────────
-export type AttackType = 'ember' | 'fireSpin' | 'flamethrower' | 'inferno' | 'fireBlast' | 'blastBurn';
+// ── Formas do Pokemon ─────────────────────────────────────────────
+export type PokemonForm = 'base' | 'stage1' | 'stage2';
+
+export interface PokemonFormConfig {
+  readonly form: PokemonForm;
+  readonly name: string;
+  readonly sprite: SpriteConfig;
+  readonly level: number;
+  readonly maxAttackSlots: number;
+  readonly maxPassiveSlots: number;
+  readonly blazeTier: 1 | 2 | 3;
+}
+
+// ── Tipos de Ataque (todos, incluindo evoluções) ─────────────────
+export type AttackType =
+  // Charmander base
+  | 'ember' | 'scratch' | 'fireSpin' | 'smokescreen' | 'dragonBreath' | 'fireFang' | 'flameCharge'
+  // Charmeleon
+  | 'slash' | 'flamethrower' | 'dragonClaw'
+  // Charizard
+  | 'airSlash' | 'flareBlitz' | 'hurricane' | 'outrage'
+  // Evoluções de arma
+  | 'inferno' | 'fireBlast' | 'blastBurn' | 'furySwipes' | 'blazeKick'
+  | 'dragonPulse' | 'nightSlash' | 'aerialAce' | 'flareRush' | 'dragonRush'
+  // Prime
+  | 'heatWave' | 'dracoMeteor';
+
+// ── Tipos de Elemento ─────────────────────────────────────────────
+export type ElementType = 'fire' | 'normal' | 'dragon' | 'flying';
+
+// ── Tipos de Inimigo e Direção ────────────────────────────────────
 export type EnemyType = 'rattata' | 'pidgey' | 'zubat' | 'geodude' | 'gastly';
 export type Direction = 'down' | 'downRight' | 'right' | 'upRight' | 'up' | 'upLeft' | 'left' | 'downLeft';
-export type HeldItemType = 'charcoal' | 'wideLens' | 'choiceSpecs';
+
+// ── Held Items (expandido) ────────────────────────────────────────
+export type HeldItemType =
+  | 'charcoal' | 'wideLens' | 'choiceSpecs' | 'quickClaw' | 'leftovers'
+  | 'dragonFang' | 'sharpBeak' | 'silkScarf' | 'shellBell'
+  | 'scopeLens' | 'razorClaw' | 'focusBand' | 'metronome' | 'magnet';
+
 export type PickupType = 'oranBerry' | 'magnetBurst' | 'rareCandy' | 'pokeballBomb';
 export type DestructibleType = 'tallGrass' | 'berryBush' | 'rockSmash' | 'treasureChest';
 
@@ -18,7 +53,25 @@ export interface SpriteConfig {
   readonly directions: 8;
 }
 
-// ── Configurações imutáveis ────────────────────────────────────────
+// ── Configuração de Ataque ────────────────────────────────────────
+export interface AttackConfig {
+  readonly key: AttackType;
+  readonly name: string;
+  readonly description: string;
+  readonly baseDamage: number;
+  readonly baseCooldown: number;
+  readonly element: ElementType;
+  readonly maxLevel: number;
+  readonly minForm: PokemonForm;
+}
+
+// ── Pool de ataques por forma ─────────────────────────────────────
+export interface AttackPoolEntry {
+  readonly attack: AttackType;
+  readonly minForm: PokemonForm;
+}
+
+// ── Configurações de Inimigos ─────────────────────────────────────
 export interface EnemyConfig {
   readonly key: EnemyType;
   readonly name: string;
@@ -42,14 +95,6 @@ export interface EnemyRangedConfig {
   readonly effectDurationMs?: number;
 }
 
-export interface AttackConfig {
-  readonly key: AttackType;
-  readonly name: string;
-  readonly description: string;
-  readonly baseDamage: number;
-  readonly baseCooldown: number;
-}
-
 // ── Held Items (Passivos) ──────────────────────────────────────────
 export interface HeldItemConfig {
   readonly key: HeldItemType;
@@ -58,6 +103,7 @@ export interface HeldItemConfig {
   readonly icon: string;
   readonly color: number;
   readonly effect: string;
+  readonly maxLevel: number;
 }
 
 // ── Evolução de Ataques ────────────────────────────────────────────
@@ -65,11 +111,31 @@ export interface EvolutionConfig {
   readonly baseAttack: AttackType;
   readonly requiredLevel: number;
   readonly requiredItem: HeldItemType;
+  readonly requiredForm: PokemonForm;
   readonly evolvedAttack: AttackType;
   readonly name: string;
   readonly description: string;
   readonly icon: string;
   readonly color: number;
+}
+
+// ── Passiva Innata (Blaze, Torrent, Overgrow) ──────────────────────
+export interface BlazeConfig {
+  readonly burnChance: number;
+  readonly burnDps: number;
+  readonly burnDuration: number;
+  readonly bonusDmgOnBurned: number;
+  readonly explodeOnKill: boolean;
+}
+
+// ── Status Effects ─────────────────────────────────────────────────
+export type StatusEffectType = 'burn' | 'stun' | 'slow' | 'confusion';
+
+export interface StatusEffect {
+  type: StatusEffectType;
+  duration: number;
+  remaining: number;
+  value: number;
 }
 
 // ── Objetos Destrutíveis ───────────────────────────────────────────
@@ -101,6 +167,9 @@ export interface PlayerState {
   xpToNext: number;
   level: number;
   kills: number;
+  form: PokemonForm;
+  attackSlots: number;
+  passiveSlots: number;
 }
 
 // ── Interface base dos ataques ─────────────────────────────────────
@@ -143,3 +212,14 @@ export const DIRECTION_ROW: Readonly<Record<Direction, number>> = {
   left: 6,
   downLeft: 7,
 } as const;
+
+// ── Helpers ────────────────────────────────────────────────────────
+export const FORM_ORDER: readonly PokemonForm[] = ['base', 'stage1', 'stage2'] as const;
+
+export function formIndex(form: PokemonForm): number {
+  return FORM_ORDER.indexOf(form);
+}
+
+export function isFormUnlocked(current: PokemonForm, required: PokemonForm): boolean {
+  return formIndex(current) >= formIndex(required);
+}

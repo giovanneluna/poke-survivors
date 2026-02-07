@@ -45,30 +45,32 @@ export class FireBlast implements Attack {
   private createOrbs(): void {
     this.orbs.clear(true, true);
     for (let i = 0; i < this.orbCount; i++) {
-      const orb = this.scene.physics.add.sprite(0, 0, 'fire-orb');
-      orb.setScale(2.5);
+      const orb = this.scene.physics.add.sprite(0, 0, 'atk-fire-range');
+      orb.setScale(1.2);
       orb.setDepth(9);
       orb.setAlpha(0.9);
       orb.setTint(0xff4400);
+      orb.play('anim-fire-orb');
       const body = orb.body as Phaser.Physics.Arcade.Body;
-      body.setCircle(8);
+      body.setCircle(14);
+      body.setOffset(6, 6);
+      body.pushable = false;
+      body.immovable = true;
       this.orbs.add(orb);
     }
   }
 
   private pulse(): void {
-    // Visual: anel de fogo expandindo
-    const ring = this.scene.add.circle(this.player.x, this.player.y, 10, 0xff4400, 0.4);
-    ring.setDepth(7);
+    // Visual: sprite Fire Blast expandindo
+    const blast = this.scene.add.sprite(this.player.x, this.player.y, 'atk-fire-blast');
+    blast.setScale(1.5).setDepth(7).setAlpha(0.8);
+    blast.play('anim-fire-blast');
     this.scene.tweens.add({
-      targets: ring,
-      radius: this.pulseRadius,
+      targets: blast,
+      scale: 2.5,
       alpha: 0,
-      duration: 500,
-      onUpdate: () => {
-        ring.setRadius(ring.radius);
-      },
-      onComplete: () => ring.destroy(),
+      duration: 600,
+      onComplete: () => blast.destroy(),
     });
 
     // Dano AoE no pulso

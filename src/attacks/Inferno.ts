@@ -30,7 +30,7 @@ export class Inferno implements Attack {
     this.cooldown = ATTACKS.inferno.baseCooldown;
 
     this.bullets = scene.physics.add.group({
-      defaultKey: 'inferno-projectile',
+      defaultKey: 'atk-ember',
       maxSize: 50,
     });
 
@@ -58,10 +58,25 @@ export class Inferno implements Attack {
 
     for (let i = 0; i < count; i++) {
       const target = sorted[i].enemy;
-      const bullet = this.bullets.get(this.player.x, this.player.y, 'inferno-projectile') as Phaser.Physics.Arcade.Sprite | null;
+
+      // Dano direto se inimigo está muito perto
+      if (sorted[i].dist < 20) {
+        const enemy = target as unknown as Enemy;
+        if (typeof enemy.takeDamage === 'function') {
+          const killed = enemy.takeDamage(this.damage);
+          if (killed) {
+            this.scene.events.emit('cone-attack-kill', target.x, target.y, enemy.xpValue);
+          }
+        }
+        this.explodeAt(target.x, target.y);
+        continue;
+      }
+
+      const bullet = this.bullets.get(this.player.x, this.player.y, 'atk-ember') as Phaser.Physics.Arcade.Sprite | null;
       if (!bullet) continue;
 
-      bullet.setActive(true).setVisible(true).setScale(2).setDepth(8);
+      bullet.setActive(true).setVisible(true).setScale(2.5).setDepth(8);
+      bullet.play('anim-ember');
       const body = bullet.body as Phaser.Physics.Arcade.Body;
       body.checkCollision.none = false;
       body.enable = true;
@@ -90,13 +105,19 @@ export class Inferno implements Attack {
   }
 
   explodeAt(x: number, y: number): void {
-    // Efeito visual de explosão
+    // Efeito visual de explosão com sprite real
+    const explosion = this.scene.add.sprite(x, y, 'atk-fire-hit');
+    explosion.setScale(2.5).setDepth(10);
+    explosion.play('anim-fire-hit');
+    explosion.once('animationcomplete', () => explosion.destroy());
+
+    // Partículas complementares
     this.scene.add.particles(x, y, 'fire-particle', {
       speed: { min: 40, max: 120 },
-      lifespan: 400,
-      quantity: 15,
-      scale: { start: 2.5, end: 0 },
-      tint: [0xff2200, 0xff6600, 0xffaa00, 0xffcc00],
+      lifespan: 300,
+      quantity: 10,
+      scale: { start: 2, end: 0 },
+      tint: [0xff2200, 0xff6600, 0xffaa00],
       emitting: false,
     }).explode();
 
@@ -107,7 +128,10 @@ export class Inferno implements Attack {
       if (!enemy.active) continue;
       const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
       if (dist <= this.explosionRadius) {
-        enemy.takeDamage(Math.floor(this.damage * 0.6));
+        const killed = enemy.takeDamage(Math.floor(this.damage * 0.6));
+        if (killed) {
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
+        }
       }
     }
   }
