@@ -158,13 +158,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   isDead(): boolean { return this.stats.hp <= 0; }
 
-  handleMovement(time: number): void {
+  handleMovement(time: number, joystickDir?: Phaser.Math.Vector2): void {
     const dir = new Phaser.Math.Vector2(0, 0);
 
     if (this.cursors.right.isDown) dir.x = 1;
     else if (this.cursors.left.isDown) dir.x = -1;
     if (this.cursors.down.isDown) dir.y = 1;
     else if (this.cursors.up.isDown) dir.y = -1;
+
+    // Joystick virtual sobrescreve se ativo e teclado não está sendo usado
+    if (dir.x === 0 && dir.y === 0 && joystickDir && (joystickDir.x !== 0 || joystickDir.y !== 0)) {
+      dir.set(joystickDir.x, joystickDir.y);
+    }
 
     const isMoving = dir.x !== 0 || dir.y !== 0;
 

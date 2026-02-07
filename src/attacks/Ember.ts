@@ -19,6 +19,7 @@ export class Ember implements Attack {
   private damage: number;
   private cooldown: number;
   private projectileCount = 1;
+  private fireId = 0;
 
   constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
     this.scene = scene;
@@ -81,6 +82,8 @@ export class Ember implements Attack {
 
       if (!bullet) continue;
 
+      const currentFireId = ++this.fireId;
+      bullet.setData('fireId', currentFireId);
       bullet.setActive(true).setVisible(true).setScale(1.5);
       bullet.setDepth(8);
       bullet.play('anim-ember');
@@ -102,9 +105,9 @@ export class Ember implements Attack {
         tint: [0xff6600, 0xff4400, 0xffaa00],
       });
 
-      // Auto-destruir após 3s
+      // Auto-destruir após 3s (só se ainda for o mesmo disparo)
       this.scene.time.delayedCall(3000, () => {
-        if (bullet.active) {
+        if (bullet.active && bullet.getData('fireId') === currentFireId) {
           this.bullets.killAndHide(bullet);
           body.checkCollision.none = true;
           body.enable = false;

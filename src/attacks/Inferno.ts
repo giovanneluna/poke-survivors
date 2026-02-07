@@ -21,6 +21,7 @@ export class Inferno implements Attack {
   private cooldown: number;
   private projectileCount = 3;
   private readonly explosionRadius = 60;
+  private fireId = 0;
 
   constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
     this.scene = scene;
@@ -75,6 +76,8 @@ export class Inferno implements Attack {
       const bullet = this.bullets.get(this.player.x, this.player.y, 'atk-ember') as Phaser.Physics.Arcade.Sprite | null;
       if (!bullet) continue;
 
+      const currentFireId = ++this.fireId;
+      bullet.setData('fireId', currentFireId);
       bullet.setActive(true).setVisible(true).setScale(2.5).setDepth(8);
       bullet.play('anim-ember');
       const body = bullet.body as Phaser.Physics.Arcade.Body;
@@ -94,7 +97,7 @@ export class Inferno implements Attack {
       });
 
       this.scene.time.delayedCall(3000, () => {
-        if (bullet.active) {
+        if (bullet.active && bullet.getData('fireId') === currentFireId) {
           this.bullets.killAndHide(bullet);
           body.checkCollision.none = true;
           body.enable = false;

@@ -33,6 +33,7 @@ import { DragonRush } from '../attacks/DragonRush';
 import { HeatWave } from '../attacks/HeatWave';
 import { DracoMeteor } from '../attacks/DracoMeteor';
 import { SoundManager } from '../audio/SoundManager';
+import { VirtualJoystick } from '../ui/VirtualJoystick';
 
 export class GameScene extends Phaser.Scene {
   player!: Player;
@@ -47,6 +48,7 @@ export class GameScene extends Phaser.Scene {
   private gameTime = 0;
   private isPaused = false;
   private rerollLocked = false;
+  private joystick: VirtualJoystick | null = null;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -58,12 +60,18 @@ export class GameScene extends Phaser.Scene {
     this.gameTime = 0;
     this.difficultyLevel = 0;
     this.rerollLocked = false;
+    this.joystick = null;
 
     this.physics.world.setBounds(0, 0, GAME.worldWidth, GAME.worldHeight);
     this.generateWorld();
 
     // ── Player ─────────────────────────────────────────────────────
     this.player = new Player(this, GAME.worldWidth / 2, GAME.worldHeight / 2);
+
+    // ── Joystick virtual (touch devices) ─────────────────────────
+    if (this.sys.game.device.input.touch) {
+      this.joystick = new VirtualJoystick(this);
+    }
 
     // ── Grupos ─────────────────────────────────────────────────────
     this.enemyGroup = this.physics.add.group({ classType: Enemy, runChildUpdate: false });
@@ -207,7 +215,7 @@ export class GameScene extends Phaser.Scene {
     if (this.isPaused) return;
 
     this.gameTime += delta;
-    this.player.handleMovement(time);
+    this.player.handleMovement(time, this.joystick?.direction);
     this.player.updateAttacks(time, delta);
 
     const playerPos = new Phaser.Math.Vector2(this.player.x, this.player.y);
