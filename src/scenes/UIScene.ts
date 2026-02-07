@@ -89,7 +89,7 @@ export class UIScene extends Phaser.Scene {
 
     const gameScene = this.scene.get('GameScene');
     gameScene.events.on('stats-update', (stats: StatsData) => this.updateHUD(stats));
-    gameScene.events.on('level-up', (options: UpgradeOption[], level: number) => this.showLevelUp(options, level));
+    gameScene.events.on('level-up', (options: UpgradeOption[], level: number, rerolls: number) => this.showLevelUp(options, level, rerolls));
     gameScene.events.on('game-over', (data: GameOverData) => this.showGameOver(data));
     gameScene.events.on('pokemon-evolved', (data: { fromName: string; toName: string; form: string; newSlots: number }) => {
       this.showEvolutionOverlay(data.fromName, data.toName);
@@ -181,7 +181,7 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
-  private showLevelUp(options: UpgradeOption[], level: number): void {
+  private showLevelUp(options: UpgradeOption[], level: number, rerolls: number = 0): void {
     const { width, height } = this.cameras.main;
     this.levelUpContainer.removeAll(true);
 
@@ -272,6 +272,41 @@ export class UIScene extends Phaser.Scene {
 
       this.levelUpContainer.add(hitbox);
     });
+
+    // ── Botão de Reroll ────────────────────────────────────────────
+    const rerollY = height / 2 + 120;
+    const hasRerolls = rerolls > 0;
+    const rerollText = hasRerolls
+      ? `Reroll (${rerolls} restante${rerolls > 1 ? 's' : ''})`
+      : 'Sem rerolls';
+
+    const rerollBtn = this.add.text(width / 2, rerollY, rerollText, {
+      fontSize: '13px',
+      color: hasRerolls ? '#aaaaaa' : '#444444',
+      fontFamily: 'monospace',
+      stroke: '#000000',
+      strokeThickness: 2,
+    }).setOrigin(0.5);
+    this.levelUpContainer.add(rerollBtn);
+
+    if (hasRerolls) {
+      // Delay para evitar double-fire (novo botão captura o pointer do click anterior)
+      this.time.delayedCall(150, () => {
+        if (!rerollBtn.active) return;
+        rerollBtn.setInteractive({ useHandCursor: true });
+
+        rerollBtn.on('pointerover', () => {
+          rerollBtn.setColor('#ffcc00');
+          SoundManager.playHover();
+        });
+        rerollBtn.on('pointerout', () => rerollBtn.setColor('#aaaaaa'));
+        rerollBtn.on('pointerdown', () => {
+          rerollBtn.disableInteractive();
+          const gameScene = this.scene.get('GameScene');
+          gameScene.events.emit('reroll-requested');
+        });
+      });
+    }
 
     this.levelUpContainer.setVisible(true);
   }

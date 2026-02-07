@@ -30,6 +30,15 @@ export type AttackType =
 // ── Tipos de Elemento ─────────────────────────────────────────────
 export type ElementType = 'fire' | 'normal' | 'dragon' | 'flying';
 
+// ── Categorias de Ataque ─────────────────────────────────────────
+export type AttackCategory =
+  | 'projectile'   // Ember, Inferno, DragonPulse, AirSlash, AerialAce
+  | 'orbital'      // FireSpin, FireBlast
+  | 'cone'         // Scratch, Slash, FurySwipes, NightSlash, Flamethrower, BlastBurn, DragonBreath, DragonClaw, FireFang, BlazeKick
+  | 'dash'         // FlameCharge, FlareRush, FlareBlitz, DragonRush
+  | 'area'         // Hurricane, Outrage, HeatWave, DracoMeteor
+  | 'aura';        // Smokescreen
+
 // ── Tipos de Inimigo e Direção ────────────────────────────────────
 export type EnemyType = 'rattata' | 'pidgey' | 'zubat' | 'geodude' | 'gastly';
 export type Direction = 'down' | 'downRight' | 'right' | 'upRight' | 'up' | 'upLeft' | 'left' | 'downLeft';
@@ -91,6 +100,7 @@ export interface EnemyRangedConfig {
   readonly cooldownMs: number;
   readonly range: number;
   readonly homing: boolean;
+  readonly projectileScale?: number;
   readonly effect?: 'slow';
   readonly effectDurationMs?: number;
 }
@@ -170,6 +180,7 @@ export interface PlayerState {
   form: PokemonForm;
   attackSlots: number;
   passiveSlots: number;
+  rerolls: number;
 }
 
 // ── Interface base dos ataques ─────────────────────────────────────

@@ -51,6 +51,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       form: 'base',
       attackSlots: 4,
       passiveSlots: 4,
+      rerolls: 3,
     };
 
     const keyboard = scene.input.keyboard as Phaser.Input.Keyboard.KeyboardPlugin;

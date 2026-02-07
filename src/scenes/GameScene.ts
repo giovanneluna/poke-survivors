@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GAME, ENEMIES, WAVES, SPAWN, XP_GEM, UPGRADE_DEFS, DESTRUCTIBLES, EVOLUTIONS, ATTACKS, CHARMANDER_FORMS } from '../config';
-import type { EnemyConfig, WaveConfig, UpgradeOption, PickupType, HeldItemType, DestructibleType, AttackType } from '../types';
+import type { EnemyConfig, WaveConfig, UpgradeOption, PickupType, HeldItemType, DestructibleType, AttackType, PokemonForm } from '../types';
 import { isFormUnlocked } from '../types';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
@@ -46,6 +46,7 @@ export class GameScene extends Phaser.Scene {
   private difficultyLevel = 0;
   private gameTime = 0;
   private isPaused = false;
+  private rerollLocked = false;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -56,6 +57,7 @@ export class GameScene extends Phaser.Scene {
     this.isPaused = false;
     this.gameTime = 0;
     this.difficultyLevel = 0;
+    this.rerollLocked = false;
 
     this.physics.world.setBounds(0, 0, GAME.worldWidth, GAME.worldHeight);
     this.generateWorld();
@@ -107,6 +109,18 @@ export class GameScene extends Phaser.Scene {
     this.events.on('upgrade-selected', (upgradeId: string) => {
       this.applyUpgrade(upgradeId);
       this.resumeGame();
+    });
+
+    // ── Escuta reroll (flag anti-reentry contra double-fire do Phaser) ─
+    this.events.on('reroll-requested', () => {
+      if (this.rerollLocked) return;
+      if (this.player.stats.rerolls <= 0) return;
+      this.rerollLocked = true;
+      this.player.stats.rerolls--;
+      SoundManager.playClick();
+      const newOptions = this.generateUpgradeOptions();
+      this.events.emit('level-up', newOptions, this.player.stats.level, this.player.stats.rerolls);
+      this.time.delayedCall(250, () => { this.rerollLocked = false; });
     });
 
     // ── Kills de ataques em cone (Flamethrower, BlastBurn, Ember close-range)
@@ -246,7 +260,7 @@ export class GameScene extends Phaser.Scene {
     const proj = this.enemyProjectiles.get(enemy.x, enemy.y, config.projectileKey) as Phaser.Physics.Arcade.Sprite | null;
     if (!proj) return;
 
-    proj.setActive(true).setVisible(true).setScale(0.6).setDepth(7);
+    proj.setActive(true).setVisible(true).setScale(config.projectileScale ?? 0.6).setDepth(7);
     proj.setData('damage', config.damage);
     proj.setData('homing', config.homing);
     proj.setData('speed', config.speed);
@@ -671,7 +685,7 @@ export class GameScene extends Phaser.Scene {
 
     SoundManager.playLevelUp();
     const options = this.generateUpgradeOptions();
-    this.events.emit('level-up', options, this.player.stats.level);
+    this.events.emit('level-up', options, this.player.stats.level, this.player.stats.rerolls);
   }
 
   private triggerEvolution(targetForm: import('../types').PokemonForm): void {
@@ -680,7 +694,7 @@ export class GameScene extends Phaser.Scene {
       // Fallback: se evolução falhar, faz level up normal
       SoundManager.playLevelUp();
       const options = this.generateUpgradeOptions();
-      this.events.emit('level-up', options, this.player.stats.level);
+      this.events.emit('level-up', options, this.player.stats.level, this.player.stats.rerolls);
       return;
     }
 
@@ -794,6 +808,11 @@ export class GameScene extends Phaser.Scene {
     const heldItemCount = this.player.getHeldItems().length;
     const maxPassive = this.player.stats.passiveSlots;
     if (heldItemCount < maxPassive) {
+      // Restrições de tipo: Dragon Fang só Charmeleon+, Sharp Beak só Charizard
+      const itemFormReqs: Partial<Record<HeldItemType, PokemonForm>> = {
+        dragonFang: 'stage1',
+        sharpBeak: 'stage2',
+      };
       const items: { key: HeldItemType; defKey: keyof typeof UPGRADE_DEFS }[] = [
         { key: 'charcoal', defKey: 'itemCharcoal' },
         { key: 'wideLens', defKey: 'itemWideLens' },
@@ -806,7 +825,10 @@ export class GameScene extends Phaser.Scene {
         { key: 'focusBand', defKey: 'itemFocusBand' },
       ];
       for (const { key, defKey } of items) {
-        if (!this.player.hasHeldItem(key)) pool.push(UPGRADE_DEFS[defKey]);
+        if (this.player.hasHeldItem(key)) continue;
+        const formReq = itemFormReqs[key];
+        if (formReq && !isFormUnlocked(playerForm, formReq)) continue;
+        pool.push(UPGRADE_DEFS[defKey]);
       }
     }
 

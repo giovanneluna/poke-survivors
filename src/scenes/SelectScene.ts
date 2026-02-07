@@ -94,6 +94,18 @@ export class SelectScene extends Phaser.Scene {
       });
     });
 
+    // ── Botão "MODO TESTE" ───────────────────────────────────────────
+    const testBtn = this.add.text(width - 20, height - 25, 'MODO TESTE', {
+      fontSize: '12px',
+      color: '#44aaff',
+      fontFamily: 'monospace',
+      fontStyle: 'bold',
+    }).setOrigin(1, 0.5).setDepth(10).setInteractive({ useHandCursor: true });
+
+    testBtn.on('pointerover', () => { testBtn.setColor('#ffffff'); SoundManager.playHover(); });
+    testBtn.on('pointerout', () => testBtn.setColor('#44aaff'));
+    testBtn.on('pointerdown', () => { SoundManager.playClick(); this.scene.start('ShowcaseScene'); });
+
     // ── Botão "Voltar" ───────────────────────────────────────────────
     const backBtn = this.add.text(20, height - 25, '← Voltar', {
       fontSize: '12px',

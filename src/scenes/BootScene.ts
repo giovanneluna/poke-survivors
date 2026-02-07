@@ -88,7 +88,7 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('atk-heat-wave', 'assets/attacks/heat-wave-sheet.png', { frameWidth: 96, frameHeight: 82 });
     this.load.spritesheet('atk-outrage', 'assets/attacks/outrage-sheet.png', { frameWidth: 48, frameHeight: 72 });
     this.load.spritesheet('atk-shadow-ball', 'assets/attacks/shadow-ball-sheet.png', { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet('atk-rock-slide', 'assets/attacks/rock-slide-sheet.png', { frameWidth: 30, frameHeight: 96 });
+    this.load.spritesheet('atk-rock-slide', 'assets/attacks/rock-slide-sheet.png', { frameWidth: 48, frameHeight: 96 });
     this.load.spritesheet('atk-hyper-voice', 'assets/attacks/hyper-voice-sheet.png', { frameWidth: 96, frameHeight: 28 });
   }
 
@@ -229,7 +229,7 @@ export class BootScene extends Phaser.Scene {
     // Flame Charge (16 frames, play once)
     this.anims.create({
       key: 'anim-flame-charge',
-      frames: this.anims.generateFrameNumbers('atk-flame-charge', { start: 0, end: 15 }),
+      frames: this.anims.generateFrameNumbers('atk-flame-charge', { start: 15, end: 0 }),
       frameRate: 24, repeat: 0,
     });
     // Flare Blitz (15 frames, play once)
