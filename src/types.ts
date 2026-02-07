@@ -1,9 +1,12 @@
 import type Phaser from 'phaser';
 
 // ── Tipos de Ataque e Inimigo ──────────────────────────────────────
-export type AttackType = 'ember' | 'fireSpin' | 'flamethrower';
+export type AttackType = 'ember' | 'fireSpin' | 'flamethrower' | 'inferno' | 'fireBlast' | 'blastBurn';
 export type EnemyType = 'rattata' | 'pidgey' | 'zubat' | 'geodude' | 'gastly';
 export type Direction = 'down' | 'downRight' | 'right' | 'upRight' | 'up' | 'upLeft' | 'left' | 'downLeft';
+export type HeldItemType = 'charcoal' | 'wideLens' | 'choiceSpecs';
+export type PickupType = 'oranBerry' | 'magnetBurst' | 'rareCandy' | 'pokeballBomb';
+export type DestructibleType = 'tallGrass' | 'berryBush' | 'rockSmash' | 'treasureChest';
 
 // ── Sprite sheet config (PMDCollab format) ─────────────────────────
 export interface SpriteConfig {
@@ -25,6 +28,18 @@ export interface EnemyConfig {
   readonly damage: number;
   readonly xpValue: number;
   readonly scale: number;
+  readonly rangedAttack?: EnemyRangedConfig;
+}
+
+export interface EnemyRangedConfig {
+  readonly projectileKey: string;
+  readonly damage: number;
+  readonly speed: number;
+  readonly cooldownMs: number;
+  readonly range: number;
+  readonly homing: boolean;
+  readonly effect?: 'slow';
+  readonly effectDurationMs?: number;
 }
 
 export interface AttackConfig {
@@ -35,11 +50,52 @@ export interface AttackConfig {
   readonly baseCooldown: number;
 }
 
+// ── Held Items (Passivos) ──────────────────────────────────────────
+export interface HeldItemConfig {
+  readonly key: HeldItemType;
+  readonly name: string;
+  readonly description: string;
+  readonly icon: string;
+  readonly color: number;
+  readonly effect: string;
+}
+
+// ── Evolução de Ataques ────────────────────────────────────────────
+export interface EvolutionConfig {
+  readonly baseAttack: AttackType;
+  readonly requiredLevel: number;
+  readonly requiredItem: HeldItemType;
+  readonly evolvedAttack: AttackType;
+  readonly name: string;
+  readonly description: string;
+  readonly icon: string;
+  readonly color: number;
+}
+
+// ── Objetos Destrutíveis ───────────────────────────────────────────
+export interface DestructibleConfig {
+  readonly key: DestructibleType;
+  readonly name: string;
+  readonly hp: number;
+  readonly textureKey: string;
+  readonly scale: number;
+  readonly drops: ReadonlyArray<{ type: PickupType | 'xpGem'; chance: number; count?: number }>;
+}
+
+// ── Pickups ────────────────────────────────────────────────────────
+export interface PickupConfig {
+  readonly key: PickupType;
+  readonly name: string;
+  readonly textureKey: string;
+  readonly description: string;
+}
+
 // ── Estado do jogador ──────────────────────────────────────────────
 export interface PlayerState {
   hp: number;
   maxHp: number;
   speed: number;
+  baseSpeed: number;
   magnetRange: number;
   xp: number;
   xpToNext: number;

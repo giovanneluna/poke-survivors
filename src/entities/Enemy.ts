@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { EnemyConfig, Direction, SpriteConfig } from '../types';
+import type { EnemyConfig, Direction, SpriteConfig, EnemyRangedConfig } from '../types';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private hp: number;
@@ -11,6 +11,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private shadow: Phaser.GameObjects.Image | null = null;
   private readonly spriteConfig: SpriteConfig;
   private currentDir: Direction = 'down';
+  readonly rangedAttack: EnemyRangedConfig | undefined;
+  private lastAttackTime = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: EnemyConfig) {
     super(scene, x, y, config.sprite.key);
@@ -23,6 +25,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.damage = config.damage;
     this.xpValue = config.xpValue;
     this.spriteConfig = config.sprite;
+    this.rangedAttack = config.rangedAttack;
 
     this.setScale(config.scale);
     this.setDepth(5);
@@ -39,7 +42,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       .setDepth(4)
       .setScale(config.scale);
 
-    // Começa com animação walk-down
     this.play(`${this.spriteConfig.key}-down`);
   }
 
@@ -48,7 +50,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     this.scene.physics.moveToObject(this, target, this.speed);
 
-    // Determina direção baseada na velocidade
     const vx = this.body.velocity.x;
     const vy = this.body.velocity.y;
     const newDir = this.velocityToDirection(vx, vy);
@@ -61,10 +62,20 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       }
     }
 
-    // Atualiza sombra
     if (this.shadow) {
       this.shadow.setPosition(this.x, this.y + 8);
     }
+  }
+
+  tryRangedAttack(playerX: number, playerY: number, time: number): { shouldFire: boolean; config: EnemyRangedConfig } | null {
+    if (!this.rangedAttack || !this.active) return null;
+
+    const dist = Phaser.Math.Distance.Between(this.x, this.y, playerX, playerY);
+    if (dist > this.rangedAttack.range) return null;
+    if (time - this.lastAttackTime < this.rangedAttack.cooldownMs) return null;
+
+    this.lastAttackTime = time;
+    return { shouldFire: true, config: this.rangedAttack };
   }
 
   private velocityToDirection(vx: number, vy: number): Direction {
@@ -72,15 +83,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const absY = Math.abs(vy);
     const threshold = 0.4;
 
-    // Se um eixo domina muito, é puramente horizontal ou vertical
-    if (absX > absY * (1 + threshold)) {
-      return vx > 0 ? 'right' : 'left';
-    }
-    if (absY > absX * (1 + threshold)) {
-      return vy > 0 ? 'down' : 'up';
-    }
+    if (absX > absY * (1 + threshold)) return vx > 0 ? 'right' : 'left';
+    if (absY > absX * (1 + threshold)) return vy > 0 ? 'down' : 'up';
 
-    // Diagonal
     if (vx > 0 && vy > 0) return 'downRight';
     if (vx > 0 && vy < 0) return 'upRight';
     if (vx < 0 && vy > 0) return 'downLeft';

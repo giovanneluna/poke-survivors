@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { PLAYER } from '../config';
-import type { PlayerState, Attack, AttackType, Direction, SpriteConfig } from '../types';
+import type { PlayerState, Attack, AttackType, Direction, SpriteConfig, HeldItemType } from '../types';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   readonly stats: PlayerState;
@@ -11,11 +11,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     right: Phaser.Input.Keyboard.Key;
   };
   private readonly attacks: Map<AttackType, Attack> = new Map();
+  private readonly heldItems: Set<HeldItemType> = new Set();
   private lastDirection: Phaser.Math.Vector2 = new Phaser.Math.Vector2(0, 1);
   private currentDir: Direction = 'down';
   private invincibleUntil = 0;
   private readonly spriteConfig: SpriteConfig;
   private shadow: Phaser.GameObjects.Image;
+  private slowUntil = 0;
+  private readonly slowMultiplier = 0.4;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, PLAYER.sprite.key);
@@ -38,6 +41,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       hp: PLAYER.startHp,
       maxHp: PLAYER.startHp,
       speed: PLAYER.startSpeed,
+      baseSpeed: PLAYER.startSpeed,
       magnetRange: PLAYER.startMagnetRange,
       xp: 0,
       xpToNext: PLAYER.baseXpToLevel,
@@ -57,32 +61,36 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.play(`${this.spriteConfig.key}-down`);
   }
 
-  addAttack(type: AttackType, attack: Attack): void {
-    this.attacks.set(type, attack);
+  // ── Ataques ────────────────────────────────────────────────────────
+  addAttack(type: AttackType, attack: Attack): void { this.attacks.set(type, attack); }
+  hasAttack(type: AttackType): boolean { return this.attacks.has(type); }
+  getAttack(type: AttackType): Attack | undefined { return this.attacks.get(type); }
+  getAllAttacks(): Attack[] { return Array.from(this.attacks.values()); }
+  removeAttack(type: AttackType): void {
+    const attack = this.attacks.get(type);
+    if (attack) { attack.destroy(); this.attacks.delete(type); }
   }
 
-  hasAttack(type: AttackType): boolean {
-    return this.attacks.has(type);
+  // ── Held Items ─────────────────────────────────────────────────────
+  addHeldItem(item: HeldItemType): void { this.heldItems.add(item); }
+  hasHeldItem(item: HeldItemType): boolean { return this.heldItems.has(item); }
+  getHeldItems(): HeldItemType[] { return Array.from(this.heldItems); }
+
+  // ── Slow effect ────────────────────────────────────────────────────
+  applySlow(durationMs: number, time: number): void {
+    this.slowUntil = time + durationMs;
   }
 
-  getAttack(type: AttackType): Attack | undefined {
-    return this.attacks.get(type);
+  isSlowed(time: number): boolean {
+    return time < this.slowUntil;
   }
 
-  getAllAttacks(): Attack[] {
-    return Array.from(this.attacks.values());
-  }
-
-  getLastDirection(): Phaser.Math.Vector2 {
-    return this.lastDirection.clone();
-  }
+  getLastDirection(): Phaser.Math.Vector2 { return this.lastDirection.clone(); }
 
   takeDamage(amount: number, time: number): void {
     if (time < this.invincibleUntil) return;
-
     this.stats.hp = Math.max(0, this.stats.hp - amount);
     this.invincibleUntil = time + PLAYER.invincibilityMs;
-
     this.setTint(0xff0000);
     this.scene.time.delayedCall(150, () => this.clearTint());
   }
@@ -104,11 +112,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + amount);
   }
 
-  isDead(): boolean {
-    return this.stats.hp <= 0;
-  }
+  isDead(): boolean { return this.stats.hp <= 0; }
 
-  handleMovement(): void {
+  handleMovement(time: number): void {
     const dir = new Phaser.Math.Vector2(0, 0);
 
     if (this.cursors.right.isDown) dir.x = 1;
@@ -118,22 +124,29 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     const isMoving = dir.x !== 0 || dir.y !== 0;
 
+    // Calcular velocidade efetiva (com slow)
+    const speedMult = this.isSlowed(time) ? this.slowMultiplier : 1;
+    const effectiveSpeed = this.stats.speed * speedMult;
+
     if (isMoving) {
       this.lastDirection = dir.clone().normalize();
       const newDir = this.vectorToDirection(dir.x, dir.y);
 
-      // Só troca animação se mudou de direção
       if (newDir !== this.currentDir) {
         this.currentDir = newDir;
         this.playWalkAnim(newDir);
       }
 
       if (dir.x !== 0 && dir.y !== 0) dir.normalize();
-      this.setVelocity(dir.x * this.stats.speed, dir.y * this.stats.speed);
+      this.setVelocity(dir.x * effectiveSpeed, dir.y * effectiveSpeed);
     } else {
       this.setVelocity(0, 0);
-      // Parado = frame 0 da direção atual
       this.anims.stop();
+    }
+
+    // Visual de slow
+    if (this.isSlowed(time)) {
+      this.setTint(0x8888ff);
     }
 
     // Atualiza sombra

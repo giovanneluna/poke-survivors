@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { GAME } from './config';
 import { BootScene } from './scenes/BootScene';
+import { TitleScene } from './scenes/TitleScene';
+import { SelectScene } from './scenes/SelectScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 
@@ -8,7 +10,7 @@ const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.WEBGL,
   width: GAME.width,
   height: GAME.height,
-  backgroundColor: '#4e8c40',
+  backgroundColor: '#0f0f23',
   parent: document.body,
   pixelArt: true,
   physics: {
@@ -22,7 +24,7 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene, GameScene, UIScene],
+  scene: [BootScene, TitleScene, SelectScene, GameScene, UIScene],
 };
 
 new Phaser.Game(config);
