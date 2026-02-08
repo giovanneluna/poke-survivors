@@ -552,7 +552,7 @@ export class BootScene extends Phaser.Scene {
     });
 
     // ── Water attack animations (Squirtle line) ──────────────────────
-    // Water Pulse — flight (frame 0 loop) + hit (frames 1-5 once)
+    // Water Pulse — flight (frame 0 loop) + hit (frames 1-5 once) + full (showcase preview)
     this.anims.create({
       key: 'anim-water-pulse',
       frames: this.anims.generateFrameNumbers('atk-water-pulse', { start: 0, end: 0 }),
@@ -562,6 +562,11 @@ export class BootScene extends Phaser.Scene {
       key: 'anim-water-pulse-hit',
       frames: this.anims.generateFrameNumbers('atk-water-pulse', { start: 1, end: 5 }),
       frameRate: 12, repeat: 0,
+    });
+    this.anims.create({
+      key: 'anim-water-pulse-full',
+      frames: this.anims.generateFrameNumbers('atk-water-pulse', { start: 0, end: 5 }),
+      frameRate: 8, repeat: -1,
     });
     // Aqua Jet — 4 directional animations (Tibia water-beam, 12 frames each)
     this.anims.create({
@@ -640,7 +645,7 @@ export class BootScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('atk-frost-breath', { start: 0, end: 2 }),
       frameRate: 10, repeat: -1,
     });
-    // Wave Splash (9 frames, looping — Bubble projectile)
+    // Wave Splash (9 frames, looping — Water Gun projectile)
     this.anims.create({
       key: 'anim-wave-splash',
       frames: this.anims.generateFrameNumbers('atk-wave-splash', { start: 0, end: 8 }),
@@ -680,7 +685,10 @@ export class BootScene extends Phaser.Scene {
     this.anims.create({ key: 'anim-surf-wave-right', frames: this.anims.generateFrameNumbers('atk-surf-wave-right', { start: 0, end: 5 }), frameRate: 10, repeat: 0 });
     this.anims.create({ key: 'anim-whirlpool-tibia', frames: this.anims.generateFrameNumbers('atk-whirlpool-tibia', { start: 0, end: 3 }), frameRate: 10, repeat: -1 });
     this.anims.create({ key: 'anim-whirlpool-rings', frames: this.anims.generateFrameNumbers('atk-whirlpool-rings', { start: 0, end: 3 }), frameRate: 10, repeat: -1 });
-    this.anims.create({ key: 'anim-bubble-shot', frames: this.anims.generateFrameNumbers('atk-bubble-shot', { start: 0, end: 4 }), frameRate: 10, repeat: 0 });
+    // Bubble Shot — flight (frame 0 loop) + hit (frames 1-4 once) + full (showcase preview)
+    this.anims.create({ key: 'anim-bubble-shot', frames: this.anims.generateFrameNumbers('atk-bubble-shot', { start: 0, end: 0 }), frameRate: 1, repeat: -1 });
+    this.anims.create({ key: 'anim-bubble-shot-hit', frames: this.anims.generateFrameNumbers('atk-bubble-shot', { start: 1, end: 4 }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: 'anim-bubble-shot-full', frames: this.anims.generateFrameNumbers('atk-bubble-shot', { start: 0, end: 4 }), frameRate: 8, repeat: -1 });
 
     // Flying: Twister, Gust, Air Cutter (4 dirs), Brave Bird Tibia, Air Slash X
     this.anims.create({ key: 'anim-twister', frames: this.anims.generateFrameNumbers('atk-twister', { start: 0, end: 9 }), frameRate: 14, repeat: -1 });

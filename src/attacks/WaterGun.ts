@@ -30,7 +30,7 @@ export class WaterGun implements Attack {
     this.cooldown = ATTACKS.waterGun.baseCooldown;
 
     this.bullets = scene.physics.add.group({
-      defaultKey: 'atk-water-range',
+      defaultKey: 'atk-wave-splash',
       maxSize: 80,
     });
 
@@ -79,22 +79,22 @@ export class WaterGun implements Attack {
       const bullet = this.bullets.get(
         this.player.x,
         this.player.y,
-        'atk-water-range'
+        'atk-wave-splash'
       ) as Phaser.Physics.Arcade.Sprite | null;
 
       if (!bullet) continue;
 
       const currentFireId = ++this.fireId;
       bullet.setData('fireId', currentFireId);
-      bullet.setActive(true).setVisible(true).setScale(2);
+      bullet.setActive(true).setVisible(true).setScale(0.8);
       bullet.setDepth(8);
-      bullet.play('anim-water-range');
+      bullet.play('anim-wave-splash');
 
       const body = bullet.body as Phaser.Physics.Arcade.Body;
       body.enable = true;
       body.reset(this.player.x, this.player.y);
       body.checkCollision.none = false;
-      body.setCircle(14, -10, -10);
+      body.setCircle(12, 4, 4);
 
       this.scene.physics.moveToObject(bullet, target, 300);
 
