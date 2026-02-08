@@ -286,7 +286,7 @@ export class TitleScene extends Phaser.Scene {
     versionBadge.strokeRoundedRect(badgeX, badgeY, badgeW, badgeH, 5)
 
     const versionText = this.add
-      .text(width / 2, badgeY + badgeH / 2, "BETA 0.10", {
+      .text(width / 2, badgeY + badgeH / 2, "BETA 0.11", {
         fontSize: "11px",
         color: "#ff8844",
         fontFamily: "monospace",

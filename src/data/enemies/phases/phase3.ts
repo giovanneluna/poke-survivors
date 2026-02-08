@@ -18,8 +18,8 @@ export const PHASE3: PhaseConfig = {
     // Wave 43 (21:30): P2 elites reforçam, preparando pro duo
     { enemies: [{ type: 'parasect', weight: 2 }, { type: 'venomoth', weight: 2 }, { type: 'cubone', weight: 1 }, { type: 'venonat', weight: 1 }],
       spawnRate: 72, maxEnemies: 178 },
-    // Wave 44 (22:00): PSYCHIC DUO + CROBAT — Hypno + Marowak + Crobat introduction
-    { enemies: [{ type: 'hypno', weight: 2 }, { type: 'marowak', weight: 2 }, { type: 'crobat', weight: 1 }, { type: 'venomoth', weight: 1 }],
+    // Wave 44 (22:00): PSYCHIC DUO + EVOLUTIONS — Hypno + Marowak + Graveler + Machoke
+    { enemies: [{ type: 'hypno', weight: 2 }, { type: 'marowak', weight: 1 }, { type: 'graveler', weight: 1 }, { type: 'machoke', weight: 1 }, { type: 'crobat', weight: 1 }],
       spawnRate: 70, maxEnemies: 180 },
     // Wave 45 (22:30): Duo se integra ao roster
     { enemies: [{ type: 'hypno', weight: 2 }, { type: 'marowak', weight: 1 }, { type: 'venomoth', weight: 2 }, { type: 'parasect', weight: 1 }],
@@ -33,8 +33,8 @@ export const PHASE3: PhaseConfig = {
 
     // ── BOSS: Gengar @ 24:00 ──
 
-    // Wave 48 (24:00): Post-Gengar intensity
-    { enemies: [{ type: 'marowak', weight: 2 }, { type: 'hypno', weight: 2 }, { type: 'parasect', weight: 1 }, { type: 'venonat', weight: 1 }],
+    // Wave 48 (24:00): Post-Gengar — Graveler + Machoke reforçam
+    { enemies: [{ type: 'marowak', weight: 2 }, { type: 'graveler', weight: 1 }, { type: 'machoke', weight: 1 }, { type: 'hypno', weight: 1 }, { type: 'parasect', weight: 1 }],
       spawnRate: 60, maxEnemies: 190 },
     // Wave 49 (24:30): Confusion swarm + Crobat air attack
     { enemies: [{ type: 'venomoth', weight: 2 }, { type: 'butterfree', weight: 2 }, { type: 'crobat', weight: 1 }, { type: 'hypno', weight: 1 }],
@@ -45,8 +45,8 @@ export const PHASE3: PhaseConfig = {
     // Wave 51 (25:30): Mixed elite
     { enemies: [{ type: 'hypno', weight: 2 }, { type: 'venomoth', weight: 2 }, { type: 'marowak', weight: 1 }, { type: 'gloom', weight: 1 }],
       spawnRate: 54, maxEnemies: 198 },
-    // Wave 52 (26:00): Bone storm
-    { enemies: [{ type: 'marowak', weight: 3 }, { type: 'cubone', weight: 2 }, { type: 'hypno', weight: 1 }],
+    // Wave 52 (26:00): Rock + Bone storm
+    { enemies: [{ type: 'marowak', weight: 2 }, { type: 'graveler', weight: 2 }, { type: 'machoke', weight: 1 }, { type: 'hypno', weight: 1 }],
       spawnRate: 52, maxEnemies: 200 },
     // Wave 53 (26:30): Pre-respawn rush
     { enemies: [{ type: 'venomoth', weight: 2 }, { type: 'butterfree', weight: 2 }, { type: 'hypno', weight: 2 }, { type: 'parasect', weight: 1 }],
@@ -76,7 +76,9 @@ export const PHASE3: PhaseConfig = {
 
   bosses: [
     { type: 'primeape', timeSeconds: 1260 },
+    { type: 'pidgeot',  timeSeconds: 1350 },
     { type: 'gengar',   timeSeconds: 1440 },
+    { type: 'golem',    timeSeconds: 1530 },
     { type: 'raticate', timeSeconds: 1620, count: 2, hpMultiplier: 1.5, dmgMultiplier: 1.3 },
   ],
 };

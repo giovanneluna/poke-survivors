@@ -9,8 +9,8 @@ export const PHASE2: PhaseConfig = {
     // Wave 21 (10:30): Tanks consolidam, Gloom heala
     { enemies: [{ type: 'metapod', weight: 2 }, { type: 'kakuna', weight: 1 }, { type: 'gloom', weight: 2 }, { type: 'machop', weight: 1 }],
       spawnRate: 170, maxEnemies: 115 },
-    // Wave 22 (11:00): Paras começa a aparecer com os tanks
-    { enemies: [{ type: 'metapod', weight: 2 }, { type: 'gloom', weight: 1 }, { type: 'kakuna', weight: 1 }, { type: 'golbat', weight: 1 }],
+    // Wave 22 (11:00): Pidgeotto entra como elite voador
+    { enemies: [{ type: 'metapod', weight: 2 }, { type: 'gloom', weight: 1 }, { type: 'pidgeotto', weight: 1 }, { type: 'golbat', weight: 1 }],
       spawnRate: 160, maxEnemies: 120 },
     // Wave 23 (11:30): STATUS TRIO — Paras + Venonat + Drowzee (poison, confusion, stun)
     { enemies: [{ type: 'paras', weight: 2 }, { type: 'venonat', weight: 2 }, { type: 'drowzee', weight: 2 }, { type: 'gloom', weight: 1 }],
@@ -36,8 +36,8 @@ export const PHASE2: PhaseConfig = {
 
     // ── BOSS: Beedrill @ 15:00 ──
 
-    // Wave 30 (15:00): Post-boss intensity
-    { enemies: [{ type: 'cubone', weight: 2 }, { type: 'drowzee', weight: 2 }, { type: 'machop', weight: 1 }, { type: 'golbat', weight: 1 }],
+    // Wave 30 (15:00): Post-boss intensity — Pidgeotto reforça
+    { enemies: [{ type: 'cubone', weight: 2 }, { type: 'drowzee', weight: 2 }, { type: 'pidgeotto', weight: 1 }, { type: 'golbat', weight: 1 }],
       spawnRate: 120, maxEnemies: 142 },
     // Wave 31 (15:30): Status hell
     { enemies: [{ type: 'venonat', weight: 3 }, { type: 'drowzee', weight: 2 }, { type: 'paras', weight: 1 }],
@@ -73,6 +73,7 @@ export const PHASE2: PhaseConfig = {
 
   bosses: [
     { type: 'beedrill',  timeSeconds: 900 },
+    { type: 'fearow',    timeSeconds: 990 },
     { type: 'vileplume', timeSeconds: 1080 },
   ],
 };

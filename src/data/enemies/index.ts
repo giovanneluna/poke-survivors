@@ -35,6 +35,9 @@ import { VENONAT } from './venonat';
 import { DROWZEE } from './drowzee';
 import { CUBONE } from './cubone';
 
+// ── Phase 2 elite (evoluções) ────────────────────────────────────────
+import { PIDGEOTTO } from './pidgeotto';
+
 // ── Phase 3 elite ───────────────────────────────────────────────────
 import { BUTTERFREE } from './butterfree';
 import { PARASECT } from './parasect';
@@ -42,18 +45,26 @@ import { VENOMOTH } from './venomoth';
 import { HYPNO } from './hypno';
 import { MAROWAK } from './marowak';
 
-// ── Phase 3 elite (evolução) ────────────────────────────────────────
+// ── Phase 3 elite (evoluções) ───────────────────────────────────────
 import { CROBAT } from './crobat';
+import { GRAVELER } from './graveler';
+import { MACHOKE } from './machoke';
 
 // ── Phase 4 elite ───────────────────────────────────────────────────
 import { ALAKAZAM } from './alakazam';
 import { ELECTRODE } from './electrode';
 
-// ── Bosses (Phase 2-3) ─────────────────────────────────────────────
+// ── Bosses (Phase 1) ───────────────────────────────────────────────
 import { BEEDRILL } from './beedrill';
 import { VILEPLUME } from './vileplume';
 import { PRIMEAPE } from './primeape';
 import { GENGAR } from './gengar';
+
+// ── Bosses (novos — evoluções finais) ───────────────────────────────
+import { FEAROW } from './fearow';
+import { PIDGEOT } from './pidgeot';
+import { MACHAMP } from './machamp';
+import { GOLEM } from './golem';
 
 // ── Phases ──────────────────────────────────────────────────────────
 import { PHASE1 } from './phases/phase1';
@@ -89,22 +100,29 @@ export const ENEMIES: Readonly<Record<string, EnemyConfig | BossConfig>> = {
   venonat: VENONAT,
   drowzee: DROWZEE,
   cubone: CUBONE,
+  pidgeotto: PIDGEOTTO,
   // Phase 3
   butterfree: BUTTERFREE,
   parasect: PARASECT,
   venomoth: VENOMOTH,
   hypno: HYPNO,
   marowak: MAROWAK,
-  // Phase 3 elite (evolução)
+  // Phase 3 elite (evoluções)
   crobat: CROBAT,
+  graveler: GRAVELER,
+  machoke: MACHOKE,
   // Phase 4
   alakazam: ALAKAZAM,
   electrode: ELECTRODE,
-  // Bosses Phase 2-3
+  // Bosses
   beedrill: BEEDRILL,
   vileplume: VILEPLUME,
   primeape: PRIMEAPE,
   gengar: GENGAR,
+  fearow: FEAROW,
+  pidgeot: PIDGEOT,
+  machamp: MACHAMP,
+  golem: GOLEM,
 } as const;
 
 export const WAVES: readonly WaveConfig[] = [

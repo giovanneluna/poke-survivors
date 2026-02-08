@@ -44,14 +44,27 @@ export const ENEMY_SPRITES: Readonly<Record<string, SpriteConfig>> = {
   hypno:     { key: 'hypno-walk',     path: 'assets/pokemon/hypno-walk.png',     frameWidth: 40, frameHeight: 40, frameCount: 4,  directions: 8 },
   marowak:   { key: 'marowak-walk',   path: 'assets/pokemon/marowak-walk.png',   frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
 
+  // ── Phase 2 elite (evoluções) ───────────────────────────────────
+  pidgeotto: { key: 'pidgeotto-walk', path: 'assets/pokemon/pidgeotto-walk.png', frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+
+  // ── Phase 3 elite (evoluções) ─────────────────────────────────
+  graveler:  { key: 'graveler-walk',  path: 'assets/pokemon/graveler-walk.png',  frameWidth: 32, frameHeight: 48, frameCount: 4,  directions: 8 },
+  machoke:   { key: 'machoke-walk',   path: 'assets/pokemon/machoke-walk.png',   frameWidth: 32, frameHeight: 48, frameCount: 4,  directions: 8 },
+
   // ── Phase 4 elite ───────────────────────────────────────────────
   alakazam:  { key: 'alakazam-walk',  path: 'assets/pokemon/alakazam-walk.png',  frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
   electrode: { key: 'electrode-walk', path: 'assets/pokemon/electrode-walk.png', frameWidth: 32, frameHeight: 40, frameCount: 7,  directions: 8 },
   crobat:    { key: 'crobat-walk',    path: 'assets/pokemon/crobat-walk.png',    frameWidth: 40, frameHeight: 56, frameCount: 8,  directions: 8 },
 
-  // ── Bosses (Phase 2-3) ─────────────────────────────────────────
+  // ── Bosses (Phase 1) ──────────────────────────────────────────
   beedrill:  { key: 'beedrill-walk',  path: 'assets/pokemon/beedrill-walk.png',  frameWidth: 32, frameHeight: 48, frameCount: 4,  directions: 8 },
   vileplume: { key: 'vileplume-walk', path: 'assets/pokemon/vileplume-walk.png', frameWidth: 32, frameHeight: 32, frameCount: 4,  directions: 8 },
   primeape:  { key: 'primeape-walk',  path: 'assets/pokemon/primeape-walk.png',  frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
   gengar:    { key: 'gengar-walk',    path: 'assets/pokemon/gengar-walk.png',    frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+
+  // ── Bosses (novos — evoluções finais) ─────────────────────────
+  fearow:    { key: 'fearow-walk',    path: 'assets/pokemon/fearow-walk.png',    frameWidth: 40, frameHeight: 64, frameCount: 6,  directions: 8 },
+  pidgeot:   { key: 'pidgeot-walk',   path: 'assets/pokemon/pidgeot-walk.png',   frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+  machamp:   { key: 'machamp-walk',   path: 'assets/pokemon/machamp-walk.png',   frameWidth: 32, frameHeight: 48, frameCount: 4,  directions: 8 },
+  golem:     { key: 'golem-walk',     path: 'assets/pokemon/golem-walk.png',     frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
 } as const;

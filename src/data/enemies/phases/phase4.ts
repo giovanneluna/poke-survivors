@@ -12,8 +12,8 @@ export const PHASE4: PhaseConfig = {
     // Wave 62 (31:00): Teleport + explosion combo
     { enemies: [{ type: 'alakazam', weight: 2 }, { type: 'electrode', weight: 2 }, { type: 'hypno', weight: 1 }],
       spawnRate: 35, maxEnemies: 228 },
-    // Wave 63 (31:30): Elite overload
-    { enemies: [{ type: 'venomoth', weight: 2 }, { type: 'alakazam', weight: 1 }, { type: 'electrode', weight: 1 }, { type: 'marowak', weight: 1 }, { type: 'butterfree', weight: 1 }],
+    // Wave 63 (31:30): Elite overload — Graveler + Machoke nas últimas waves
+    { enemies: [{ type: 'venomoth', weight: 1 }, { type: 'alakazam', weight: 1 }, { type: 'electrode', weight: 1 }, { type: 'graveler', weight: 1 }, { type: 'machoke', weight: 1 }, { type: 'butterfree', weight: 1 }],
       spawnRate: 34, maxEnemies: 230 },
     // Wave 64 (32:00): Status hell
     { enemies: [{ type: 'hypno', weight: 2 }, { type: 'venomoth', weight: 2 }, { type: 'alakazam', weight: 1 }, { type: 'gloom', weight: 1 }],
@@ -78,8 +78,11 @@ export const PHASE4: PhaseConfig = {
     { type: 'beedrill', timeSeconds: 1800, count: 2, hpMultiplier: 1.5, dmgMultiplier: 1.3 },
     { type: 'gengar',   timeSeconds: 1980, count: 2, hpMultiplier: 1.5, dmgMultiplier: 1.3 },
     { type: 'snorlax',  timeSeconds: 2160, count: 2, hpMultiplier: 1.5, dmgMultiplier: 1.3 },
+    { type: 'machamp',  timeSeconds: 2250, hpMultiplier: 1.5, dmgMultiplier: 1.3 },
     { type: 'nidoking', timeSeconds: 2340, hpMultiplier: 2, dmgMultiplier: 1.5 },
-    { type: 'gengar',   timeSeconds: 2342, hpMultiplier: 2, dmgMultiplier: 1.5 },
-    { type: 'snorlax',  timeSeconds: 2344, hpMultiplier: 2, dmgMultiplier: 1.5 },
+    { type: 'machamp',  timeSeconds: 2342, hpMultiplier: 2, dmgMultiplier: 1.5 },
+    { type: 'gengar',   timeSeconds: 2344, hpMultiplier: 2, dmgMultiplier: 1.5 },
+    { type: 'snorlax',  timeSeconds: 2346, hpMultiplier: 2, dmgMultiplier: 1.5 },
+    { type: 'golem',    timeSeconds: 2348, hpMultiplier: 2, dmgMultiplier: 1.5 },
   ],
 };

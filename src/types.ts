@@ -57,14 +57,17 @@ export type EnemyType =
   | 'spearow' | 'ekans' | 'oddish' | 'mankey'
   | 'haunter' | 'machop' | 'golbat'
   | 'raticate' | 'arbok' | 'nidoking' | 'snorlax'
-  // Phase 2 — Comuns
+  // Phase 2 — Comuns + elite
   | 'metapod' | 'kakuna' | 'gloom' | 'paras' | 'venonat' | 'drowzee' | 'cubone'
-  // Phase 3 — Elites
+  | 'pidgeotto'
+  // Phase 3 — Elites + evoluções
   | 'butterfree' | 'parasect' | 'venomoth' | 'hypno' | 'marowak'
+  | 'graveler' | 'machoke'
   // Phase 4 — Elites avançados
   | 'alakazam' | 'electrode' | 'crobat'
-  // Novos Bosses
-  | 'beedrill' | 'vileplume' | 'primeape' | 'gengar';
+  // Bosses
+  | 'beedrill' | 'vileplume' | 'primeape' | 'gengar'
+  | 'fearow' | 'pidgeot' | 'machamp' | 'golem';
 export type Direction = 'down' | 'downRight' | 'right' | 'upRight' | 'up' | 'upLeft' | 'left' | 'downLeft';
 
 // ── Held Items (expandido) ────────────────────────────────────────
