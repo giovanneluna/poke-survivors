@@ -484,14 +484,17 @@ export class SpawnSystem {
 
     switch (attack.pattern) {
       case 'charge': {
+        const chargeSprite = attack.spriteKey ?? 'atk-bite';
+        const chargeAnim = attack.animKey ?? 'anim-bite';
+        const chargeScale = attack.spriteScale ?? 2;
         const angle = Phaser.Math.Angle.Between(boss.x, boss.y, playerX, playerY);
         const speed = 400;
         boss.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
-        boss.setTint(0xff4444);
+        boss.setTint(attack.tintColor ?? 0xff4444);
 
-        const bite = scene.add.sprite(boss.x, boss.y, 'atk-bite').setScale(2).setDepth(12);
+        const bite = scene.add.sprite(boss.x, boss.y, chargeSprite).setScale(chargeScale).setDepth(12);
         bite.setRotation(angle);
-        bite.play('anim-bite');
+        if (scene.anims.exists(chargeAnim)) bite.play(chargeAnim);
         bite.once('animationcomplete', () => bite.destroy());
 
         const updateBite = scene.time.addEvent({
@@ -512,6 +515,9 @@ export class SpawnSystem {
       }
 
       case 'fan': {
+        const fanSprite = attack.spriteKey ?? 'atk-gunk-shot';
+        const fanAnim = attack.animKey ?? 'anim-gunk-shot';
+        const fanScale = attack.spriteScale ?? 1.5;
         const count = attack.projectileCount ?? 3;
         const spreadAngle = 30 * (Math.PI / 180);
         const baseAngle = Phaser.Math.Angle.Between(boss.x, boss.y, playerX, playerY);
@@ -520,19 +526,19 @@ export class SpawnSystem {
           const offset = (i - (count - 1) / 2) * spreadAngle;
           const angle = baseAngle + offset;
 
-          const proj = this.ctx.enemyProjectiles.get(boss.x, boss.y, 'atk-gunk-shot') as Phaser.Physics.Arcade.Sprite | null;
+          const proj = this.ctx.enemyProjectiles.get(boss.x, boss.y, fanSprite) as Phaser.Physics.Arcade.Sprite | null;
           if (!proj) continue;
 
-          proj.setActive(true).setVisible(true).setScale(1.5).setDepth(7);
-          proj.setTexture('atk-gunk-shot');
+          proj.setActive(true).setVisible(true).setScale(fanScale).setDepth(7);
+          proj.setTexture(fanSprite);
           proj.setData('damage', attack.damage);
           proj.setData('homing', false);
           proj.setData('speed', 140);
-          proj.setTint(0xaa44ff);
+          if (attack.tintColor) proj.setTint(attack.tintColor); else proj.setTint(0xaa44ff);
           proj.setRotation(angle);
 
-          if (scene.anims.exists('anim-gunk-shot')) {
-            proj.play('anim-gunk-shot');
+          if (scene.anims.exists(fanAnim)) {
+            proj.play(fanAnim);
           }
 
           const body = proj.body as Phaser.Physics.Arcade.Body;
@@ -551,16 +557,19 @@ export class SpawnSystem {
       }
 
       case 'aoe-tremor': {
+        const tremorSprite = attack.spriteKey ?? 'atk-thrash';
+        const tremorAnim = attack.animKey ?? 'anim-thrash';
+        const tremorScale = attack.spriteScale ?? 3;
         const radius = attack.aoeRadius ?? 150;
-        boss.setTint(0xff8800);
+        boss.setTint(attack.tintColor ?? 0xff8800);
         scene.cameras.main.shake(400, 0.008);
         SoundManager.playBossLand();
 
-        const thrash = scene.add.sprite(boss.x, boss.y, 'atk-thrash').setScale(3).setDepth(12);
-        thrash.play('anim-thrash');
+        const thrash = scene.add.sprite(boss.x, boss.y, tremorSprite).setScale(tremorScale).setDepth(12);
+        if (scene.anims.exists(tremorAnim)) thrash.play(tremorAnim);
         thrash.once('animationcomplete', () => thrash.destroy());
 
-        const circle = scene.add.circle(boss.x, boss.y, 0, 0xff4400, 0.3).setDepth(3);
+        const circle = scene.add.circle(boss.x, boss.y, 0, attack.aoeColor ?? 0xff4400, 0.3).setDepth(3);
         scene.tweens.add({
           targets: circle,
           radius: { from: 0, to: radius },
@@ -581,8 +590,11 @@ export class SpawnSystem {
       }
 
       case 'aoe-land': {
+        const landSprite = attack.spriteKey ?? 'atk-stomp';
+        const landAnim = attack.animKey ?? 'anim-stomp';
+        const landScale = attack.spriteScale ?? 6;
         const radius = attack.aoeRadius ?? 180;
-        boss.setTint(0xffdd00);
+        boss.setTint(attack.tintColor ?? 0xffdd00);
 
         scene.tweens.add({
           targets: boss,
@@ -596,11 +608,11 @@ export class SpawnSystem {
             SoundManager.playBossLand();
             scene.cameras.main.shake(500, 0.012);
 
-            const stomp = scene.add.sprite(boss.x, boss.y, 'atk-stomp').setScale(6).setDepth(12);
-            stomp.play('anim-stomp');
+            const stomp = scene.add.sprite(boss.x, boss.y, landSprite).setScale(landScale).setDepth(12);
+            if (scene.anims.exists(landAnim)) stomp.play(landAnim);
             stomp.once('animationcomplete', () => stomp.destroy());
 
-            const circle = scene.add.circle(boss.x, boss.y, 0, 0xffaa00, 0.3).setDepth(3);
+            const circle = scene.add.circle(boss.x, boss.y, 0, attack.aoeColor ?? 0xffaa00, 0.3).setDepth(3);
             scene.tweens.add({
               targets: circle,
               radius: { from: 0, to: radius },

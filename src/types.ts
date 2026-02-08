@@ -194,6 +194,16 @@ export interface BossAttackConfig {
   readonly projectileCount?: number;
   readonly aoeRadius?: number;
   readonly teleportRange?: number;
+  /** Sprite key para o ataque visual (default depende do pattern) */
+  readonly spriteKey?: string;
+  /** Animation key para o ataque (default depende do pattern) */
+  readonly animKey?: string;
+  /** Scale do sprite de ataque */
+  readonly spriteScale?: number;
+  /** Tint color do boss durante o ataque */
+  readonly tintColor?: number;
+  /** Tint color do círculo AoE */
+  readonly aoeColor?: number;
 }
 
 export interface BossConfig extends EnemyConfig {

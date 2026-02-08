@@ -779,7 +779,11 @@ export class ShowcaseScene extends Phaser.Scene {
         .setOrigin(0, 0.5)
 
       // Boss attack sprite demo
-      const atkMapping = bossAttackSprites[boss.bossAttack.pattern]
+      // Usa spriteKey/animKey do boss config se disponível, senão fallback do mapeamento por pattern
+      const bossAtk = boss.bossAttack;
+      const atkMapping = bossAtk.spriteKey && bossAtk.animKey
+        ? { atkKey: bossAtk.spriteKey, animKey: bossAtk.animKey, scale: bossAtk.spriteScale ?? 2 }
+        : bossAttackSprites[bossAtk.pattern]
       if (atkMapping && this.textures.exists(atkMapping.atkKey)) {
         const spawnBossAtk = (): void => {
           const atkSprite = this.add.sprite(DEMO_START_X, y, atkMapping.atkKey)

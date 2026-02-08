@@ -112,6 +112,12 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('atk-gunk-shot', 'assets/attacks/poison-dark/gunk-shot-sheet.png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('atk-thrash', 'assets/attacks/thrash-sheet.png', { frameWidth: 48, frameHeight: 32 });
     this.load.spritesheet('atk-stomp', 'assets/attacks/stomp-sheet.png', { frameWidth: 16, frameHeight: 16 });
+    // Flying boss attacks
+    this.load.spritesheet('atk-hurricane-boss', 'assets/attacks/flying/hurricane-sheet.png', { frameWidth: 56, frameHeight: 80 });
+    this.load.spritesheet('atk-air-slash', 'assets/attacks/flying/air-slash-sheet.png', { frameWidth: 48, frameHeight: 48 });
+    // Rock boss attacks
+    this.load.spritesheet('atk-golem-explosion', 'assets/attacks/normal/explosion-sheet.png', { frameWidth: 168, frameHeight: 128 });
+    this.load.spritesheet('atk-rock-slide', 'assets/attacks/rock/rock-slide-sheet.png', { frameWidth: 80, frameHeight: 256 });
 
     // Water attack spritesheets (Squirtle line)
     this.load.spritesheet('atk-water-pulse', 'assets/attacks/water-pulse-sheet.png', { frameWidth: 64, frameHeight: 56 });
@@ -387,6 +393,31 @@ export class BootScene extends Phaser.Scene {
       key: 'anim-stomp',
       frames: this.anims.generateFrameNumbers('atk-stomp', { start: 0, end: 9 }),
       frameRate: 18, repeat: 0,
+    });
+
+    // Hurricane boss (52 frames, loop - tornado vortex)
+    this.anims.create({
+      key: 'anim-hurricane-boss',
+      frames: this.anims.generateFrameNumbers('atk-hurricane-boss', { start: 0, end: 51 }),
+      frameRate: 20, repeat: -1,
+    });
+    // Air Slash (8 frames, loop - cutting projectile)
+    this.anims.create({
+      key: 'anim-air-slash',
+      frames: this.anims.generateFrameNumbers('atk-air-slash', { start: 0, end: 7 }),
+      frameRate: 16, repeat: -1,
+    });
+    // Explosion / Golem (37 frames, play once)
+    this.anims.create({
+      key: 'anim-golem-explosion',
+      frames: this.anims.generateFrameNumbers('atk-golem-explosion', { start: 0, end: 36 }),
+      frameRate: 24, repeat: 0,
+    });
+    // Rock Slide (79 frames, play once - falling rocks)
+    this.anims.create({
+      key: 'anim-rock-slide',
+      frames: this.anims.generateFrameNumbers('atk-rock-slide', { start: 0, end: 78 }),
+      frameRate: 24, repeat: 0,
     });
 
     // ── Water attack animations (Squirtle line) ──────────────────────
