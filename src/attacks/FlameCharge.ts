@@ -5,10 +5,35 @@ import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
 
+type CardinalDir = 'up' | 'down' | 'left' | 'right';
+
+function angleToCardinal(rad: number): CardinalDir {
+  const deg = Phaser.Math.RadToDeg(rad);
+  if (deg >= -135 && deg < -45) return 'up';
+  if (deg >= -45 && deg < 45) return 'right';
+  if (deg >= 45 && deg < 135) return 'down';
+  return 'left';
+}
+
+/** Offset: chama emana do jogador (pequeno offset para não cobrir o corpo) */
+const DIR_OFFSET: Record<CardinalDir, { x: number; y: number }> = {
+  up:    { x: 0, y: -20 },
+  down:  { x: 0, y: 20 },
+  left:  { x: -20, y: 0 },
+  right: { x: 20, y: 0 },
+};
+
+/** Origin: ancora o sprite na borda proxima ao jogador, estendendo para fora */
+const DIR_ORIGIN: Record<CardinalDir, { x: number; y: number }> = {
+  up:    { x: 0.5, y: 1 },
+  down:  { x: 0.5, y: 0 },
+  left:  { x: 1, y: 0.5 },
+  right: { x: 0, y: 0.5 },
+};
+
 /**
  * Flame Charge: dash em chamas na direção do movimento.
- * O jogador avança rapidamente, causando dano e ganhando speed boost temporário.
- * Equivalente ao "Lightning Ring" dash.
+ * Usa sprites direcionais (up/down/left/right) sem rotação.
  */
 export class FlameCharge implements Attack {
   readonly type = 'flameCharge' as const;
@@ -38,20 +63,33 @@ export class FlameCharge implements Attack {
 
   private dash(): void {
     const dir = this.player.getLastDirection();
-    const dirAngleRad = Math.atan2(dir.y, dir.x);
+    const angle = Math.atan2(dir.y, dir.x);
+    const cardinal = angleToCardinal(angle);
 
     const startX = this.player.x;
     const startY = this.player.y;
-    const endX = startX + Math.cos(dirAngleRad) * this.dashDistance;
-    const endY = startY + Math.sin(dirAngleRad) * this.dashDistance;
+    const endX = startX + Math.cos(angle) * this.dashDistance;
+    const endY = startY + Math.sin(angle) * this.dashDistance;
 
-    // Sprite animado do flame charge segue o jogador
-    const chargeSprite = this.scene.add.sprite(this.player.x, this.player.y, 'atk-flame-charge');
-    chargeSprite.setScale(1).setDepth(10).setAlpha(0.9);
-    chargeSprite.setRotation(dirAngleRad - Math.PI / 2);
-    chargeSprite.play('anim-flame-charge');
+    // Sprite direcional — sem rotação, escala 1x (pixel-perfect)
+    const textureKey = `atk-flame-charge-${cardinal}`;
+    const animKey = `anim-flame-charge-${cardinal}`;
+    const offset = DIR_OFFSET[cardinal];
+
+    const origin = DIR_ORIGIN[cardinal];
+    const chargeSprite = this.scene.add.sprite(
+      this.player.x + offset.x,
+      this.player.y + offset.y,
+      textureKey,
+    );
+    chargeSprite.setOrigin(origin.x, origin.y);
+    chargeSprite.setDepth(10).setAlpha(0.9);
+    chargeSprite.play(animKey);
+
     const followCharge = (): void => {
-      if (chargeSprite.active) chargeSprite.setPosition(this.player.x, this.player.y);
+      if (chargeSprite.active) {
+        chargeSprite.setPosition(this.player.x + offset.x, this.player.y + offset.y);
+      }
     };
     this.scene.events.on('update', followCharge);
     chargeSprite.once('animationcomplete', () => {
@@ -81,14 +119,12 @@ export class FlameCharge implements Attack {
     );
 
     for (const enemySprite of enemies) {
-      // Verificar se o inimigo está perto da linha do dash
       const distToLine = Phaser.Math.Distance.Between(
         enemySprite.x, enemySprite.y,
         (startX + endX) / 2, (startY + endY) / 2
       );
       if (distToLine > this.dashDistance * 0.7) continue;
 
-      // Verificar distância perpendicular à linha
       const dx = endX - startX;
       const dy = endY - startY;
       const len = Math.sqrt(dx * dx + dy * dy);
@@ -108,12 +144,10 @@ export class FlameCharge implements Attack {
       }
     }
 
-    // Speed boost temporário
+    // Speed boost temporário (sem tint — evita parecer que o jogador está tomando dano)
     this.player.stats.speed = Math.floor(this.player.stats.baseSpeed * (1 + this.speedBoost));
-    this.player.setTint(0xff8800);
     this.scene.time.delayedCall(this.speedBoostDuration, () => {
       this.player.stats.speed = this.player.stats.baseSpeed;
-      if (this.player.active) this.player.clearTint();
     });
   }
 

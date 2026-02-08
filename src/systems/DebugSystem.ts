@@ -48,7 +48,8 @@ export class DebugSystem {
       { name: 'Phase 2 Test', desc: 'Metapod, Gloom healer, Venonat confusion, Cubone boomerang', color: 0x66ddaa, key: 'phase2Test' },
       { name: 'Phase 3 Test', desc: 'Parasect slow aura, Hypno homing stun, Marowak bone', color: 0xdd66aa, key: 'phase3Test' },
       { name: 'Phase 4 Test', desc: 'Alakazam teleport, Electrode explode, boss Gengar', color: 0xaa44ff, key: 'phase4Test' },
-      { name: 'Boss Rush', desc: 'Todos os 8 bosses em sequencia rapida', color: 0xff4444, key: 'bossRush' },
+      { name: 'Boss Rush', desc: 'Todos os bosses em sequencia rapida', color: 0xff4444, key: 'bossRush' },
+      { name: 'Boss Selector', desc: 'Escolha qual boss invocar', color: 0xdd44ff, key: 'bossSelector' },
     ];
 
     const startY = 100;
@@ -310,12 +311,30 @@ export class DebugSystem {
         const allBosses: EnemyType[] = [
           'raticate', 'arbok', 'nidoking', 'snorlax',
           'beedrill', 'vileplume', 'primeape', 'gengar',
+          'golem', 'machamp', 'pidgeot', 'fearow', 'alakazam-boss',
         ];
         allBosses.forEach((type, i) => {
           scene.time.delayedCall(i * 5000, () => {
             this.spawnSystem.spawnBoss(type);
           });
         });
+        break;
+      }
+
+      case 'bossSelector': {
+        p.stats.level = 30;
+        p.stats.hp = 999;
+        p.stats.maxHp = 999;
+        p.stats.form = 'stage1';
+        p.evolve('stage1');
+
+        const emberBS = p.getAttack('ember');
+        if (emberBS) { for (let i = 0; i < 7; i++) emberBS.upgrade(); }
+        const fsBS = this.attackFactory.createAttack('fireSpin');
+        for (let i = 0; i < 7; i++) fsBS.upgrade();
+
+        // Mostra o menu de boss selector apos setup
+        scene.time.delayedCall(100, () => this.showBossSelector());
         break;
       }
     }
@@ -366,6 +385,92 @@ export class DebugSystem {
       loop: true,
       callback: () => this.spawnDummies(),
     });
+  }
+
+  private showBossSelector(): void {
+    const scene = this.ctx.scene;
+    const { width, height } = scene.cameras.main;
+
+    const overlay = scene.add.container(0, 0).setDepth(1000).setScrollFactor(0);
+
+    const bg = scene.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.92)
+      .setScrollFactor(0);
+    bg.setInteractive();
+    overlay.add(bg);
+
+    overlay.add(scene.add.text(width / 2, 30, 'BOSS SELECTOR', {
+      fontSize: '18px', color: '#dd44ff', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setScrollFactor(0));
+
+    const bosses: { key: EnemyType; name: string; color: number }[] = [
+      { key: 'raticate', name: 'Raticate', color: 0xaa8866 },
+      { key: 'arbok', name: 'Arbok', color: 0x9944cc },
+      { key: 'nidoking', name: 'Nidoking', color: 0xbb44aa },
+      { key: 'snorlax', name: 'Snorlax', color: 0x44aa88 },
+      { key: 'beedrill', name: 'Beedrill', color: 0xddcc22 },
+      { key: 'vileplume', name: 'Vileplume', color: 0xff4466 },
+      { key: 'primeape', name: 'Primeape', color: 0xcc6644 },
+      { key: 'gengar', name: 'Gengar', color: 0x8844cc },
+      { key: 'golem', name: 'Golem', color: 0x887744 },
+      { key: 'machamp', name: 'Machamp', color: 0x6688cc },
+      { key: 'pidgeot', name: 'Pidgeot', color: 0xddaa44 },
+      { key: 'fearow', name: 'Fearow', color: 0xbb7744 },
+      { key: 'alakazam-boss', name: 'Alakazam (Final)', color: 0xffdd44 },
+    ];
+
+    const cols = 3;
+    const btnW = 140;
+    const btnH = 36;
+    const gapX = 10;
+    const gapY = 8;
+    const startY = 60;
+    const totalW = cols * btnW + (cols - 1) * gapX;
+    const startX = (width - totalW) / 2;
+
+    bosses.forEach((boss, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = startX + col * (btnW + gapX) + btnW / 2;
+      const y = startY + row * (btnH + gapY) + btnH / 2;
+
+      const btnGfx = scene.add.graphics().setScrollFactor(0);
+      const drawBtn = (hover: boolean): void => {
+        btnGfx.clear();
+        btnGfx.fillStyle(hover ? 0x1e1e44 : 0x111133, 0.95);
+        btnGfx.fillRoundedRect(x - btnW / 2, y - btnH / 2, btnW, btnH, 6);
+        btnGfx.lineStyle(1, hover ? boss.color : 0x333366, hover ? 1 : 0.5);
+        btnGfx.strokeRoundedRect(x - btnW / 2, y - btnH / 2, btnW, btnH, 6);
+      };
+      drawBtn(false);
+      overlay.add(btnGfx);
+
+      overlay.add(scene.add.text(x, y, boss.name, {
+        fontSize: '11px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      }).setOrigin(0.5).setScrollFactor(0));
+
+      const hitbox = scene.add.rectangle(x, y, btnW, btnH, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true }).setScrollFactor(0);
+      hitbox.on('pointerover', () => drawBtn(true));
+      hitbox.on('pointerout', () => drawBtn(false));
+      hitbox.on('pointerdown', () => {
+        SoundManager.playClick();
+        this.spawnSystem.spawnBoss(boss.key);
+      });
+      overlay.add(hitbox);
+    });
+
+    // Fechar
+    const closeBtn = scene.add.text(width / 2, startY + Math.ceil(bosses.length / cols) * (btnH + gapY) + 15, 'Fechar [X]', {
+      fontSize: '12px', color: '#666666', fontFamily: 'monospace',
+    }).setOrigin(0.5).setScrollFactor(0).setInteractive({ useHandCursor: true });
+    closeBtn.on('pointerover', () => closeBtn.setColor('#ffffff'));
+    closeBtn.on('pointerout', () => closeBtn.setColor('#666666'));
+    closeBtn.on('pointerdown', () => {
+      SoundManager.playClick();
+      overlay.destroy(true);
+    });
+    overlay.add(closeBtn);
   }
 
   private spawnDummies(): void {

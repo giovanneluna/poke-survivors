@@ -169,7 +169,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.lastTeleportTime = time;
 
     const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-    const dist = Phaser.Math.FloatBetween(80, this.teleportConfig.range);
+    const dist = Phaser.Math.FloatBetween(140, this.teleportConfig.range);
     const newX = playerX + Math.cos(angle) * dist;
     const newY = playerY + Math.sin(angle) * dist;
 

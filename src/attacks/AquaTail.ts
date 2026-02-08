@@ -5,11 +5,43 @@ import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
 
+type CardinalDir = 'up' | 'down' | 'left' | 'right';
+
+function angleToCardinal(rad: number): CardinalDir {
+  const deg = Phaser.Math.RadToDeg(rad);
+  if (deg >= -135 && deg < -45) return 'up';
+  if (deg >= -45 && deg < 45) return 'right';
+  if (deg >= 45 && deg < 135) return 'down';
+  return 'left';
+}
+
+/** Offset: cauda emana ATRÁS do jogador (oposto à direção de movimento) */
+const DIR_OFFSET: Record<CardinalDir, { x: number; y: number }> = {
+  up:    { x: 0, y: 20 },
+  down:  { x: 0, y: -20 },
+  left:  { x: 20, y: 0 },
+  right: { x: -20, y: 0 },
+};
+
+/** Origin: ancora o sprite na borda próxima ao jogador, estendendo para trás */
+const DIR_ORIGIN: Record<CardinalDir, { x: number; y: number }> = {
+  up:    { x: 0.5, y: 0 },
+  down:  { x: 0.5, y: 1 },
+  left:  { x: 0, y: 0.5 },
+  right: { x: 1, y: 0.5 },
+};
+
+/** Mapeia direção do player → direção oposta (onde a cauda aparece) */
+const OPPOSITE: Record<CardinalDir, CardinalDir> = {
+  up: 'down', down: 'up', left: 'right', right: 'left',
+};
+
 /**
  * Aqua Tail: cauda aquática com alta chance de crítico.
- * Arco de dano amplo (120°) e curto alcance, com sprite Liquidation.
+ * Arco de dano amplo (120°) e curto alcance, com sprite water-wave direcional.
  * Similar ao Slash mas com tema Water e crit base 15%.
  * Wartortle tier (minForm: stage1).
+ * Usa sprites direcionais (up/down/left/right) sem rotação.
  */
 export class AquaTail implements Attack {
   readonly type = 'aquaTail' as const;
@@ -41,22 +73,30 @@ export class AquaTail implements Attack {
   private swipe(): void {
     const dir = this.player.getLastDirection();
     const dirAngleRad = Math.atan2(dir.y, dir.x);
+    const cardinal = angleToCardinal(dirAngleRad);
 
     const isCrit = Math.random() < this.critChance;
     const finalDamage = isCrit ? Math.floor(this.damage * this.critMultiplier) : this.damage;
 
-    // Visual: sprite liquidation rotacionado na direcao do ataque
-    const offsetX = Math.cos(dirAngleRad) * 30;
-    const offsetY = Math.sin(dirAngleRad) * 30;
+    // Sprite direcional — cauda aparece ATRÁS do jogador
+    const tailDir = OPPOSITE[cardinal];
+    const textureKey = `atk-aqua-tail-${tailDir}`;
+    const animKey = `anim-aqua-tail-${tailDir}`;
+    const offset = DIR_OFFSET[cardinal];
+
+    const origin = DIR_ORIGIN[cardinal];
     const tail = this.scene.add.sprite(
-      this.player.x + offsetX, this.player.y + offsetY, 'atk-liquidation'
+      this.player.x + offset.x, this.player.y + offset.y, textureKey,
     );
-    const tintColor = isCrit ? 0xffffff : 0x44aaff;
-    tail.setScale(isCrit ? 0.6 : 0.5).setDepth(10).setAlpha(0.9).setTint(tintColor);
-    tail.setRotation(dirAngleRad);
-    tail.play('anim-liquidation');
+    tail.setOrigin(origin.x, origin.y);
+    if (isCrit) {
+      tail.setDepth(10).setAlpha(0.95).setTint(0xffffff);
+    } else {
+      tail.setDepth(10).setAlpha(0.9);
+    }
+    tail.play(animKey);
     const followTail = (): void => {
-      if (tail.active) tail.setPosition(this.player.x + offsetX, this.player.y + offsetY);
+      if (tail.active) tail.setPosition(this.player.x + offset.x, this.player.y + offset.y);
     };
     this.scene.events.on('update', followTail);
     tail.once('animationcomplete', () => {
@@ -76,7 +116,8 @@ export class AquaTail implements Attack {
       });
     }
 
-    // Dano em arco
+    // Dano em arco ATRÁS do jogador (180° oposto à direção de movimento)
+    const tailAngleRad = dirAngleRad + Math.PI;
     const enemies = this.enemyGroup.getChildren().filter(
       (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
     );
@@ -92,7 +133,7 @@ export class AquaTail implements Attack {
       );
       const angleDiff = Math.abs(
         Phaser.Math.Angle.ShortestBetween(
-          Phaser.Math.RadToDeg(dirAngleRad),
+          Phaser.Math.RadToDeg(tailAngleRad),
           Phaser.Math.RadToDeg(angleToEnemy)
         )
       );

@@ -28,6 +28,9 @@ export const SNORLAX: BossConfig = {
     range: 300,
     beamDuration: 1500,
     beamWidth: 32,
+    spriteKey: 'atk-extreme-speed',
+    animKey: 'anim-extreme-speed',
+    spriteScale: 3,
     tintColor: 0xffffff,
     aoeColor: 0xffffaa,
   }, {

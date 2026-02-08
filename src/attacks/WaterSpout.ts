@@ -86,6 +86,9 @@ export class WaterSpout implements Attack {
         Math.sin(angle) * WaterSpout.SPEED
       );
 
+      // Rotacionar sprite na direcao do tiro
+      bullet.setRotation(angle);
+
       // Trail de particulas pesadas
       const trail = this.scene.add.particles(0, 0, 'water-particle', {
         follow: bullet,

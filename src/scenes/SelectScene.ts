@@ -9,9 +9,7 @@ export class SelectScene extends Phaser.Scene {
   private cards: Phaser.GameObjects.Container[] = [];
   private cardGraphics: Phaser.GameObjects.Graphics[] = [];
   private phaseOverlay: Phaser.GameObjects.Container | null = null;
-  private passwordOverlay: Phaser.GameObjects.Container | null = null;
   private devConfigOverlay: Phaser.GameObjects.Container | null = null;
-  private passwordKeyHandler: ((event: KeyboardEvent) => void) | null = null;
   private devKeyHandler: ((event: KeyboardEvent) => void) | null = null;
 
   constructor() {
@@ -148,7 +146,7 @@ export class SelectScene extends Phaser.Scene {
       const card2X = width / 2 + 130;
       this.createPhaseCard(card2X, cardY, 'FASE DEV', 'DEBUGGER', 0x44aaff, 0x66ccff,
         'Cenários de teste\npré-configurados\npara debugging.', () => {
-          this.showPasswordPrompt();
+          this.showDevConfigOverlay();
         });
     }
 
@@ -233,113 +231,10 @@ export class SelectScene extends Phaser.Scene {
     this.phaseOverlay.add(hitbox);
   }
 
-  private showPasswordPrompt(): void {
-    if (this.passwordOverlay) return;
-
-    const { width, height } = this.cameras.main;
-    this.passwordOverlay = this.add.container(0, 0).setDepth(300);
-
-    // Fundo escuro sobre o overlay de fases
-    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7);
-    bg.setInteractive();
-    this.passwordOverlay.add(bg);
-
-    this.passwordOverlay.add(this.add.text(width / 2, height / 2 - 60, 'ACESSO RESTRITO', {
-      fontSize: '16px', color: '#44aaff', fontFamily: 'monospace', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 3,
-    }).setOrigin(0.5));
-
-    this.passwordOverlay.add(this.add.text(width / 2, height / 2 - 35, 'Digite a senha:', {
-      fontSize: '12px', color: '#888888', fontFamily: 'monospace',
-    }).setOrigin(0.5));
-
-    // Caixa de input visual
-    const boxGfx = this.add.graphics();
-    boxGfx.fillStyle(0x111133, 0.95);
-    boxGfx.fillRoundedRect(width / 2 - 80, height / 2 - 15, 160, 30, 6);
-    boxGfx.lineStyle(1, 0x44aaff, 0.5);
-    boxGfx.strokeRoundedRect(width / 2 - 80, height / 2 - 15, 160, 30, 6);
-    this.passwordOverlay.add(boxGfx);
-
-    let password = '';
-    const pwDisplay = this.add.text(width / 2, height / 2, '', {
-      fontSize: '18px', color: '#ffffff', fontFamily: 'monospace',
-      stroke: '#000000', strokeThickness: 2,
-    }).setOrigin(0.5);
-    this.passwordOverlay.add(pwDisplay);
-
-    const errorText = this.add.text(width / 2, height / 2 + 25, '', {
-      fontSize: '11px', color: '#ff4444', fontFamily: 'monospace',
-    }).setOrigin(0.5);
-    this.passwordOverlay.add(errorText);
-
-    this.passwordOverlay.add(this.add.text(width / 2, height / 2 + 55, 'ESC para cancelar', {
-      fontSize: '10px', color: '#555555', fontFamily: 'monospace',
-    }).setOrigin(0.5));
-
-    const cleanup = (): void => {
-      if (this.passwordKeyHandler) {
-        window.removeEventListener('keydown', this.passwordKeyHandler);
-        this.passwordKeyHandler = null;
-      }
-      if (this.passwordOverlay) {
-        this.passwordOverlay.destroy(true);
-        this.passwordOverlay = null;
-      }
-    };
-
-    const onKeyDown = (event: KeyboardEvent): void => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      if (event.key === 'Escape') {
-        SoundManager.playClick();
-        cleanup();
-        return;
-      }
-      if (event.key === 'Backspace') {
-        password = password.slice(0, -1);
-        pwDisplay.setText('*'.repeat(password.length));
-        return;
-      }
-      if (event.key === 'Enter') {
-        if (password === 'lulu') {
-          cleanup();
-          this.hidePhaseSelection();
-          this.showDevConfigOverlay();
-        } else {
-          errorText.setText('Senha incorreta!');
-          password = '';
-          pwDisplay.setText('');
-          this.time.delayedCall(1500, () => { if (errorText.active) errorText.setText(''); });
-        }
-        return;
-      }
-      if (event.key.length === 1 && password.length < 20) {
-        password += event.key;
-        pwDisplay.setText('*'.repeat(password.length));
-      }
-    };
-
-    this.passwordKeyHandler = onKeyDown;
-    window.addEventListener('keydown', onKeyDown);
-
-    // Cleanup automático se a scene for destruída
-    this.events.once('shutdown', cleanup);
-  }
-
   private hidePhaseSelection(): void {
-    if (this.passwordKeyHandler) {
-      window.removeEventListener('keydown', this.passwordKeyHandler);
-      this.passwordKeyHandler = null;
-    }
     if (this.devKeyHandler) {
       window.removeEventListener('keydown', this.devKeyHandler);
       this.devKeyHandler = null;
-    }
-    if (this.passwordOverlay) {
-      this.passwordOverlay.destroy(true);
-      this.passwordOverlay = null;
     }
     if (this.devConfigOverlay) {
       this.devConfigOverlay.destroy(true);
@@ -535,6 +430,20 @@ export class SelectScene extends Phaser.Scene {
     });
     this.devConfigOverlay.add(startHit);
     yPos += 50;
+
+    // ── Skills VIEW ────────────────────────────────────────────
+    const skillsBtn = this.add.text(panelX, yPos, 'Skills VIEW', {
+      fontSize: '12px', color: '#ffaa00', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    skillsBtn.on('pointerover', () => skillsBtn.setColor('#ffdd44'));
+    skillsBtn.on('pointerout', () => skillsBtn.setColor('#ffaa00'));
+    skillsBtn.on('pointerdown', () => {
+      SoundManager.playClick();
+      this.hidePhaseSelection();
+      this.scene.start('ShowcaseScene');
+    });
+    this.devConfigOverlay.add(skillsBtn);
+    yPos += 22;
 
     // ── Back to debugger ────────────────────────────────────────
     const debugBtn = this.add.text(panelX, yPos, 'Debugger (cenários)', {

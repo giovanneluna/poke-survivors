@@ -20,6 +20,11 @@ export const MACHAMP: BossConfig = {
     damage: 55,
     cooldownMs: 3000,
     aoeRadius: 160,
+    spriteKey: 'atk-ground-melee',
+    animKey: 'anim-ground-melee',
+    spriteScale: 2,
+    tintColor: 0xcc4400,
+    aoeColor: 0xcc4400,
   }, {
     name: 'Dynamic Punch Dir',
     pattern: 'directional',

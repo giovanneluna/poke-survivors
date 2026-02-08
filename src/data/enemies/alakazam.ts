@@ -11,8 +11,8 @@ export const ALAKAZAM: EnemyConfig = {
   xpValue: 110,
   scale: 1.0,
   teleport: {
-    cooldownMs: 5000,
-    range: 150,
+    cooldownMs: 6500,
+    range: 220,
   },
   rangedAttack: {
     projectileKey: 'atk-psychic',

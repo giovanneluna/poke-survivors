@@ -57,7 +57,7 @@ import type { GameContext } from './GameContext';
 import type { CollisionSystem } from './CollisionSystem';
 import type { PickupSystem } from './PickupSystem';
 
-type CollisionPattern = 'none' | 'projectile' | 'orbital' | 'inferno';
+type CollisionPattern = 'none' | 'projectile' | 'orbital' | 'inferno' | 'deflect';
 
 type HitElement = 'fire' | 'water';
 
@@ -133,13 +133,7 @@ const REGISTRY: Partial<Record<AttackType, AttackEntry>> = {
     getGroup: (a) => (a as WaterGun).getBullets(),
     getDamage: (a) => () => (a as WaterGun).getDamage(),
   },
-  waterPulse: {
-    create: (ctx) => new WaterPulse(ctx.scene, ctx.player, ctx.enemyGroup),
-    collision: 'projectile',
-    hitElement: 'water',
-    getGroup: (a) => (a as WaterPulse).getBullets(),
-    getDamage: (a) => () => (a as WaterPulse).getDamage(),
-  },
+  waterPulse: { create: (ctx) => new WaterPulse(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
   iceBeam: {
     create: (ctx) => new IceBeam(ctx.scene, ctx.player, ctx.enemyGroup),
     collision: 'projectile',
@@ -187,7 +181,12 @@ const REGISTRY: Partial<Record<AttackType, AttackEntry>> = {
     getDamage: (a) => () => (a as Bubble).getDamage(),
   },
   tackle: { create: (ctx) => new Tackle(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
-  withdraw: { create: (ctx) => new Withdraw(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  withdraw: {
+    create: (ctx) => new Withdraw(ctx.scene, ctx.player, ctx.enemyGroup),
+    collision: 'deflect',
+    hitElement: 'water',
+    getGroup: (a) => (a as Withdraw).getDeflectZone(),
+  },
   aquaJet: { create: (ctx) => new AquaJet(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
   hydroPump: { create: (ctx) => new HydroPump(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
   aquaTail: { create: (ctx) => new AquaTail(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
@@ -264,10 +263,11 @@ export class AttackFactory {
   }
 
   private setupCollisions(type: AttackType, attack: Attack, entry: AttackEntry): void {
-    if (entry.collision === 'none' || !entry.getGroup || !entry.getDamage) return;
+    if (entry.collision === 'none' || !entry.getGroup) return;
+    if (entry.collision !== 'deflect' && !entry.getDamage) return;
 
     const group = entry.getGroup(attack);
-    const getDamage = entry.getDamage(attack);
+    const getDamage = entry.getDamage?.(attack) ?? (() => 0);
     const hitElement = entry.hitElement ?? 'fire';
 
     switch (entry.collision) {
@@ -288,6 +288,9 @@ export class AttackFactory {
         }
         break;
       }
+      case 'deflect':
+        this.collisionSystem.setupDeflectCollisions(type, group, hitElement);
+        break;
     }
   }
 }

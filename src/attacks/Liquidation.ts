@@ -76,7 +76,7 @@ export class Liquidation implements Attack {
 
     // Visual: sprite de liquidation animado
     const liquidSprite = this.scene.add.sprite(tx, ty, 'atk-liquidation');
-    liquidSprite.setScale(1.2).setDepth(11).setAlpha(0.9);
+    liquidSprite.setScale(1).setDepth(11).setAlpha(0.9);
     liquidSprite.play('anim-liquidation');
     liquidSprite.once('animationcomplete', () => liquidSprite.destroy());
 

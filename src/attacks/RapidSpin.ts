@@ -18,14 +18,14 @@ export class RapidSpin implements Attack {
   private orbCount = 2;
   private radius = 60;
   private damage: number;
-  private readonly rotationSpeed = 4;
+  private readonly rotationSpeed = 2.5;
   private angle = 0;
 
   // ── Ciclo ativo/cooldown (VS Bible pattern) ─────────────────────
   private state: 'active' | 'cooldown' = 'active';
   private stateTimer = 0;
-  private activeDuration = 4000;
-  private cooldownDuration = 3000;
+  private activeDuration = 3000;
+  private cooldownDuration = 4000;
 
   constructor(scene: Phaser.Scene, player: Player) {
     this.scene = scene;
@@ -150,11 +150,11 @@ export class RapidSpin implements Attack {
 
   upgrade(): void {
     this.level++;
-    this.damage += 3;
+    this.damage += 2;
     this.orbCount++;
     this.radius += 8;
-    this.activeDuration += 500;
-    this.cooldownDuration = Math.max(1000, this.cooldownDuration - 300);
+    this.activeDuration += 300;
+    this.cooldownDuration = Math.max(1500, this.cooldownDuration - 200);
     this.createOrbs();
   }
 

@@ -15,8 +15,8 @@ export const ALAKAZAM_BOSS: BossConfig = {
   resistance: 0.3,
   hpRegenPerSec: 30,
   teleport: {
-    cooldownMs: 3000,
-    range: 200,
+    cooldownMs: 4000,
+    range: 280,
   },
   bossAttacks: [
     {
@@ -45,9 +45,9 @@ export const ALAKAZAM_BOSS: BossConfig = {
       name: 'Teleport + Psybeam',
       pattern: 'teleport-fan',
       damage: 25,
-      cooldownMs: 5000,
+      cooldownMs: 6500,
       projectileCount: 5,
-      teleportRange: 180,
+      teleportRange: 250,
       spriteKey: 'atk-psychic',
       animKey: 'anim-psychic',
       tintColor: 0xcc44ff,

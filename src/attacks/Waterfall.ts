@@ -5,11 +5,38 @@ import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
 
+type CardinalDir = 'up' | 'down' | 'left' | 'right';
+
+function angleToCardinal(rad: number): CardinalDir {
+  const deg = Phaser.Math.RadToDeg(rad);
+  if (deg >= -135 && deg < -45) return 'up';
+  if (deg >= -45 && deg < 45) return 'right';
+  if (deg >= 45 && deg < 135) return 'down';
+  return 'left';
+}
+
+/** Offset: jato emana do jogador */
+const DIR_OFFSET: Record<CardinalDir, { x: number; y: number }> = {
+  up:    { x: 0, y: -20 },
+  down:  { x: 0, y: 20 },
+  left:  { x: -20, y: 0 },
+  right: { x: 20, y: 0 },
+};
+
+/** Origin: ancora o sprite na borda proxima ao jogador, estendendo para fora */
+const DIR_ORIGIN: Record<CardinalDir, { x: number; y: number }> = {
+  up:    { x: 0.5, y: 1 },
+  down:  { x: 0.5, y: 0 },
+  left:  { x: 1, y: 0.5 },
+  right: { x: 0, y: 0.5 },
+};
+
 /**
  * Waterfall: evolucao do Aqua Jet.
  * Dash longo com trilha de agua persistente que aplica slow.
  * Equivalente ao Flare Rush do Charmander, com tematica aquatica.
  * Trail permanece e reduz velocidade dos inimigos que passam por ela.
+ * Usa sprites direcionais (up/down/left/right) sem rotação.
  */
 export class Waterfall implements Attack {
   readonly type = 'waterfall' as const;
@@ -43,6 +70,7 @@ export class Waterfall implements Attack {
   private dash(): void {
     const dir = this.player.getLastDirection();
     const angle = Math.atan2(dir.y, dir.x);
+    const cardinal = angleToCardinal(angle);
 
     const startX = this.player.x;
     const startY = this.player.y;
@@ -60,15 +88,31 @@ export class Waterfall implements Attack {
       });
     }
 
-    // Sprite animado do waterfall ao longo do dash
-    const rushSprite = this.scene.add.sprite(startX, startY, 'atk-aqua-jet');
-    rushSprite.setScale(0.6).setDepth(10).setAlpha(0.9);
-    rushSprite.setRotation(angle - Math.PI / 2);
-    rushSprite.play('anim-aqua-jet');
-    this.scene.tweens.add({
-      targets: rushSprite, x: endX, y: endY, duration: steps * 25,
+    // Sprite direcional — sem rotação
+    const textureKey = `atk-aqua-jet-${cardinal}`;
+    const animKey = `anim-aqua-jet-${cardinal}`;
+    const offset = DIR_OFFSET[cardinal];
+
+    const origin = DIR_ORIGIN[cardinal];
+    const rushSprite = this.scene.add.sprite(
+      this.player.x + offset.x,
+      this.player.y + offset.y,
+      textureKey,
+    );
+    rushSprite.setOrigin(origin.x, origin.y);
+    rushSprite.setDepth(10).setAlpha(0.9);
+    rushSprite.play(animKey);
+
+    const followRush = (): void => {
+      if (rushSprite.active) {
+        rushSprite.setPosition(this.player.x + offset.x, this.player.y + offset.y);
+      }
+    };
+    this.scene.events.on('update', followRush);
+    rushSprite.once('animationcomplete', () => {
+      this.scene.events.off('update', followRush);
+      rushSprite.destroy();
     });
-    rushSprite.once('animationcomplete', () => rushSprite.destroy());
 
     // Visual: particulas de agua + zonas de agua persistentes no trail
     for (let i = 0; i < trailPoints.length; i++) {
@@ -163,12 +207,10 @@ export class Waterfall implements Attack {
       },
     });
 
-    // Speed boost: aumenta velocidade do jogador temporariamente
+    // Speed boost temporário (sem tint — evita parecer que o jogador está tomando dano)
     this.player.stats.speed = Math.floor(this.player.stats.baseSpeed * (1 + this.speedBoost));
-    this.player.setTint(0x3388ff);
     this.scene.time.delayedCall(2500, () => {
       this.player.stats.speed = this.player.stats.baseSpeed;
-      if (this.player.active) this.player.clearTint();
     });
   }
 

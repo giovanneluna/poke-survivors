@@ -96,7 +96,7 @@ export class MuddyWater implements Attack {
       bullet.setData('fireId', currentFireId);
       bullet.setData('pierceCount', 0);
       bullet.setData('hitEnemies', new Set<number>());
-      bullet.setActive(true).setVisible(true).setScale(1);
+      bullet.setActive(true).setVisible(true).setScale(0.5);
       bullet.setDepth(8).setTint(0x664422);
       bullet.play('anim-water-pulse');
 
@@ -222,10 +222,18 @@ export class MuddyWater implements Attack {
   }
 
   private killBullet(bullet: Phaser.Physics.Arcade.Sprite): void {
+    this.spawnImpact(bullet.x, bullet.y);
     this.bullets.killAndHide(bullet);
     const body = bullet.body as Phaser.Physics.Arcade.Body;
     body.checkCollision.none = true;
     body.enable = false;
+  }
+
+  private spawnImpact(x: number, y: number): void {
+    const impact = this.scene.add.sprite(x, y, 'atk-water-pulse');
+    impact.setScale(0.7).setDepth(11).setAlpha(0.9).setTint(0x664422);
+    impact.play('anim-water-pulse-hit');
+    impact.once('animationcomplete', () => impact.destroy());
   }
 
   getDamage(): number {

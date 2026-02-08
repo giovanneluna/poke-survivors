@@ -194,6 +194,26 @@ export class CollisionSystem {
     this.attackColliders.set(attackType, colliders);
   }
 
+  // ── Deflect-only collisions (aura that destroys enemy projectiles) ──
+  setupDeflectCollisions(
+    attackType: string,
+    zone: Phaser.Physics.Arcade.Group,
+    hitElement: 'fire' | 'water' = 'water',
+  ): void {
+    const colliders: Phaser.Physics.Arcade.Collider[] = [];
+    const scene = this.ctx.scene;
+
+    colliders.push(scene.physics.add.overlap(zone, this.ctx.enemyProjectiles, (_zoneObj, projObj) => {
+      const proj = projObj as Phaser.Physics.Arcade.Sprite;
+      if (!proj.active) return;
+      this.ctx.enemyProjectiles.killAndHide(proj);
+      (proj.body as Phaser.Physics.Arcade.Body).enable = false;
+      this.pickupSystem.playHitEffect(proj.x, proj.y, hitElement);
+    }));
+
+    this.attackColliders.set(attackType, colliders);
+  }
+
   // ── Inferno-style collisions (projectile that explodes on hit) ────
   setupInfernoCollisions(
     attackType: string,

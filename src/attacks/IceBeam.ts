@@ -32,7 +32,7 @@ export class IceBeam implements Attack {
     this.cooldown = ATTACKS.iceBeam.baseCooldown;
 
     this.bullets = scene.physics.add.group({
-      defaultKey: 'atk-ice-range',
+      defaultKey: 'atk-frost-breath',
       maxSize: 30,
     });
 
@@ -80,21 +80,28 @@ export class IceBeam implements Attack {
       const bullet = this.bullets.get(
         this.player.x,
         this.player.y,
-        'atk-ice-range'
+        'atk-frost-breath'
       ) as Phaser.Physics.Arcade.Sprite | null;
 
       if (!bullet) continue;
 
       const currentFireId = ++this.fireId;
       bullet.setData('fireId', currentFireId);
-      bullet.setActive(true).setVisible(true).setScale(0.8);
+      bullet.setActive(true).setVisible(true);
+      bullet.setTexture('atk-frost-breath');
       bullet.setDepth(8);
-      bullet.play('anim-ice-range');
+      bullet.play('anim-frost-breath');
 
       const body = bullet.body as Phaser.Physics.Arcade.Body;
       body.enable = true;
       body.reset(this.player.x, this.player.y);
       body.checkCollision.none = false;
+
+      // Rotacionar sprite na direcao do alvo (beam aponta para o inimigo)
+      const angleToTarget = Math.atan2(
+        target.y - this.player.y, target.x - this.player.x
+      );
+      bullet.setRotation(angleToTarget);
 
       this.scene.physics.moveToObject(bullet, target, 280);
 

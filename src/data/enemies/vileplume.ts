@@ -25,6 +25,11 @@ export const VILEPLUME: BossConfig = {
     damage: 35,
     cooldownMs: 4500,
     aoeRadius: 260,
+    spriteKey: 'atk-acid-spray',
+    animKey: 'anim-acid-spray',
+    spriteScale: 2,
+    tintColor: 0xcc44cc,
+    aoeColor: 0x9944cc,
   }, {
     name: 'Stun Spore',
     pattern: 'zone',

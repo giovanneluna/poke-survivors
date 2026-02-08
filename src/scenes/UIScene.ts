@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { UpgradeOption, PlayerState, HeldItemType, AttackType, GachaRewardType, PokemonForm } from '../types';
+import type { UpgradeOption, PlayerState, HeldItemType, AttackType, GachaRewardType, PokemonForm, EnemyType } from '../types';
 import { ATTACKS } from '../config';
 import { SoundManager } from '../audio/SoundManager';
 import { Boss } from '../entities/Boss';
@@ -120,8 +120,38 @@ export class UIScene extends Phaser.Scene {
       this.showPauseOverlay(pauseBtn);
     });
 
-    // ── Damage Tracker (abaixo de kills/mute/pause) ──────────────────
-    this.damageContainer = this.add.container(width - 10, 72).setDepth(100);
+    // ── Botão Debug Hitbox (localhost only) ──────────────────────────
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    let debugYOffset = 0;
+    if (isLocal) {
+      const debugBtn = this.add.text(width - 10, 74, '☐', {
+        fontSize: '14px', color: '#888888',
+      }).setOrigin(1, 0).setDepth(100).setInteractive({ useHandCursor: true });
+      let debugOn = false;
+      debugBtn.on('pointerdown', () => {
+        debugOn = !debugOn;
+        debugBtn.setText(debugOn ? '☑' : '☐');
+        debugBtn.setColor(debugOn ? '#ff4444' : '#888888');
+        // Toggle debug em TODAS as scenes com physics
+        this.game.scene.scenes.forEach((s) => {
+          if (s.physics?.world) {
+            if (debugOn) {
+              if (!s.physics.world.debugGraphic) {
+                s.physics.world.createDebugGraphic();
+              }
+              s.physics.world.drawDebug = true;
+            } else {
+              s.physics.world.drawDebug = false;
+              s.physics.world.debugGraphic?.clear();
+            }
+          }
+        });
+      });
+      debugYOffset = 22;
+    }
+
+    // ── Damage Tracker (abaixo de kills/mute/pause/debug) ──────────────
+    this.damageContainer = this.add.container(width - 10, 72 + debugYOffset).setDepth(100);
 
     const gameScene = this.scene.get('GameScene');
     gameScene.events.on('stats-update', (stats: StatsData) => this.updateHUD(stats));
@@ -816,7 +846,7 @@ export class UIScene extends Phaser.Scene {
         gs.events.emit('stats-refresh');
       }},
       { label: 'Boss', color: '#ff2222', action: () => {
-        gs.getSpawnSystem().spawnBoss('raticate');
+        this.showBossSelector(gs);
       }},
     ];
 
@@ -1035,6 +1065,90 @@ export class UIScene extends Phaser.Scene {
           fontSize: '8px', color: '#555555', fontFamily: 'monospace',
         }).setOrigin(0.5, 1));
     }
+  }
+
+  private showBossSelector(gs: GameScene): void {
+    const { width, height } = this.cameras.main;
+
+    // Overlay container sobre tudo
+    const container = this.add.container(0, 0).setDepth(600);
+
+    // Background escuro
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8)
+      .setInteractive(); // bloqueia cliques atrás
+    container.add(bg);
+
+    const bosses: Array<{ key: string; label: string; color: string }> = [
+      { key: 'raticate', label: 'Raticate', color: '#cc9966' },
+      { key: 'arbok', label: 'Arbok', color: '#aa44aa' },
+      { key: 'nidoking', label: 'Nidoking', color: '#9944cc' },
+      { key: 'snorlax', label: 'Snorlax', color: '#44aa88' },
+      { key: 'beedrill', label: 'Beedrill', color: '#cccc22' },
+      { key: 'vileplume', label: 'Vileplume', color: '#ff4488' },
+      { key: 'primeape', label: 'Primeape', color: '#cc6644' },
+      { key: 'gengar', label: 'Gengar', color: '#9944ff' },
+      { key: 'fearow', label: 'Fearow', color: '#aa8866' },
+      { key: 'pidgeot', label: 'Pidgeot', color: '#ffaa44' },
+      { key: 'machamp', label: 'Machamp', color: '#6688cc' },
+      { key: 'golem', label: 'Golem', color: '#886644' },
+      { key: 'alakazam-boss', label: 'Alakazam', color: '#ffdd44' },
+    ];
+
+    // Título
+    const title = this.add.text(width / 2, 40, 'SPAWN BOSS', {
+      fontSize: '16px', color: '#ff4444', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5);
+    container.add(title);
+
+    // Grid 3 colunas
+    const cols = 3;
+    const btnW = 100;
+    const btnH = 28;
+    const gap = 8;
+    const gridW = cols * btnW + (cols - 1) * gap;
+    const startX = (width - gridW) / 2;
+    const startY = 70;
+
+    bosses.forEach((boss, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const bx = startX + col * (btnW + gap);
+      const by = startY + row * (btnH + gap);
+
+      const gfx = this.add.graphics();
+      gfx.fillStyle(0x1a1a3e, 0.95);
+      gfx.fillRoundedRect(bx, by, btnW, btnH, 4);
+      gfx.lineStyle(1, Phaser.Display.Color.HexStringToColor(boss.color).color, 0.6);
+      gfx.strokeRoundedRect(bx, by, btnW, btnH, 4);
+      container.add(gfx);
+
+      const label = this.add.text(bx + btnW / 2, by + btnH / 2, boss.label, {
+        fontSize: '11px', color: boss.color, fontFamily: 'monospace', fontStyle: 'bold',
+      }).setOrigin(0.5);
+      container.add(label);
+
+      const hit = this.add.rectangle(bx + btnW / 2, by + btnH / 2, btnW, btnH, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true });
+      hit.on('pointerover', () => label.setColor('#ffffff'));
+      hit.on('pointerout', () => label.setColor(boss.color));
+      hit.on('pointerdown', () => {
+        SoundManager.playClick();
+        gs.getSpawnSystem().spawnBoss(boss.key as EnemyType);
+        container.destroy();
+      });
+      container.add(hit);
+    });
+
+    // Botão fechar
+    const closeBtn = this.add.text(width / 2, startY + Math.ceil(bosses.length / cols) * (btnH + gap) + 10,
+      '[ FECHAR ]', {
+        fontSize: '12px', color: '#888888', fontFamily: 'monospace',
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    closeBtn.on('pointerover', () => closeBtn.setColor('#ffffff'));
+    closeBtn.on('pointerout', () => closeBtn.setColor('#888888'));
+    closeBtn.on('pointerdown', () => { SoundManager.playClick(); container.destroy(); });
+    container.add(closeBtn);
   }
 
   private showGameOver(data: GameOverData): void {

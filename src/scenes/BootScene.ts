@@ -80,7 +80,10 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('atk-fire-blast', 'assets/attacks/fire/fire-blast-sheet.png', { frameWidth: 72, frameHeight: 73 });
     this.load.spritesheet('atk-blast-burn', 'assets/attacks/fire/blast-burn-sheet.png', { frameWidth: 80, frameHeight: 80 });
     this.load.spritesheet('atk-fire-fang', 'assets/attacks/fire/fire-fang-sheet.png', { frameWidth: 80, frameHeight: 64 });
-    this.load.spritesheet('atk-flame-charge', 'assets/attacks/fire/flame-charge-sheet.png', { frameWidth: 20, frameHeight: 96 });
+    this.load.spritesheet('atk-flame-charge-up', 'assets/attacks/fire/flame-charge-up-sheet.png', { frameWidth: 32, frameHeight: 160 });
+    this.load.spritesheet('atk-flame-charge-down', 'assets/attacks/fire/flame-charge-down-sheet.png', { frameWidth: 32, frameHeight: 160 });
+    this.load.spritesheet('atk-flame-charge-left', 'assets/attacks/fire/flame-charge-left-sheet.png', { frameWidth: 160, frameHeight: 32 });
+    this.load.spritesheet('atk-flame-charge-right', 'assets/attacks/fire/flame-charge-right-sheet.png', { frameWidth: 160, frameHeight: 32 });
     this.load.spritesheet('atk-flare-blitz', 'assets/attacks/fire/flare-blitz-sheet.png', { frameWidth: 96, frameHeight: 83 });
     this.load.spritesheet('atk-heat-wave', 'assets/attacks/fire/heat-wave-sheet.png', { frameWidth: 96, frameHeight: 82 });
 
@@ -113,10 +116,15 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('atk-hurricane-boss', 'assets/attacks/flying/hurricane-sheet.png', { frameWidth: 56, frameHeight: 80 });
 
     // ── Ghost attack spritesheets ───────────────────────────────
-    this.load.spritesheet('atk-shadow-ball', 'assets/attacks/ghost/shadow-ball-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-shadow-ball', 'assets/attacks/ghost/shadow-ball-sheet.png', { frameWidth: 96, frameHeight: 64 });
+    this.load.spritesheet('atk-shadow-ball-wave', 'assets/attacks/ghost/shadow-ball-wave.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-shadow-ball-hit', 'assets/attacks/ghost/shadow-ball-hit-sheet.png', { frameWidth: 96, frameHeight: 48 });
+    this.load.spritesheet('atk-lick-gengar', 'assets/attacks/ghost/lick-gengar-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-shadow-bite', 'assets/attacks/ghost/gengar-shadow-bite-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-gengar-buff', 'assets/attacks/ghost/gengar-buff-sheet.png', { frameWidth: 32, frameHeight: 64 });
 
     // ── Rock attack spritesheets ────────────────────────────────
-    this.load.spritesheet('atk-rock-slide', 'assets/attacks/rock/rock-slide-sheet.png', { frameWidth: 80, frameHeight: 256 });
+    this.load.spritesheet('atk-rock-slide', 'assets/attacks/rock/rock-slide-sheet.png', { frameWidth: 48, frameHeight: 96 });
     this.load.spritesheet('atk-rock-throw', 'assets/attacks/rock/rock-throw-sheet.png', { frameWidth: 16, frameHeight: 16 });
 
     // ── Psychic attack spritesheets ─────────────────────────────
@@ -125,17 +133,36 @@ export class BootScene extends Phaser.Scene {
 
     // ── Ground attack spritesheets ──────────────────────────────
     this.load.spritesheet('atk-bonemerang', 'assets/attacks/ground/bonemerang-sheet.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('atk-ground-melee', 'assets/attacks/ground/ground-melee-sheet.png', { frameWidth: 80, frameHeight: 80 });
 
     // ── Poison attack spritesheets ──────────────────────────────
     this.load.spritesheet('atk-gunk-shot', 'assets/attacks/poison/gunk-shot-sheet.png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('atk-venoshock', 'assets/attacks/normal/venoshock-sheet.png', { frameWidth: 32, frameHeight: 80 });
+    this.load.spritesheet('atk-acid-spray', 'assets/attacks/poison/acid-spray-sheet.png', { frameWidth: 80, frameHeight: 80 });
+    this.load.spritesheet('atk-smog', 'assets/attacks/poison/smog-sheet.png', { frameWidth: 50, frameHeight: 50 });
+    this.load.spritesheet('atk-sludge-wave', 'assets/attacks/poison/sludge-wave-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-poison-melee', 'assets/attacks/poison/poison-melee-sheet.png', { frameWidth: 56, frameHeight: 64 });
+
+    // ── Dark attack spritesheets ────────────────────────────────
+    this.load.spritesheet('atk-dark-melee', 'assets/attacks/dark/dark-melee-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-dark-hit', 'assets/attacks/dark/dark-hit-sheet.png', { frameWidth: 64, frameHeight: 62 });
+
+    // ── Normal (extra) ──────────────────────────────────────────
+    this.load.spritesheet('atk-extreme-speed', 'assets/attacks/normal/extreme-speed-sheet.png', { frameWidth: 72, frameHeight: 72 });
 
     // ── Water attack spritesheets (Squirtle line) ───────────────
-    this.load.spritesheet('atk-water-pulse', 'assets/attacks/water/water-pulse-sheet.png', { frameWidth: 64, frameHeight: 56 });
-    this.load.spritesheet('atk-aqua-jet', 'assets/attacks/water/aqua-jet-sheet.png', { frameWidth: 96, frameHeight: 160 });
+    this.load.spritesheet('atk-water-pulse', 'assets/attacks/water/water-pulse-sheet.png', { frameWidth: 200, frameHeight: 104 });
+    this.load.spritesheet('atk-aqua-jet-up', 'assets/attacks/water/aqua-jet-down-sheet.png', { frameWidth: 96, frameHeight: 160 });
+    this.load.spritesheet('atk-aqua-jet-down', 'assets/attacks/water/aqua-jet-up-sheet.png', { frameWidth: 96, frameHeight: 160 });
+    this.load.spritesheet('atk-aqua-jet-left', 'assets/attacks/water/aqua-jet-right-sheet.png', { frameWidth: 160, frameHeight: 96 });
+    this.load.spritesheet('atk-aqua-jet-right', 'assets/attacks/water/aqua-jet-left-sheet.png', { frameWidth: 160, frameHeight: 96 });
     this.load.spritesheet('atk-hydro-pump', 'assets/attacks/water/hydro-pump-sheet.png', { frameWidth: 96, frameHeight: 160 });
     this.load.spritesheet('atk-surf', 'assets/attacks/water/surf-sheet.png', { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet('atk-liquidation', 'assets/attacks/water/liquidation-sheet.png', { frameWidth: 64, frameHeight: 120 });
+    this.load.spritesheet('atk-liquidation', 'assets/attacks/water/liquidation-sheet.png', { frameWidth: 200, frameHeight: 120 });
+    this.load.spritesheet('atk-aqua-tail-up', 'assets/attacks/water/aqua-tail-down-sheet.png', { frameWidth: 64, frameHeight: 96 });
+    this.load.spritesheet('atk-aqua-tail-down', 'assets/attacks/water/aqua-tail-up-sheet.png', { frameWidth: 64, frameHeight: 96 });
+    this.load.spritesheet('atk-aqua-tail-left', 'assets/attacks/water/aqua-tail-right-sheet.png', { frameWidth: 96, frameHeight: 64 });
+    this.load.spritesheet('atk-aqua-tail-right', 'assets/attacks/water/aqua-tail-left-sheet.png', { frameWidth: 96, frameHeight: 64 });
     this.load.spritesheet('atk-rapid-spin', 'assets/attacks/water/rapid-spin-sheet.png', { frameWidth: 72, frameHeight: 72 });
     this.load.spritesheet('atk-water-range', 'assets/attacks/water/water-range-sheet.png', { frameWidth: 8, frameHeight: 8 });
     this.load.spritesheet('atk-water-hit', 'assets/attacks/water/water-hit-sheet.png', { frameWidth: 16, frameHeight: 16 });
@@ -146,6 +173,7 @@ export class BootScene extends Phaser.Scene {
 
     // ── Ice attack spritesheets ─────────────────────────────────
     this.load.spritesheet('atk-ice-range', 'assets/attacks/ice/ice-range-sheet.png', { frameWidth: 64, frameHeight: 56 });
+    this.load.spritesheet('atk-frost-breath', 'assets/attacks/ice/frost-breath-sheet.png', { frameWidth: 64, frameHeight: 64 });
 
     // ── Tibia-converted boss attack spritesheets ──────────────
     // Fire
@@ -168,11 +196,11 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('atk-air-cutter-right', 'assets/attacks/flying/air-cutter-right-sheet.png', { frameWidth: 96, frameHeight: 96 });
     this.load.spritesheet('atk-brave-bird-tibia', 'assets/attacks/flying/brave-bird-tibia-sheet.png', { frameWidth: 96, frameHeight: 96 });
     this.load.spritesheet('atk-air-slash-x', 'assets/attacks/flying/air-slash-x-sheet.png', { frameWidth: 96, frameHeight: 96 });
-    // Ghost
-    this.load.spritesheet('atk-shadow-ball-up', 'assets/attacks/ghost/shadow-ball-up-sheet.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('atk-shadow-ball-down', 'assets/attacks/ghost/shadow-ball-down-sheet.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('atk-shadow-ball-left', 'assets/attacks/ghost/shadow-ball-left-sheet.png', { frameWidth: 96, frameHeight: 96 });
-    this.load.spritesheet('atk-shadow-ball-right', 'assets/attacks/ghost/shadow-ball-right-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    // Ghost (Shadow Ball is spherical — same sheet for all directions)
+    this.load.spritesheet('atk-shadow-ball-up', 'assets/attacks/ghost/shadow-ball-sheet.png', { frameWidth: 96, frameHeight: 64 });
+    this.load.spritesheet('atk-shadow-ball-down', 'assets/attacks/ghost/shadow-ball-sheet.png', { frameWidth: 96, frameHeight: 64 });
+    this.load.spritesheet('atk-shadow-ball-left', 'assets/attacks/ghost/shadow-ball-sheet.png', { frameWidth: 96, frameHeight: 64 });
+    this.load.spritesheet('atk-shadow-ball-right', 'assets/attacks/ghost/shadow-ball-sheet.png', { frameWidth: 96, frameHeight: 64 });
     // Psychic
     this.load.spritesheet('atk-psywave-a', 'assets/attacks/psychic/psywave-a-sheet.png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('atk-psywave-b', 'assets/attacks/psychic/psywave-b-sheet.png', { frameWidth: 32, frameHeight: 32 });
@@ -342,11 +370,26 @@ export class BootScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('atk-smokescreen', { start: 0, end: 11 }),
       frameRate: 12, repeat: -1,
     });
-    // Flame Charge (16 frames, play once)
+    // Flame Charge — 4 directional animations (Tibia fire-beam)
     this.anims.create({
-      key: 'anim-flame-charge',
-      frames: this.anims.generateFrameNumbers('atk-flame-charge', { start: 15, end: 0 }),
-      frameRate: 24, repeat: 0,
+      key: 'anim-flame-charge-up',
+      frames: this.anims.generateFrameNumbers('atk-flame-charge-up', { start: 0, end: 5 }),
+      frameRate: 15, repeat: 0,
+    });
+    this.anims.create({
+      key: 'anim-flame-charge-down',
+      frames: this.anims.generateFrameNumbers('atk-flame-charge-down', { start: 0, end: 5 }),
+      frameRate: 15, repeat: 0,
+    });
+    this.anims.create({
+      key: 'anim-flame-charge-left',
+      frames: this.anims.generateFrameNumbers('atk-flame-charge-left', { start: 0, end: 5 }),
+      frameRate: 15, repeat: 0,
+    });
+    this.anims.create({
+      key: 'anim-flame-charge-right',
+      frames: this.anims.generateFrameNumbers('atk-flame-charge-right', { start: 0, end: 5 }),
+      frameRate: 15, repeat: 0,
     });
     // Flare Blitz (15 frames, play once)
     this.anims.create({
@@ -384,11 +427,41 @@ export class BootScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('atk-outrage', { start: 0, end: 12 }),
       frameRate: 16, repeat: -1,
     });
-    // Shadow Ball (16 frames, looping projectile)
+    // Shadow Ball (3 frames, looping projectile — 96x64 each)
     this.anims.create({
       key: 'anim-shadow-ball',
-      frames: this.anims.generateFrameNumbers('atk-shadow-ball', { start: 0, end: 15 }),
-      frameRate: 18, repeat: -1,
+      frames: this.anims.generateFrameNumbers('atk-shadow-ball', { start: 0, end: 2 }),
+      frameRate: 10, repeat: -1,
+    });
+    // Shadow Ball Wave (16 frames, grow/shrink orb — Gengar teleport-fan)
+    this.anims.create({
+      key: 'anim-shadow-ball-wave',
+      frames: this.anims.generateFrameNumbers('atk-shadow-ball-wave', { start: 0, end: 15 }),
+      frameRate: 16, repeat: -1,
+    });
+    // Shadow Ball Hit (4 frames, impact explosion)
+    this.anims.create({
+      key: 'anim-shadow-ball-hit',
+      frames: this.anims.generateFrameNumbers('atk-shadow-ball-hit', { start: 0, end: 3 }),
+      frameRate: 12, repeat: 0,
+    });
+    // Lick Gengar (6 frames, tongue melee)
+    this.anims.create({
+      key: 'anim-lick-gengar',
+      frames: this.anims.generateFrameNumbers('atk-lick-gengar', { start: 0, end: 5 }),
+      frameRate: 12, repeat: 0,
+    });
+    // Shadow Bite (4 frames, bite marks)
+    this.anims.create({
+      key: 'anim-shadow-bite',
+      frames: this.anims.generateFrameNumbers('atk-shadow-bite', { start: 0, end: 3 }),
+      frameRate: 10, repeat: 0,
+    });
+    // Gengar Buff (4 frames, curse faces)
+    this.anims.create({
+      key: 'anim-gengar-buff',
+      frames: this.anims.generateFrameNumbers('atk-gengar-buff', { start: 0, end: 3 }),
+      frameRate: 6, repeat: -1,
     });
     // Rock Slide (16 frames, looping projectile)
     this.anims.create({
@@ -471,37 +544,45 @@ export class BootScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('atk-hurricane-boss', { start: 0, end: 51 }),
       frameRate: 20, repeat: -1,
     });
-    // Air Slash (8 frames, loop - cutting projectile)
-    this.anims.create({
-      key: 'anim-air-slash',
-      frames: this.anims.generateFrameNumbers('atk-air-slash', { start: 0, end: 7 }),
-      frameRate: 16, repeat: -1,
-    });
-    // Explosion / Golem (37 frames, play once)
+    // Explosion / Golem (18 frames, play once — 3024px / 168px = 18)
     this.anims.create({
       key: 'anim-golem-explosion',
-      frames: this.anims.generateFrameNumbers('atk-golem-explosion', { start: 0, end: 36 }),
-      frameRate: 24, repeat: 0,
-    });
-    // Rock Slide (79 frames, play once - falling rocks)
-    this.anims.create({
-      key: 'anim-rock-slide',
-      frames: this.anims.generateFrameNumbers('atk-rock-slide', { start: 0, end: 78 }),
+      frames: this.anims.generateFrameNumbers('atk-golem-explosion', { start: 0, end: 17 }),
       frameRate: 24, repeat: 0,
     });
 
     // ── Water attack animations (Squirtle line) ──────────────────────
-    // Water Pulse (22 frames, looping projectile)
+    // Water Pulse — flight (frame 0 loop) + hit (frames 1-5 once)
     this.anims.create({
       key: 'anim-water-pulse',
-      frames: this.anims.generateFrameNumbers('atk-water-pulse', { start: 0, end: 21 }),
-      frameRate: 18, repeat: -1,
+      frames: this.anims.generateFrameNumbers('atk-water-pulse', { start: 0, end: 0 }),
+      frameRate: 1, repeat: -1,
     });
-    // Aqua Jet (20 frames, play once)
     this.anims.create({
-      key: 'anim-aqua-jet',
-      frames: this.anims.generateFrameNumbers('atk-aqua-jet', { start: 0, end: 19 }),
-      frameRate: 24, repeat: 0,
+      key: 'anim-water-pulse-hit',
+      frames: this.anims.generateFrameNumbers('atk-water-pulse', { start: 1, end: 5 }),
+      frameRate: 12, repeat: 0,
+    });
+    // Aqua Jet — 4 directional animations (Tibia water-beam, 12 frames each)
+    this.anims.create({
+      key: 'anim-aqua-jet-up',
+      frames: this.anims.generateFrameNumbers('atk-aqua-jet-up', { start: 0, end: 11 }),
+      frameRate: 30, repeat: 0,
+    });
+    this.anims.create({
+      key: 'anim-aqua-jet-down',
+      frames: this.anims.generateFrameNumbers('atk-aqua-jet-down', { start: 0, end: 11 }),
+      frameRate: 30, repeat: 0,
+    });
+    this.anims.create({
+      key: 'anim-aqua-jet-left',
+      frames: this.anims.generateFrameNumbers('atk-aqua-jet-left', { start: 0, end: 11 }),
+      frameRate: 30, repeat: 0,
+    });
+    this.anims.create({
+      key: 'anim-aqua-jet-right',
+      frames: this.anims.generateFrameNumbers('atk-aqua-jet-right', { start: 0, end: 11 }),
+      frameRate: 30, repeat: 0,
     });
     // Hydro Pump (20 frames, play once)
     this.anims.create({
@@ -515,12 +596,20 @@ export class BootScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('atk-surf', { start: 0, end: 3 }),
       frameRate: 10, repeat: -1,
     });
-    // Liquidation (18 frames, play once)
+    // Liquidation (5 frames, play once)
     this.anims.create({
       key: 'anim-liquidation',
-      frames: this.anims.generateFrameNumbers('atk-liquidation', { start: 0, end: 17 }),
-      frameRate: 22, repeat: 0,
+      frames: this.anims.generateFrameNumbers('atk-liquidation', { start: 0, end: 4 }),
+      frameRate: 10, repeat: 0,
     });
+    // Aqua Tail directional (4 frames each, play once)
+    for (const dir of ['up', 'down', 'left', 'right'] as const) {
+      this.anims.create({
+        key: `anim-aqua-tail-${dir}`,
+        frames: this.anims.generateFrameNumbers(`atk-aqua-tail-${dir}`, { start: 0, end: 3 }),
+        frameRate: 12, repeat: 0,
+      });
+    }
     // Rapid Spin (11 frames, looping orbital)
     this.anims.create({
       key: 'anim-rapid-spin',
@@ -544,6 +633,12 @@ export class BootScene extends Phaser.Scene {
       key: 'anim-ice-range',
       frames: this.anims.generateFrameNumbers('atk-ice-range', { start: 0, end: 13 }),
       frameRate: 16, repeat: -1,
+    });
+    // Frost Breath (3 frames, looping — Ice Beam projectile)
+    this.anims.create({
+      key: 'anim-frost-breath',
+      frames: this.anims.generateFrameNumbers('atk-frost-breath', { start: 0, end: 2 }),
+      frameRate: 10, repeat: -1,
     });
     // Wave Splash (9 frames, looping — Bubble projectile)
     this.anims.create({
@@ -597,11 +692,11 @@ export class BootScene extends Phaser.Scene {
     this.anims.create({ key: 'anim-brave-bird-tibia', frames: this.anims.generateFrameNumbers('atk-brave-bird-tibia', { start: 0, end: 2 }), frameRate: 8, repeat: 0 });
     this.anims.create({ key: 'anim-air-slash-x', frames: this.anims.generateFrameNumbers('atk-air-slash-x', { start: 0, end: 2 }), frameRate: 8, repeat: 0 });
 
-    // Ghost: Shadow Ball directional (4 dirs)
-    this.anims.create({ key: 'anim-shadow-ball-up', frames: this.anims.generateFrameNumbers('atk-shadow-ball-up', { start: 0, end: 3 }), frameRate: 10, repeat: 0 });
-    this.anims.create({ key: 'anim-shadow-ball-down', frames: this.anims.generateFrameNumbers('atk-shadow-ball-down', { start: 0, end: 7 }), frameRate: 12, repeat: 0 });
-    this.anims.create({ key: 'anim-shadow-ball-left', frames: this.anims.generateFrameNumbers('atk-shadow-ball-left', { start: 0, end: 1 }), frameRate: 8, repeat: 0 });
-    this.anims.create({ key: 'anim-shadow-ball-right', frames: this.anims.generateFrameNumbers('atk-shadow-ball-right', { start: 0, end: 5 }), frameRate: 10, repeat: 0 });
+    // Ghost: Shadow Ball directional (spherical — same 3 frames for all dirs)
+    this.anims.create({ key: 'anim-shadow-ball-up', frames: this.anims.generateFrameNumbers('atk-shadow-ball-up', { start: 0, end: 2 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-shadow-ball-down', frames: this.anims.generateFrameNumbers('atk-shadow-ball-down', { start: 0, end: 2 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-shadow-ball-left', frames: this.anims.generateFrameNumbers('atk-shadow-ball-left', { start: 0, end: 2 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-shadow-ball-right', frames: this.anims.generateFrameNumbers('atk-shadow-ball-right', { start: 0, end: 2 }), frameRate: 10, repeat: 0 });
 
     // Psychic: Psywave (2 variants, 4 frames each)
     this.anims.create({ key: 'anim-psywave-a', frames: this.anims.generateFrameNumbers('atk-psywave-a', { start: 0, end: 3 }), frameRate: 10, repeat: -1 });
@@ -633,11 +728,25 @@ export class BootScene extends Phaser.Scene {
     this.anims.create({ key: 'anim-poison-range', frames: this.anims.generateFrameNumbers('atk-poison-range', { start: 0, end: 3 }), frameRate: 10, repeat: -1 });
     this.anims.create({ key: 'anim-screech', frames: this.anims.generateFrameNumbers('atk-screech', { start: 0, end: 6 }), frameRate: 10, repeat: 0 });
     this.anims.create({ key: 'anim-dark-range', frames: this.anims.generateFrameNumbers('atk-dark-range', { start: 0, end: 5 }), frameRate: 10, repeat: -1 });
+
+    // ── Novas animações (sprites existentes no disco) ──────────
+    // Poison: Acid Spray (32f), Smog (9f), Sludge Wave (8f), Poison Melee (11f)
+    this.anims.create({ key: 'anim-acid-spray', frames: this.anims.generateFrameNumbers('atk-acid-spray', { start: 0, end: 31 }), frameRate: 24, repeat: 0 });
+    this.anims.create({ key: 'anim-smog', frames: this.anims.generateFrameNumbers('atk-smog', { start: 0, end: 8 }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: 'anim-sludge-wave', frames: this.anims.generateFrameNumbers('atk-sludge-wave', { start: 0, end: 7 }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: 'anim-poison-melee', frames: this.anims.generateFrameNumbers('atk-poison-melee', { start: 0, end: 10 }), frameRate: 14, repeat: 0 });
+    // Dark: Dark Melee (7f), Dark Hit (13f)
+    this.anims.create({ key: 'anim-dark-melee', frames: this.anims.generateFrameNumbers('atk-dark-melee', { start: 0, end: 6 }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: 'anim-dark-hit', frames: this.anims.generateFrameNumbers('atk-dark-hit', { start: 0, end: 12 }), frameRate: 16, repeat: 0 });
+    // Ground: Ground Melee (12f)
+    this.anims.create({ key: 'anim-ground-melee', frames: this.anims.generateFrameNumbers('atk-ground-melee', { start: 0, end: 11 }), frameRate: 16, repeat: 0 });
+    // Normal: Extreme Speed (11f)
+    this.anims.create({ key: 'anim-extreme-speed', frames: this.anims.generateFrameNumbers('atk-extreme-speed', { start: 0, end: 10 }), frameRate: 16, repeat: 0 });
   }
 
   private createWalkAnims(sprite: SpriteConfig): void {
+    if (this.anims.exists(`${sprite.key}-down`)) return;
     const directions: Direction[] = ['down', 'downRight', 'right', 'upRight', 'up', 'upLeft', 'left', 'downLeft'];
-    // FrameRate proporcional ao nº de frames para ciclos naturais (~0.5-0.8s)
     const fps = Math.max(4, Math.min(10, sprite.frameCount * 2));
     for (const dir of directions) {
       const row = DIRECTION_ROW[dir];

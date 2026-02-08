@@ -5,11 +5,38 @@ import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
 
+type CardinalDir = 'up' | 'down' | 'left' | 'right';
+
+function angleToCardinal(rad: number): CardinalDir {
+  const deg = Phaser.Math.RadToDeg(rad);
+  if (deg >= -135 && deg < -45) return 'up';
+  if (deg >= -45 && deg < 45) return 'right';
+  if (deg >= 45 && deg < 135) return 'down';
+  return 'left';
+}
+
+/** Offset: onda emana do jogador */
+const DIR_OFFSET: Record<CardinalDir, { x: number; y: number }> = {
+  up:    { x: 0, y: -20 },
+  down:  { x: 0, y: 20 },
+  left:  { x: -20, y: 0 },
+  right: { x: 20, y: 0 },
+};
+
+/** Origin: ancora o sprite na borda proxima ao jogador, estendendo para fora */
+const DIR_ORIGIN: Record<CardinalDir, { x: number; y: number }> = {
+  up:    { x: 0.5, y: 1 },
+  down:  { x: 0.5, y: 0 },
+  left:  { x: 1, y: 0.5 },
+  right: { x: 0, y: 0.5 },
+};
+
 /**
  * Crabhammer: evolucao do Aqua Tail.
  * Cone melee com 50% de chance de critico (2.5x dano).
  * No crit: splash de particulas de agua + mini screen shake.
  * Blastoise tier (minForm: stage2).
+ * Usa sprites direcionais (up/down/left/right) sem rotação.
  */
 export class Crabhammer implements Attack {
   readonly type = 'crabhammer' as const;
@@ -41,26 +68,30 @@ export class Crabhammer implements Attack {
   private swipe(): void {
     const dir = this.player.getLastDirection();
     const dirAngleRad = Math.atan2(dir.y, dir.x);
+    const cardinal = angleToCardinal(dirAngleRad);
 
     const isCrit = Math.random() < this.critChance;
     const finalDamage = isCrit ? Math.floor(this.damage * this.critMultiplier) : this.damage;
 
-    // Visual: sprite Liquidation rotacionado na direcao do ataque
-    const offsetX = Math.cos(dirAngleRad) * 30;
-    const offsetY = Math.sin(dirAngleRad) * 30;
+    // Sprite direcional — sem rotação
+    const textureKey = `atk-aqua-tail-${cardinal}`;
+    const animKey = `anim-aqua-tail-${cardinal}`;
+    const offset = DIR_OFFSET[cardinal];
+
+    const origin = DIR_ORIGIN[cardinal];
     const claw = this.scene.add.sprite(
-      this.player.x + offsetX, this.player.y + offsetY, 'atk-liquidation'
+      this.player.x + offset.x, this.player.y + offset.y, textureKey,
     );
+    claw.setOrigin(origin.x, origin.y);
 
     if (isCrit) {
-      claw.setScale(0.8).setDepth(10).setAlpha(0.95).setTint(0xffffff);
+      claw.setScale(2).setDepth(10).setAlpha(0.95).setTint(0xffffff);
     } else {
-      claw.setScale(0.6).setDepth(10).setAlpha(0.9).setTint(0x44aaff);
+      claw.setScale(1.5).setDepth(10).setAlpha(0.9);
     }
-    claw.setRotation(dirAngleRad);
-    claw.play('anim-liquidation');
+    claw.play(animKey);
     const followClaw = (): void => {
-      if (claw.active) claw.setPosition(this.player.x + offsetX, this.player.y + offsetY);
+      if (claw.active) claw.setPosition(this.player.x + offset.x, this.player.y + offset.y);
     };
     this.scene.events.on('update', followClaw);
     claw.once('animationcomplete', () => {
@@ -74,7 +105,7 @@ export class Crabhammer implements Attack {
       : [0x3388ff, 0x44aaff, 0x66ccff];
 
     this.scene.add.particles(
-      this.player.x + offsetX, this.player.y + offsetY, 'water-particle', {
+      this.player.x + offset.x, this.player.y + offset.y, 'water-particle', {
         speed: { min: 30, max: 80 },
         lifespan: 200,
         quantity: isCrit ? 12 : 6,

@@ -635,12 +635,14 @@ export class SpawnSystem {
 
       case 'teleport-fan': {
         const teleRange = attack.teleportRange ?? 150;
-        boss.setTint(0xaa44ff);
+        const tpSprite = attack.spriteKey ?? 'atk-shadow-ball';
+        const tpAnim = attack.animKey ?? 'anim-shadow-ball';
+        const tpScale = attack.spriteScale ?? 1;
+        boss.setTint(attack.tintColor ?? 0xaa44ff);
         boss.setAlpha(0.3);
 
-        // Teleport near player
         const tpAngle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-        const tpDist = Phaser.Math.FloatBetween(80, teleRange);
+        const tpDist = Phaser.Math.FloatBetween(140, teleRange);
         const destX = playerX + Math.cos(tpAngle) * tpDist;
         const destY = playerY + Math.sin(tpAngle) * tpDist;
 
@@ -648,9 +650,8 @@ export class SpawnSystem {
           if (!boss.active) return;
           boss.setPosition(destX, destY);
           boss.setAlpha(1);
-          boss.setTint(0xaa44ff);
+          boss.setTint(attack.tintColor ?? 0xaa44ff);
 
-          // Fire fan of shadow balls after reappearing
           scene.time.delayedCall(200, () => {
             if (!boss.active) return;
             boss.clearTint();
@@ -663,19 +664,19 @@ export class SpawnSystem {
               const offset = (i - (count - 1) / 2) * spreadAngle;
               const angle = baseAngle + offset;
 
-              const proj = this.ctx.enemyProjectiles.get(boss.x, boss.y, 'atk-shadow-ball') as Phaser.Physics.Arcade.Sprite | null;
+              const proj = this.ctx.enemyProjectiles.get(boss.x, boss.y, tpSprite) as Phaser.Physics.Arcade.Sprite | null;
               if (!proj) continue;
 
-              proj.setActive(true).setVisible(true).setScale(1).setDepth(7);
-              proj.setTexture('atk-shadow-ball');
+              proj.setActive(true).setVisible(true).setScale(tpScale).setDepth(7);
+              proj.setTexture(tpSprite);
               proj.setData('damage', attack.damage);
               proj.setData('homing', false);
               proj.setData('speed', 160);
               proj.setData('effect', null);
               proj.setData('effectDuration', 0);
 
-              if (scene.anims.exists('anim-shadow-ball')) {
-                proj.play('anim-shadow-ball');
+              if (scene.anims.exists(tpAnim)) {
+                proj.play(tpAnim);
               }
 
               const body = proj.body as Phaser.Physics.Arcade.Body;

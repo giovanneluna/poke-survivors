@@ -4,7 +4,7 @@ export const ATTACKS: Readonly<Record<string, AttackConfig>> = {
   // Charmander base
   ember:        { key: 'ember',        name: 'Ember',         description: 'Bolas de fogo no inimigo mais próximo',      baseDamage: 10, baseCooldown: 1200, element: 'fire',   maxLevel: 8, minForm: 'base' },
   scratch:      { key: 'scratch',      name: 'Scratch',       description: 'Garrada rápida na direção do movimento',     baseDamage: 8,  baseCooldown: 600,  element: 'normal', maxLevel: 8, minForm: 'base' },
-  fireSpin:     { key: 'fireSpin',     name: 'Fire Spin',     description: 'Orbes de fogo orbitam ao seu redor',         baseDamage: 7,  baseCooldown: 400,  element: 'fire',   maxLevel: 8, minForm: 'base' },
+  fireSpin:     { key: 'fireSpin',     name: 'Fire Spin',     description: 'Orbes de fogo orbitam ao seu redor',         baseDamage: 5,  baseCooldown: 400,  element: 'fire',   maxLevel: 8, minForm: 'base' },
   smokescreen:  { key: 'smokescreen',  name: 'Smokescreen',   description: 'Nuvem de fumaça que causa slow nos inimigos', baseDamage: 0,  baseCooldown: 0,    element: 'normal', maxLevel: 8, minForm: 'base' },
   dragonBreath: { key: 'dragonBreath', name: 'Dragon Breath', description: 'Sopro frontal com chance de stun',           baseDamage: 15, baseCooldown: 1800, element: 'dragon', maxLevel: 8, minForm: 'stage1' },
   fireFang:     { key: 'fireFang',     name: 'Fire Fang',     description: 'Mordida flamejante com chance de queimação', baseDamage: 12, baseCooldown: 1000, element: 'fire',   maxLevel: 8, minForm: 'base' },
@@ -36,7 +36,7 @@ export const ATTACKS: Readonly<Record<string, AttackConfig>> = {
   waterGun:     { key: 'waterGun',     name: 'Water Gun',     description: 'Jato de água no inimigo mais próximo',       baseDamage: 10, baseCooldown: 1200, element: 'water',  maxLevel: 8, minForm: 'base' },
   bubble:       { key: 'bubble',       name: 'Bubble',        description: 'Bolhas lentas multi-shot com slow',          baseDamage: 7,  baseCooldown: 800,  element: 'water',  maxLevel: 8, minForm: 'base' },
   tackle:       { key: 'tackle',       name: 'Tackle',        description: 'Investida rápida na direção do movimento',   baseDamage: 8,  baseCooldown: 600,  element: 'normal', maxLevel: 8, minForm: 'base' },
-  rapidSpin:    { key: 'rapidSpin',    name: 'Rapid Spin',    description: 'Gira na carapaça, zona de dano circular',    baseDamage: 7,  baseCooldown: 400,  element: 'normal', maxLevel: 8, minForm: 'base' },
+  rapidSpin:    { key: 'rapidSpin',    name: 'Rapid Spin',    description: 'Gira na carapaça, zona de dano circular',    baseDamage: 5,  baseCooldown: 400,  element: 'normal', maxLevel: 8, minForm: 'base' },
   withdraw:     { key: 'withdraw',     name: 'Withdraw',      description: 'Carapaça reduz dano recebido em 15%',        baseDamage: 0,  baseCooldown: 0,    element: 'water',  maxLevel: 8, minForm: 'base' },
   aquaJet:      { key: 'aquaJet',      name: 'Aqua Jet',      description: 'Dash aquático, +speed temporário',           baseDamage: 14, baseCooldown: 3000, element: 'water',  maxLevel: 8, minForm: 'base' },
   // Wartortle
