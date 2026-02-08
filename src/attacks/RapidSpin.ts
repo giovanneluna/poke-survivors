@@ -16,9 +16,9 @@ export class RapidSpin implements Attack {
   private readonly player: Player;
   private readonly orbs: ArcadeGroup;
   private orbCount = 2;
-  private radius = 60;
+  private radius = 65;
   private damage: number;
-  private readonly rotationSpeed = 2.5;
+  private readonly rotationSpeed = 2;
   private angle = 0;
 
   // ── Ciclo ativo/cooldown (VS Bible pattern) ─────────────────────

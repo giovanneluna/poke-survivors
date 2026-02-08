@@ -198,7 +198,7 @@ export class Bubble implements Attack {
 
   upgrade(): void {
     this.level++
-    this.damage += 3
+    this.damage += 4
     if (this.level % 3 === 0) {
       this.bubblesPerBurst++
     }
