@@ -51,7 +51,14 @@ export class FurySwipes implements Attack {
         arc.setScale(1.4).setDepth(10).setAlpha(0.9);
         arc.setRotation(angle);
         arc.play('anim-fury-swipes');
-        arc.once('animationcomplete', () => arc.destroy());
+        const followArc = (): void => {
+          if (arc.active) arc.setPosition(this.player.x + offsetX, this.player.y + offsetY);
+        };
+        this.scene.events.on('update', followArc);
+        arc.once('animationcomplete', () => {
+          this.scene.events.off('update', followArc);
+          arc.destroy();
+        });
 
         // Dano 360° (cada swipe cobre um setor)
         const enemies = this.enemyGroup.getChildren().filter(

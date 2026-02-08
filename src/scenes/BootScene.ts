@@ -72,6 +72,12 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('atk-fire-range', 'assets/attacks/fire-range-sheet.png', { frameWidth: 40, frameHeight: 40 });
     this.load.spritesheet('atk-fire-hit', 'assets/attacks/fire-hit-sheet.png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('atk-flamethrower', 'assets/attacks/flamethrower-sheet.png', { frameWidth: 80, frameHeight: 96 });
+    // Flamethrower Tibia (4 cardinal dirs, 6 frames each, 96x96)
+    // Mapeamento correto: 107=UP, 108=DOWN, 109=LEFT, 110=RIGHT
+    this.load.spritesheet('atk-flame-up', 'assets/attacks/flamethrower-tibia-se-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-flame-down', 'assets/attacks/flamethrower-tibia-sw-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-flame-left', 'assets/attacks/flamethrower-tibia-e-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-flame-right', 'assets/attacks/flamethrower-tibia-ne-sheet.png', { frameWidth: 96, frameHeight: 96 });
     this.load.spritesheet('atk-fire-blast', 'assets/attacks/fire-blast-sheet.png', { frameWidth: 72, frameHeight: 73 });
     this.load.spritesheet('atk-blast-burn', 'assets/attacks/blast-burn-sheet.png', { frameWidth: 80, frameHeight: 80 });
 
@@ -186,6 +192,11 @@ export class BootScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('atk-flamethrower', { start: 0, end: 15 }),
       frameRate: 24, repeat: 0,
     });
+    // Flamethrower Tibia directional (6 frames each, play once)
+    this.anims.create({ key: 'anim-flame-up', frames: this.anims.generateFrameNumbers('atk-flame-up', { start: 0, end: 5 }), frameRate: 14, repeat: 0 });
+    this.anims.create({ key: 'anim-flame-down', frames: this.anims.generateFrameNumbers('atk-flame-down', { start: 0, end: 5 }), frameRate: 14, repeat: 0 });
+    this.anims.create({ key: 'anim-flame-left', frames: this.anims.generateFrameNumbers('atk-flame-left', { start: 0, end: 5 }), frameRate: 14, repeat: 0 });
+    this.anims.create({ key: 'anim-flame-right', frames: this.anims.generateFrameNumbers('atk-flame-right', { start: 0, end: 5 }), frameRate: 14, repeat: 0 });
     // Fire Blast expanding star (12 frames, looping for pulse)
     this.anims.create({
       key: 'anim-fire-blast',

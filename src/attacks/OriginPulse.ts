@@ -54,12 +54,19 @@ export class OriginPulse implements Attack {
     beam.setScale(0.8).setDepth(10).setAlpha(0.9);
     beam.setRotation(dirAngleRad - Math.PI / 2);
     beam.play('anim-hydro-pump');
+    const followBeam = (): void => {
+      if (beam.active) beam.setPosition(this.player.x + offsetX, this.player.y + offsetY);
+    };
+    this.scene.events.on('update', followBeam);
     this.scene.tweens.add({
       targets: beam,
       scale: 1.2,
       alpha: 0,
       duration: 900,
-      onComplete: () => beam.destroy(),
+      onComplete: () => {
+        this.scene.events.off('update', followBeam);
+        beam.destroy();
+      },
     });
 
     // Particulas de agua ao longo do cone

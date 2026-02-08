@@ -56,7 +56,14 @@ export class HydroPump implements Attack {
     beam.setScale(0.6).setDepth(10).setAlpha(0.9);
     beam.setRotation(dirAngleRad - Math.PI / 2);
     beam.play('anim-hydro-pump');
-    beam.once('animationcomplete', () => beam.destroy());
+    const followBeam = (): void => {
+      if (beam.active) beam.setPosition(this.player.x + offsetX, this.player.y + offsetY);
+    };
+    this.scene.events.on('update', followBeam);
+    beam.once('animationcomplete', () => {
+      this.scene.events.off('update', followBeam);
+      beam.destroy();
+    });
 
     // Partículas ao longo do jato
     this.scene.add.particles(this.player.x, this.player.y, 'water-particle', {

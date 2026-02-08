@@ -59,7 +59,14 @@ export class Crabhammer implements Attack {
     }
     claw.setRotation(dirAngleRad);
     claw.play('anim-liquidation');
-    claw.once('animationcomplete', () => claw.destroy());
+    const followClaw = (): void => {
+      if (claw.active) claw.setPosition(this.player.x + offsetX, this.player.y + offsetY);
+    };
+    this.scene.events.on('update', followClaw);
+    claw.once('animationcomplete', () => {
+      this.scene.events.off('update', followClaw);
+      claw.destroy();
+    });
 
     // Particulas de agua
     const particleTints = isCrit

@@ -62,16 +62,23 @@ export class FireBlast implements Attack {
   }
 
   private pulse(): void {
-    // Visual: sprite Fire Blast expandindo
+    // Visual: sprite Fire Blast expandindo (segue o jogador)
     const blast = this.scene.add.sprite(this.player.x, this.player.y, 'atk-fire-blast');
     blast.setScale(1.5).setDepth(7).setAlpha(0.8);
     blast.play('anim-fire-blast');
+    const followBlast = (): void => {
+      if (blast.active) blast.setPosition(this.player.x, this.player.y);
+    };
+    this.scene.events.on('update', followBlast);
     this.scene.tweens.add({
       targets: blast,
       scale: 2.5,
       alpha: 0,
       duration: 600,
-      onComplete: () => blast.destroy(),
+      onComplete: () => {
+        this.scene.events.off('update', followBlast);
+        blast.destroy();
+      },
     });
 
     // Dano AoE no pulso

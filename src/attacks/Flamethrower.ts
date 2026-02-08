@@ -47,16 +47,22 @@ export class Flamethrower implements Attack {
 
     const dirAngleRad = Math.atan2(dir.y, dir.x);
 
-    // Sprite animado de Flamethrower na direção do ataque
-    const offsetX = Math.cos(dirAngleRad) * 40;
-    const offsetY = Math.sin(dirAngleRad) * 40;
-    const flame = this.scene.add.sprite(
-      this.player.x + offsetX, this.player.y + offsetY, 'atk-flamethrower'
-    );
+    // Sprite direcional Tibia (4 cardinais, cada cobrindo 90°)
+    const { key, anim, originX, originY } = this.getDirectionalSprite(dirAngleRad);
+    const flame = this.scene.add.sprite(this.player.x, this.player.y, key);
+    flame.setOrigin(originX, originY);
     flame.setScale(1.2).setDepth(10).setAlpha(0.9);
-    flame.setRotation(dirAngleRad + Math.PI / 2);
-    flame.play('anim-flamethrower');
-    flame.once('animationcomplete', () => flame.destroy());
+    flame.play(anim);
+
+    // Fogo segue o jogador enquanto a animação roda
+    const followPlayer = (): void => {
+      if (flame.active) flame.setPosition(this.player.x, this.player.y);
+    };
+    this.scene.events.on('update', followPlayer);
+    flame.once('animationcomplete', () => {
+      this.scene.events.off('update', followPlayer);
+      flame.destroy();
+    });
 
     // Partículas complementares
     this.scene.add.particles(this.player.x, this.player.y, 'fire-particle', {
@@ -109,6 +115,36 @@ export class Flamethrower implements Attack {
         }
       }
     }
+  }
+
+  /**
+   * Mapeia ângulo em radianos para a sprite direcional Tibia.
+   *
+   * 4 sprites cardinais (confirmadas pelo usuário via all-sheet):
+   *   107 → UP    (atk-flame-up)    — fogo sobe
+   *   108 → DOWN  (atk-flame-down)  — fogo desce
+   *   109 → LEFT  (atk-flame-left)  — fogo vai ←
+   *   110 → RIGHT (atk-flame-right) — fogo vai →
+   *
+   * Phaser: 0°=→, 90°=↓, 180°=←, 270°=↑
+   * Cada sprite cobre um quadrante de 90°.
+   */
+  private getDirectionalSprite(angle: number): {
+    key: string; anim: string; originX: number; originY: number;
+  } {
+    const deg = ((Phaser.Math.RadToDeg(angle) % 360) + 360) % 360;
+
+    // → RIGHT (315°–45°): fogo vai para direita, origem na borda esquerda
+    if (deg >= 315 || deg < 45)
+      return { key: 'atk-flame-right', anim: 'anim-flame-right', originX: 0, originY: 0.5 };
+    // ↓ DOWN (45°–135°): fogo vai para baixo, origem na borda de cima
+    if (deg >= 45 && deg < 135)
+      return { key: 'atk-flame-down', anim: 'anim-flame-down', originX: 0.5, originY: 0 };
+    // ← LEFT (135°–225°): fogo vai para esquerda, origem na borda direita
+    if (deg >= 135 && deg < 225)
+      return { key: 'atk-flame-left', anim: 'anim-flame-left', originX: 1, originY: 0.5 };
+    // ↑ UP (225°–315°): fogo vai para cima, origem na borda de baixo
+    return { key: 'atk-flame-up', anim: 'anim-flame-up', originX: 0.5, originY: 1 };
   }
 
   update(_time: number, _delta: number): void {

@@ -54,7 +54,14 @@ export class NightSlash implements Attack {
     arc.setScale(isCrit ? 1.6 : 1.2).setDepth(10).setAlpha(0.9).setTint(color);
     arc.setRotation(dirAngleRad);
     arc.play('anim-night-slash');
-    arc.once('animationcomplete', () => arc.destroy());
+    const followArc = (): void => {
+      if (arc.active) arc.setPosition(this.player.x + offsetX, this.player.y + offsetY);
+    };
+    this.scene.events.on('update', followArc);
+    arc.once('animationcomplete', () => {
+      this.scene.events.off('update', followArc);
+      arc.destroy();
+    });
 
     // Partículas sombrias
     this.scene.add.particles(this.player.x + offsetX, this.player.y + offsetY, 'fire-particle', {

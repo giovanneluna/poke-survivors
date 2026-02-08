@@ -48,7 +48,14 @@ export class Scratch implements Attack {
     arc.setScale(1.3).setDepth(10).setAlpha(0.9);
     arc.setRotation(dirAngleRad);
     arc.play('anim-scratch');
-    arc.once('animationcomplete', () => arc.destroy());
+    const followArc = (): void => {
+      if (arc.active) arc.setPosition(this.player.x + offsetX, this.player.y + offsetY);
+    };
+    this.scene.events.on('update', followArc);
+    arc.once('animationcomplete', () => {
+      this.scene.events.off('update', followArc);
+      arc.destroy();
+    });
 
     // Dano em arco
     const enemies = this.enemyGroup.getChildren().filter(

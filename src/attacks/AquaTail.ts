@@ -55,7 +55,14 @@ export class AquaTail implements Attack {
     tail.setScale(isCrit ? 0.6 : 0.5).setDepth(10).setAlpha(0.9).setTint(tintColor);
     tail.setRotation(dirAngleRad);
     tail.play('anim-liquidation');
-    tail.once('animationcomplete', () => tail.destroy());
+    const followTail = (): void => {
+      if (tail.active) tail.setPosition(this.player.x + offsetX, this.player.y + offsetY);
+    };
+    this.scene.events.on('update', followTail);
+    tail.once('animationcomplete', () => {
+      this.scene.events.off('update', followTail);
+      tail.destroy();
+    });
 
     // Texto de crit
     if (isCrit) {

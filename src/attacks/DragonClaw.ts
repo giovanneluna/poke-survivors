@@ -48,7 +48,7 @@ export class DragonClaw implements Attack {
         const angleOffset = (hit - 1) * 0.3;
         const angleRad = baseAngleRad + angleOffset;
 
-        // Visual: garra dracônica animada
+        // Visual: garra dracônica segue o jogador
         const offsetX = Math.cos(angleRad) * 30;
         const offsetY = Math.sin(angleRad) * 30;
         const claw = this.scene.add.sprite(
@@ -57,7 +57,14 @@ export class DragonClaw implements Attack {
         claw.setScale(1).setDepth(10).setAlpha(0.9);
         claw.setRotation(angleRad);
         claw.play('anim-dragon-claw');
-        claw.once('animationcomplete', () => claw.destroy());
+        const followClaw = (): void => {
+          if (claw.active) claw.setPosition(this.player.x + offsetX, this.player.y + offsetY);
+        };
+        this.scene.events.on('update', followClaw);
+        claw.once('animationcomplete', () => {
+          this.scene.events.off('update', followClaw);
+          claw.destroy();
+        });
 
         // Dano em arco
         const enemies = this.enemyGroup.getChildren().filter(

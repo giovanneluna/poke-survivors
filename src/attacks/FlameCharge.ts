@@ -45,15 +45,19 @@ export class FlameCharge implements Attack {
     const endX = startX + Math.cos(dirAngleRad) * this.dashDistance;
     const endY = startY + Math.sin(dirAngleRad) * this.dashDistance;
 
-    // Sprite animado do flame charge na posição do dash
-    const chargeSprite = this.scene.add.sprite(startX, startY, 'atk-flame-charge');
+    // Sprite animado do flame charge segue o jogador
+    const chargeSprite = this.scene.add.sprite(this.player.x, this.player.y, 'atk-flame-charge');
     chargeSprite.setScale(1).setDepth(10).setAlpha(0.9);
     chargeSprite.setRotation(dirAngleRad - Math.PI / 2);
     chargeSprite.play('anim-flame-charge');
-    this.scene.tweens.add({
-      targets: chargeSprite, x: endX, y: endY, duration: 150,
+    const followCharge = (): void => {
+      if (chargeSprite.active) chargeSprite.setPosition(this.player.x, this.player.y);
+    };
+    this.scene.events.on('update', followCharge);
+    chargeSprite.once('animationcomplete', () => {
+      this.scene.events.off('update', followCharge);
+      chargeSprite.destroy();
     });
-    chargeSprite.once('animationcomplete', () => chargeSprite.destroy());
 
     // Trail de fogo ao longo do caminho
     const steps = 5;

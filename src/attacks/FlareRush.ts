@@ -56,15 +56,19 @@ export class FlareRush implements Attack {
       });
     }
 
-    // Sprite animado do flare rush ao longo do dash
-    const rushSprite = this.scene.add.sprite(startX, startY, 'atk-flame-charge');
+    // Sprite animado do flare rush segue o jogador
+    const rushSprite = this.scene.add.sprite(this.player.x, this.player.y, 'atk-flame-charge');
     rushSprite.setScale(1.2).setDepth(10).setAlpha(0.9);
     rushSprite.setRotation(angle - Math.PI / 2);
     rushSprite.play('anim-flame-charge');
-    this.scene.tweens.add({
-      targets: rushSprite, x: endX, y: endY, duration: steps * 25,
+    const followRush = (): void => {
+      if (rushSprite.active) rushSprite.setPosition(this.player.x, this.player.y);
+    };
+    this.scene.events.on('update', followRush);
+    rushSprite.once('animationcomplete', () => {
+      this.scene.events.off('update', followRush);
+      rushSprite.destroy();
     });
-    rushSprite.once('animationcomplete', () => rushSprite.destroy());
 
     // Visual: partículas + zonas de fogo persistentes no trail
     for (let i = 0; i < trailPoints.length; i++) {

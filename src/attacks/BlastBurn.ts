@@ -50,12 +50,19 @@ export class BlastBurn implements Attack {
     );
     burn.setScale(2).setDepth(10).setAlpha(0.9);
     burn.play('anim-blast-burn');
+    const followBurn = (): void => {
+      if (burn.active) burn.setPosition(this.player.x + offsetX, this.player.y + offsetY);
+    };
+    this.scene.events.on('update', followBurn);
     this.scene.tweens.add({
       targets: burn,
       scale: 3,
       alpha: 0,
       duration: 800,
-      onComplete: () => burn.destroy(),
+      onComplete: () => {
+        this.scene.events.off('update', followBurn);
+        burn.destroy();
+      },
     });
 
     // Partículas complementares
