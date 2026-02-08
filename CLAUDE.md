@@ -11,6 +11,11 @@ Vampire Survivors clone com tema Pokémon. Phaser 3.90 + TypeScript + Vite.
 - `BootScene` → carrega tudo → `TitleScene` → `SelectScene` → `GameScene` + `UIScene`
 - Ataques implementam interface `Attack` (type, level, update, upgrade, destroy)
 - Config centralizado em `src/config.ts`, tipos em `src/types.ts`
+- Sprites separados: `src/data/sprites/starters.ts` (jogáveis) e `src/data/sprites/enemies.ts` (wild/boss)
+- Inimigos organizados em `src/data/enemies/` com configs individuais + `phases/phase1.ts` (20 waves, 10 min)
+- Bosses: `src/entities/Boss.ts` extends `Enemy` com ataques especiais (charge, fan, aoe-tremor, aoe-land)
+- Sistema de poison por contato (Ekans) implementado no `Player.ts`
+- Gacha box: drop de bosses → overlay UIScene → reward aleatório
 - SFX procedural via Web Audio API (`src/audio/SoundManager.ts`)
 
 ## Regras
@@ -29,7 +34,7 @@ Vampire Survivors clone com tema Pokémon. Phaser 3.90 + TypeScript + Vite.
 - **Site:** https://sprites.pmdcollab.org/
 - **Formato:** Spritesheet PNG com 8 direções de walk, cada direção é uma row
 - **URL direta:** `https://raw.githubusercontent.com/PMDCollab/SpriteCollab/master/sprite/{DEX_NUMBER}/Walk-Anim.png`
-- **Dex numbers:** Bulbasaur=0001, Charmander=0004, Squirtle=0007, Rattata=0019, Pidgey=0016, Zubat=0041, Geodude=0074, Gastly=0092
+- **Dex numbers:** Bulbasaur=0001, Charmander=0004, Squirtle=0007, Pidgey=0016, Rattata=0019, Spearow=0021, Ekans=0023, Nidoking=0034, Jigglypuff=0039, Zubat=0041, Golbat=0042, Oddish=0043, Mankey=0056, Abra=0063, Machop=0066, Geodude=0074, Gastly=0092, Haunter=0093, Eevee=0133, Magikarp=0129, Snorlax=0143, Mew=0151
 - **Pasta local:** `public/assets/pokemon/`
 - **Arquivos:**
   - `charmander-walk.png` (32x32, 4 frames, 8 dirs)
@@ -42,6 +47,19 @@ Vampire Survivors clone com tema Pokémon. Phaser 3.90 + TypeScript + Vite.
   - `zubat-walk.png` (32x56, 8 frames, 8 dirs)
   - `geodude-walk.png` (32x32, 4 frames, 8 dirs)
   - `gastly-walk.png` (48x64, 12 frames, 8 dirs)
+  - `caterpie-walk.png` (32x32, 4 frames, 8 dirs)
+  - `weedle-walk.png` (32x32, 4 frames, 8 dirs)
+  - `spearow-walk.png` (32x40, 5 frames, 8 dirs)
+  - `ekans-walk.png` (40x48, 6 frames, 8 dirs)
+  - `oddish-walk.png` (24x40, 8 frames, 8 dirs)
+  - `mankey-walk.png` (32x56, 8 frames, 8 dirs)
+  - `haunter-walk.png` (32x56, 10 frames, 8 dirs)
+  - `machop-walk.png` (24x32, 4 frames, 8 dirs)
+  - `golbat-walk.png` (40x64, 8 frames, 8 dirs)
+  - `raticate-walk.png` (40x48, 6 frames, 8 dirs)
+  - `arbok-walk.png` (40x56, 6 frames, 8 dirs)
+  - `nidoking-walk.png` (40x48, 4 frames, 8 dirs)
+  - `snorlax-walk.png` (32x48, 4 frames, 8 dirs)
 - **Como adicionar novo Pokémon:**
   1. Achar o dex number (ex: Pikachu = 0025)
   2. Baixar: `https://raw.githubusercontent.com/PMDCollab/SpriteCollab/master/sprite/0025/Walk-Anim.png`
@@ -91,6 +109,10 @@ Vampire Survivors clone com tema Pokémon. Phaser 3.90 + TypeScript + Vite.
   - `flamethrower-sheet.png` — 16 frames, 80x96 (coluna do Flamethrower)
   - `fire-blast-sheet.png` — 12 frames, 72x73 (estrela do Fire Blast)
   - `blast-burn-sheet.png` — 15 frames, 80x80 (explosão do Blast Burn)
+  - `bite-sheet.png` — 12 frames, 32x48 (boss Raticate — Hyper Fang/BITE)
+  - `venoshock-sheet.png` — 13 frames, 32x80 (boss Arbok — Poison Sting/VENOSHOCK)
+  - `thrash-sheet.png` — 7 frames, 48x32 (boss Nidoking — Thrash/THRASH)
+  - `stomp-sheet.png` — 10 frames, 16x16 (boss Snorlax — Body Slam/STOMP)
 - **Como adicionar novo ataque:**
   1. Achar o nome no repo (ex: `WATER_GUN`, `THUNDER_SHOCK`, `RAZOR_LEAF`)
   2. Baixar frames: `for i in $(seq 0 N); do f=$(printf "%03d" $i); curl -o "${f}.png" "https://raw.githubusercontent.com/keldaanCommunity/pokemonAutoChess/main/app/public/src/assets/abilities%7Btps%7D/{NOME}/${f}.png"; done`
@@ -107,6 +129,7 @@ Geradas no `BootScene.generateTextures()` — não precisam de arquivo externo:
 - Destrutíveis: `dest-tall-grass`, `dest-berry-bush`, `dest-rock`, `dest-chest`
 - Pickups: `pickup-oran`, `pickup-magnet`, `pickup-candy`, `pickup-bomb`
 - Held items (miniatura HUD): `held-charcoal`, `held-wide-lens`, `held-choice-specs`
+- Boss drops: `gacha-box` (pokeball dourada 32x32)
 - Shards (title screen): `shard-fire`, `shard-water`, `shard-grass`, `shard-gold`
 
 ### 6. SFX (Procedural — sem arquivos)

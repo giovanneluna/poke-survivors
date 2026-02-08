@@ -213,6 +213,37 @@ class SoundManagerImpl {
       { freq: 40, duration: 0.2, wave: 'sawtooth', volume: 0.3 },
     ]);
   }
+
+  // ── Boss Sounds ───────────────────────────────────────────────────
+
+  playBossWarning(): void {
+    this.playTones([
+      { freq: 100, duration: 0.08, wave: 'sawtooth', volume: 0.6 },
+      { freq: 150, duration: 0.08, wave: 'sawtooth', volume: 0.6 },
+      { freq: 200, duration: 0.08, wave: 'sawtooth', volume: 0.5 },
+      { freq: 250, duration: 0.08, wave: 'sawtooth', volume: 0.5 },
+      { freq: 300, duration: 0.12, wave: 'sawtooth', volume: 0.4 },
+    ]);
+  }
+
+  playBossSpawn(): void {
+    this.playNoise(0.15, 0.3);
+    this.playTones([
+      { freq: 60, duration: 0.15, wave: 'sawtooth', volume: 0.6 },
+      { freq: 50, duration: 0.15, wave: 'sawtooth', volume: 0.5 },
+      { freq: 40, duration: 0.2, wave: 'sawtooth', volume: 0.4 },
+      { freq: 40, duration: 0.1, wave: 'sine', volume: 0.3 },
+    ]);
+  }
+
+  playBossLand(): void {
+    this.playNoise(0.1, 0.35);
+    this.playTones([
+      { freq: 80, duration: 0.1, wave: 'sine', volume: 0.6 },
+      { freq: 50, duration: 0.1, wave: 'sine', volume: 0.5 },
+      { freq: 20, duration: 0.1, wave: 'sine', volume: 0.3 },
+    ]);
+  }
 }
 
 /** Singleton global do SoundManager */

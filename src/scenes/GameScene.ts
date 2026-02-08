@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
-import { GAME, ENEMIES, WAVES, SPAWN, XP_GEM, UPGRADE_DEFS, DESTRUCTIBLES, EVOLUTIONS, ATTACKS, CHARMANDER_FORMS } from '../config';
-import type { EnemyConfig, WaveConfig, UpgradeOption, PickupType, HeldItemType, DestructibleType, AttackType, PokemonForm } from '../types';
+import { GAME, STARTERS, ENEMIES, WAVES, BOSS_SCHEDULE, SPAWN, XP_GEM, UPGRADE_DEFS, DESTRUCTIBLES, EVOLUTIONS, ATTACKS } from '../config';
+import type { StarterConfig } from '../config';
+import type { EnemyConfig, BossConfig, BossAttackConfig, WaveConfig, UpgradeOption, PickupType, HeldItemType, DestructibleType, AttackType, PokemonForm } from '../types';
 import { isFormUnlocked } from '../types';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
+import { Boss } from '../entities/Boss';
 import { Destructible } from '../entities/Destructible';
 import { Pickup } from '../entities/Pickup';
 import { Ember } from '../attacks/Ember';
@@ -49,9 +51,18 @@ export class GameScene extends Phaser.Scene {
   private isPaused = false;
   private rerollLocked = false;
   private joystick: VirtualJoystick | null = null;
+  private attackColliders = new Map<string, Phaser.Physics.Arcade.Collider[]>();
+  private debugMode = false;
+  private starterKey = 'charmander';
+  private starterConfig: StarterConfig | null = null;
 
   constructor() {
     super({ key: 'GameScene' });
+  }
+
+  init(data?: { debugMode?: boolean; starterKey?: string }): void {
+    this.debugMode = data?.debugMode ?? false;
+    this.starterKey = data?.starterKey ?? 'charmander';
   }
 
   create(): void {
@@ -61,12 +72,16 @@ export class GameScene extends Phaser.Scene {
     this.difficultyLevel = 0;
     this.rerollLocked = false;
     this.joystick = null;
+    this.attackColliders.clear();
 
     this.physics.world.setBounds(0, 0, GAME.worldWidth, GAME.worldHeight);
     this.generateWorld();
 
+    // ── Starter config ─────────────────────────────────────────────
+    this.starterConfig = STARTERS.find(s => s.key === this.starterKey) ?? STARTERS[0];
+
     // ── Player ─────────────────────────────────────────────────────
-    this.player = new Player(this, GAME.worldWidth / 2, GAME.worldHeight / 2);
+    this.player = new Player(this, GAME.worldWidth / 2, GAME.worldHeight / 2, this.starterConfig);
 
     // ── Joystick virtual (touch devices) ─────────────────────────
     if (this.sys.game.device.input.touch) {
@@ -93,22 +108,32 @@ export class GameScene extends Phaser.Scene {
     if (this.scene.isActive('UIScene')) this.scene.stop('UIScene');
     this.scene.launch('UIScene');
 
-    // ── Spawn de inimigos ──────────────────────────────────────────
-    this.difficultyLevel = 0;
-    this.spawnTimer = this.time.addEvent({
-      delay: WAVES[0].spawnRate, loop: true, callback: () => this.spawnEnemy(),
-    });
-    this.time.addEvent({
-      delay: SPAWN.difficultyIntervalMs, loop: true, callback: () => this.increaseDifficulty(),
-    });
+    // ── Spawn de inimigos (apenas modo normal) ─────────────────────
+    if (!this.debugMode) {
+      this.difficultyLevel = 0;
+      this.spawnTimer = this.time.addEvent({
+        delay: WAVES[0].spawnRate, loop: true, callback: () => this.spawnEnemy(),
+      });
+      this.time.addEvent({
+        delay: SPAWN.difficultyIntervalMs, loop: true, callback: () => this.increaseDifficulty(),
+      });
 
-    // ── Objetos destrutíveis no mapa ───────────────────────────────
-    this.spawnDestructibles();
+      // ── Objetos destrutíveis no mapa ───────────────────────────────
+      this.spawnDestructibles();
 
-    // ── Treasure Chest a cada 60s ──────────────────────────────────
-    this.time.addEvent({
-      delay: 60_000, loop: true, callback: () => this.spawnChest(),
-    });
+      // ── Treasure Chest a cada 60s ──────────────────────────────────
+      this.time.addEvent({
+        delay: 60_000, loop: true, callback: () => this.spawnChest(),
+      });
+
+      // ── Boss spawn timers ────────────────────────────────────────────
+      for (const bossSpawn of BOSS_SCHEDULE) {
+        this.time.addEvent({
+          delay: bossSpawn.timeSeconds * 1000,
+          callback: () => this.spawnBoss(bossSpawn.type),
+        });
+      }
+    }
 
     // ── Colisões ───────────────────────────────────────────────────
     this.setupCollisions();
@@ -122,13 +147,19 @@ export class GameScene extends Phaser.Scene {
     // ── Escuta reroll (flag anti-reentry contra double-fire do Phaser) ─
     this.events.on('reroll-requested', () => {
       if (this.rerollLocked) return;
-      if (this.player.stats.rerolls <= 0) return;
+      if (!this.debugMode && this.player.stats.rerolls <= 0) return;
       this.rerollLocked = true;
-      this.player.stats.rerolls--;
+      if (!this.debugMode) this.player.stats.rerolls--;
       SoundManager.playClick();
       const newOptions = this.generateUpgradeOptions();
-      this.events.emit('level-up', newOptions, this.player.stats.level, this.player.stats.rerolls);
+      this.events.emit('level-up', newOptions, this.player.stats.level, this.getDisplayRerolls());
       this.time.delayedCall(250, () => { this.rerollLocked = false; });
+    });
+
+    // ── Gacha reward aplicado ──────────────────────────────────────
+    this.events.on('gacha-reward', (rewardType: string) => {
+      this.applyGachaReward(rewardType);
+      this.resumeGame();
     });
 
     // ── Kills de ataques em cone (Flamethrower, BlastBurn, Ember close-range)
@@ -141,6 +172,13 @@ export class GameScene extends Phaser.Scene {
 
     this.gameTime = 0;
     this.emitStats();
+
+    // ── Debug Mode: mostrar menu de cenários ─────────────────────────
+    if (this.debugMode) {
+      this.isPaused = true;
+      this.physics.pause();
+      this.time.delayedCall(100, () => this.showDebugMenu());
+    }
   }
 
   // ── Geração do mundo ──────────────────────────────────────────────
@@ -217,6 +255,8 @@ export class GameScene extends Phaser.Scene {
     this.gameTime += delta;
     this.player.handleMovement(time, this.joystick?.direction);
     this.player.updateAttacks(time, delta);
+    this.player.updatePoison(time, delta);
+    if (this.player.isDead()) { this.gameOver(); return; }
 
     const playerPos = new Phaser.Math.Vector2(this.player.x, this.player.y);
 
@@ -226,7 +266,13 @@ export class GameScene extends Phaser.Scene {
       if (!enemy.active) return;
       enemy.moveToward(playerPos);
       const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-      if (dist > SPAWN.despawnDistance) { enemy.cleanup(); return; }
+      if (dist > SPAWN.despawnDistance && enemy.shouldDespawn()) { enemy.cleanup(); return; }
+
+      // Boss attacks
+      if (enemy instanceof Boss) {
+        const bossAtk = enemy.tryBossAttack(this.player.x, this.player.y, time);
+        if (bossAtk) this.executeBossAttack(enemy, bossAtk);
+      }
 
       // Ataque ranged
       const attack = enemy.tryRangedAttack(this.player.x, this.player.y, time);
@@ -309,9 +355,11 @@ export class GameScene extends Phaser.Scene {
           const took = this.player.takeDamage(enemy.damage, this.time.now);
           if (took) {
             SoundManager.playPlayerHit();
-            // Efeito de contato (slow por Caterpie/Weedle)
+            // Efeito de contato (slow por Caterpie/Weedle/Oddish, poison por Ekans)
             if (enemy.contactEffect?.type === 'slow') {
               this.player.applySlow(enemy.contactEffect.durationMs, this.time.now);
+            } else if (enemy.contactEffect?.type === 'poison' && enemy.contactEffect.dps) {
+              this.player.applyPoison(enemy.contactEffect.dps, enemy.contactEffect.durationMs, this.time.now);
             }
             this.emitStats();
             if (this.player.isDead()) this.gameOver();
@@ -381,7 +429,9 @@ export class GameScene extends Phaser.Scene {
 
   // ── Colisões dos ataques do player ──────────────────────────────────
   setupEmberCollisions(ember: Ember): void {
-    this.physics.add.overlap(ember.getBullets(), this.enemyGroup, (bulletObj, enemyObj) => {
+    const colliders: Phaser.Physics.Arcade.Collider[] = [];
+
+    colliders.push(this.physics.add.overlap(ember.getBullets(), this.enemyGroup, (bulletObj, enemyObj) => {
       const bullet = bulletObj as Phaser.Physics.Arcade.Sprite;
       const enemy = enemyObj as Enemy;
       if (!bullet.active || !enemy.active) return;
@@ -392,11 +442,11 @@ export class GameScene extends Phaser.Scene {
       SoundManager.playHit();
       this.playFireHit(hitX, hitY);
       const killed = enemy.takeDamage(ember.getDamage());
-      if (killed) { SoundManager.playEnemyDeath(); this.player.stats.kills++; this.spawnXpGem(enemy.x, enemy.y, enemy.xpValue); }
-    });
+      if (killed) { SoundManager.playEnemyDeath(); this.onEnemyKilled(enemy); }
+    }));
 
     // Ember vs destructibles
-    this.physics.add.overlap(ember.getBullets(), this.destructibles, (bulletObj, destObj) => {
+    colliders.push(this.physics.add.overlap(ember.getBullets(), this.destructibles, (bulletObj, destObj) => {
       const bullet = bulletObj as Phaser.Physics.Arcade.Sprite;
       const dest = destObj as Destructible;
       if (!bullet.active || !dest.active) return;
@@ -405,12 +455,16 @@ export class GameScene extends Phaser.Scene {
       body.checkCollision.none = true; body.enable = false;
       const destroyed = dest.takeDamage(ember.getDamage());
       if (destroyed) this.onDestructibleDestroyed(dest);
-    });
+    }));
+
+    this.attackColliders.set('ember', colliders);
   }
 
   setupFireSpinCollisions(fireSpin: FireSpin): void {
+    const colliders: Phaser.Physics.Arcade.Collider[] = [];
     const hitCooldowns = new Map<number, number>();
-    this.physics.add.overlap(fireSpin.getOrbs(), this.enemyGroup, (_orbObj, enemyObj) => {
+
+    colliders.push(this.physics.add.overlap(fireSpin.getOrbs(), this.enemyGroup, (_orbObj, enemyObj) => {
       const enemy = enemyObj as Enemy;
       if (!enemy.active) return;
       const enemyId = enemy.x * 10000 + enemy.y;
@@ -419,29 +473,33 @@ export class GameScene extends Phaser.Scene {
       hitCooldowns.set(enemyId, this.time.now);
       this.playFireHit(enemy.x, enemy.y);
       const killed = enemy.takeDamage(fireSpin.getDamage());
-      if (killed) { this.player.stats.kills++; this.spawnXpGem(enemy.x, enemy.y, enemy.xpValue); hitCooldowns.delete(enemyId); }
-    });
+      if (killed) { this.onEnemyKilled(enemy); hitCooldowns.delete(enemyId); }
+    }));
 
     // FireSpin vs destructibles
-    this.physics.add.overlap(fireSpin.getOrbs(), this.destructibles, (_orbObj, destObj) => {
+    colliders.push(this.physics.add.overlap(fireSpin.getOrbs(), this.destructibles, (_orbObj, destObj) => {
       const dest = destObj as Destructible;
       if (!dest.active) return;
       const destroyed = dest.takeDamage(1);
       if (destroyed) this.onDestructibleDestroyed(dest);
-    });
+    }));
 
     // FireSpin orbs destroem projéteis inimigos
-    this.physics.add.overlap(fireSpin.getOrbs(), this.enemyProjectiles, (_orbObj, projObj) => {
+    colliders.push(this.physics.add.overlap(fireSpin.getOrbs(), this.enemyProjectiles, (_orbObj, projObj) => {
       const proj = projObj as Phaser.Physics.Arcade.Sprite;
       if (!proj.active) return;
       this.enemyProjectiles.killAndHide(proj);
       (proj.body as Phaser.Physics.Arcade.Body).enable = false;
       this.playFireHit(proj.x, proj.y);
-    });
+    }));
+
+    this.attackColliders.set('fireSpin', colliders);
   }
 
   setupInfernoCollisions(inferno: Inferno): void {
-    this.physics.add.overlap(inferno.getBullets(), this.enemyGroup, (bulletObj, enemyObj) => {
+    const colliders: Phaser.Physics.Arcade.Collider[] = [];
+
+    colliders.push(this.physics.add.overlap(inferno.getBullets(), this.enemyGroup, (bulletObj, enemyObj) => {
       const bullet = bulletObj as Phaser.Physics.Arcade.Sprite;
       const enemy = enemyObj as Enemy;
       if (!bullet.active || !enemy.active) return;
@@ -449,12 +507,12 @@ export class GameScene extends Phaser.Scene {
       const body = bullet.body as Phaser.Physics.Arcade.Body;
       body.checkCollision.none = true; body.enable = false;
       const killed = enemy.takeDamage(inferno.getDamage());
-      if (killed) { this.player.stats.kills++; this.spawnXpGem(enemy.x, enemy.y, enemy.xpValue); }
+      if (killed) { this.onEnemyKilled(enemy); }
       // EXPLOSÃO AoE
       inferno.explodeAt(enemy.x, enemy.y);
-    });
+    }));
 
-    this.physics.add.overlap(inferno.getBullets(), this.destructibles, (bulletObj, destObj) => {
+    colliders.push(this.physics.add.overlap(inferno.getBullets(), this.destructibles, (bulletObj, destObj) => {
       const bullet = bulletObj as Phaser.Physics.Arcade.Sprite;
       const dest = destObj as Destructible;
       if (!bullet.active || !dest.active) return;
@@ -463,12 +521,16 @@ export class GameScene extends Phaser.Scene {
       body.checkCollision.none = true; body.enable = false;
       const destroyed = dest.takeDamage(inferno.getDamage());
       if (destroyed) this.onDestructibleDestroyed(dest);
-    });
+    }));
+
+    this.attackColliders.set('inferno', colliders);
   }
 
   setupFireBlastCollisions(fireBlast: FireBlast): void {
+    const colliders: Phaser.Physics.Arcade.Collider[] = [];
     const hitCooldowns = new Map<number, number>();
-    this.physics.add.overlap(fireBlast.getOrbs(), this.enemyGroup, (_orbObj, enemyObj) => {
+
+    colliders.push(this.physics.add.overlap(fireBlast.getOrbs(), this.enemyGroup, (_orbObj, enemyObj) => {
       const enemy = enemyObj as Enemy;
       if (!enemy.active) return;
       const enemyId = enemy.x * 10000 + enemy.y;
@@ -477,24 +539,34 @@ export class GameScene extends Phaser.Scene {
       hitCooldowns.set(enemyId, this.time.now);
       this.playFireHit(enemy.x, enemy.y);
       const killed = enemy.takeDamage(fireBlast.getDamage());
-      if (killed) { this.player.stats.kills++; this.spawnXpGem(enemy.x, enemy.y, enemy.xpValue); hitCooldowns.delete(enemyId); }
-    });
+      if (killed) { this.onEnemyKilled(enemy); hitCooldowns.delete(enemyId); }
+    }));
 
-    this.physics.add.overlap(fireBlast.getOrbs(), this.destructibles, (_orbObj, destObj) => {
+    colliders.push(this.physics.add.overlap(fireBlast.getOrbs(), this.destructibles, (_orbObj, destObj) => {
       const dest = destObj as Destructible;
       if (!dest.active) return;
       const destroyed = dest.takeDamage(2);
       if (destroyed) this.onDestructibleDestroyed(dest);
-    });
+    }));
 
     // FireBlast orbs destroem projéteis inimigos
-    this.physics.add.overlap(fireBlast.getOrbs(), this.enemyProjectiles, (_orbObj, projObj) => {
+    colliders.push(this.physics.add.overlap(fireBlast.getOrbs(), this.enemyProjectiles, (_orbObj, projObj) => {
       const proj = projObj as Phaser.Physics.Arcade.Sprite;
       if (!proj.active) return;
       this.enemyProjectiles.killAndHide(proj);
       (proj.body as Phaser.Physics.Arcade.Body).enable = false;
       this.playFireHit(proj.x, proj.y);
-    });
+    }));
+
+    this.attackColliders.set('fireBlast', colliders);
+  }
+
+  private removeAttackColliders(type: string): void {
+    const colliders = this.attackColliders.get(type);
+    if (colliders) {
+      colliders.forEach(c => c.destroy());
+      this.attackColliders.delete(type);
+    }
   }
 
   // ── Destructible drops ──────────────────────────────────────────────
@@ -564,6 +636,7 @@ export class GameScene extends Phaser.Scene {
       magnetBurst: 'pickup-magnet',
       rareCandy: 'pickup-candy',
       pokeballBomb: 'pickup-bomb',
+      gachaBox: 'gacha-box',
     };
     const pickup = new Pickup(this, x, y, type, textureMap[type]);
     this.pickups.add(pickup);
@@ -614,13 +687,23 @@ export class GameScene extends Phaser.Scene {
           const enemy = child as Enemy;
           if (enemy.active) {
             const killed = enemy.takeDamage(999);
-            if (killed) { this.player.stats.kills++; this.spawnXpGem(enemy.x, enemy.y, enemy.xpValue); }
+            if (killed) { this.onEnemyKilled(enemy); }
           }
         });
         break;
+
+      case 'gachaBox':
+        this.isPaused = true;
+        this.physics.pause();
+        this.events.emit('show-gacha');
+        break;
     }
 
-    pickup.destroy();
+    if (pickup.pickupType !== 'gachaBox') {
+      pickup.destroy();
+    } else {
+      pickup.destroy();
+    }
     this.emitStats();
   }
 
@@ -710,7 +793,8 @@ export class GameScene extends Phaser.Scene {
 
     // Verificar evolução do Pokémon
     const level = this.player.stats.level;
-    const evolutionForm = CHARMANDER_FORMS.find(f => f.level === level && f.form !== 'base');
+    const forms = this.starterConfig?.forms ?? [];
+    const evolutionForm = forms.find(f => f.level === level && f.form !== 'base');
     if (evolutionForm && evolutionForm.form !== this.player.stats.form) {
       this.triggerEvolution(evolutionForm.form);
       return;
@@ -718,26 +802,28 @@ export class GameScene extends Phaser.Scene {
 
     SoundManager.playLevelUp();
     const options = this.generateUpgradeOptions();
-    this.events.emit('level-up', options, this.player.stats.level, this.player.stats.rerolls);
+    this.events.emit('level-up', options, this.player.stats.level, this.getDisplayRerolls());
   }
 
   private triggerEvolution(targetForm: import('../types').PokemonForm): void {
+    // Capturar nome anterior ANTES de evoluir
+    const forms = this.starterConfig?.forms ?? [];
+    const currentFormConfig = forms.find(f => f.form === this.player.stats.form);
+    const prevName = currentFormConfig?.name ?? this.starterConfig?.name ?? '???';
+
     const formConfig = this.player.evolve(targetForm);
     if (!formConfig) {
-      // Fallback: se evolução falhar, faz level up normal
       SoundManager.playLevelUp();
       const options = this.generateUpgradeOptions();
-      this.events.emit('level-up', options, this.player.stats.level, this.player.stats.rerolls);
+      this.events.emit('level-up', options, this.player.stats.level, this.getDisplayRerolls());
       return;
     }
 
     SoundManager.playEvolve();
 
-    // Flash de tela branca
     this.cameras.main.flash(800, 255, 255, 255);
     this.cameras.main.shake(500, 0.01);
 
-    // Partículas de evolução
     const px = this.player.x;
     const py = this.player.y;
     this.add.particles(px, py, 'fire-particle', {
@@ -747,9 +833,7 @@ export class GameScene extends Phaser.Scene {
       emitting: false,
     }).explode();
 
-    // Notificação de evolução
     const name = formConfig.name;
-    const prevName = targetForm === 'stage1' ? 'Charmander' : 'Charmeleon';
     this.showPickupNotification(`${prevName} EVOLUIU PARA ${name.toUpperCase()}!`, 0xFFDD44);
 
     // Emite evento para UIScene mostrar overlay de evolução
@@ -764,7 +848,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(1500, () => {
       SoundManager.playLevelUp();
       const options = this.generateUpgradeOptions();
-      this.events.emit('level-up', options, this.player.stats.level);
+      this.events.emit('level-up', options, this.player.stats.level, this.getDisplayRerolls());
     });
   }
 
@@ -1001,6 +1085,7 @@ export class GameScene extends Phaser.Scene {
 
       // EVOLUÇÕES
       case 'evolveInferno': {
+        this.removeAttackColliders('ember');
         this.player.removeAttack('ember');
         const inf = new Inferno(this, this.player, this.enemyGroup);
         this.player.addAttack('inferno', inf);
@@ -1011,6 +1096,7 @@ export class GameScene extends Phaser.Scene {
         break;
       }
       case 'evolveFireBlast': {
+        this.removeAttackColliders('fireSpin');
         this.player.removeAttack('fireSpin');
         const fb = new FireBlast(this, this.player, this.enemyGroup);
         this.player.addAttack('fireBlast', fb);
@@ -1094,6 +1180,530 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.emitStats();
+  }
+
+  // ── Enemy kill handler (checks boss drops) ──────────────────────
+  private onEnemyKilled(enemy: Enemy): void {
+    this.player.stats.kills++;
+    this.spawnXpGem(enemy.x, enemy.y, enemy.xpValue);
+
+    // Boss drop: gacha box
+    if (enemy instanceof Boss) {
+      this.spawnPickup(enemy.x, enemy.y, 'gachaBox');
+      this.events.emit('boss-killed', enemy.name);
+    }
+  }
+
+  // ── Gacha reward application ──────────────────────────────────────
+  private applyGachaReward(rewardType: string): void {
+    switch (rewardType) {
+      case 'skillUpgrade': {
+        const attacks = this.player.getAllAttacks();
+        if (attacks.length > 0) {
+          const atk = attacks[Phaser.Math.Between(0, attacks.length - 1)];
+          const config = ATTACKS[atk.type];
+          if (config && atk.level < config.maxLevel) {
+            atk.upgrade();
+            this.showPickupNotification(`${config.name} +1!`, 0x44ff44);
+          } else {
+            // Fallback: heal
+            this.player.heal(50);
+            this.showPickupNotification('+50 HP', 0x44ff44);
+          }
+        }
+        break;
+      }
+      case 'heldItem':
+        this.dropHeldItem(this.player.x, this.player.y - 20);
+        break;
+      case 'rareCandy': {
+        this.showPickupNotification('RARE CANDY! +1 Level!', 0xFFD700);
+        const leveled = this.player.addXp(this.player.stats.xpToNext);
+        if (leveled) this.triggerLevelUp();
+        break;
+      }
+      case 'evolutionStone':
+        // Evolui arma aleatória elegível
+        this.showPickupNotification('EVOLUTION STONE!', 0xff8800);
+        // Para simplicidade: dá +2 levels a um ataque
+        {
+          const attacks = this.player.getAllAttacks();
+          if (attacks.length > 0) {
+            const atk = attacks[Phaser.Math.Between(0, attacks.length - 1)];
+            atk.upgrade();
+            atk.upgrade();
+            this.showPickupNotification(`${atk.type} +2!`, 0xff8800);
+          }
+        }
+        break;
+      case 'maxRevive':
+        this.player.stats.hp = this.player.stats.maxHp;
+        this.showPickupNotification('MAX REVIVE! HP CHEIO!', 0xff44ff);
+        break;
+    }
+    this.emitStats();
+  }
+
+  // ── Boss spawning ─────────────────────────────────────────────────
+  private spawnBoss(type: import('../types').EnemyType): void {
+    if (this.isPaused) return;
+    const config = ENEMIES[type];
+    if (!config) return;
+
+    // Aviso para UIScene
+    this.events.emit('boss-warning', config.name);
+    SoundManager.playBossWarning();
+
+    // Após 3s: spawna o boss
+    this.time.delayedCall(3000, () => {
+      const pos = this.getSpawnPosition();
+      const boss = new Boss(this, pos.x, pos.y, config as BossConfig);
+      this.enemyGroup.add(boss);
+      SoundManager.playBossSpawn();
+
+      // Emitir HP bar para UIScene
+      this.events.emit('boss-spawned', {
+        name: config.name,
+        hp: config.hp,
+        maxHp: config.hp,
+        boss,
+      });
+    });
+  }
+
+  // ── Boss attacks ──────────────────────────────────────────────────
+  private executeBossAttack(boss: Boss, attack: BossAttackConfig): void {
+    const playerX = this.player.x;
+    const playerY = this.player.y;
+
+    switch (attack.pattern) {
+      case 'charge': {
+        // Hyper Fang: dash na direção do player + bite animation
+        const angle = Phaser.Math.Angle.Between(boss.x, boss.y, playerX, playerY);
+        const speed = 400;
+        boss.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+        boss.setTint(0xff4444);
+
+        // Bite sprite follows boss during charge
+        const bite = this.add.sprite(boss.x, boss.y, 'atk-bite').setScale(2).setDepth(12);
+        bite.setRotation(angle);
+        bite.play('anim-bite');
+        bite.once('animationcomplete', () => bite.destroy());
+
+        // Update bite position during charge
+        const updateBite = this.time.addEvent({
+          delay: 16, loop: true,
+          callback: () => {
+            if (boss.active && bite.active) {
+              bite.setPosition(boss.x + Math.cos(angle) * 20, boss.y + Math.sin(angle) * 20);
+            }
+          },
+        });
+
+        this.time.delayedCall(500, () => {
+          updateBite.destroy();
+          if (bite.active) bite.destroy();
+          if (boss.active) { boss.clearTint(); boss.setVelocity(0, 0); }
+        });
+        break;
+      }
+
+      case 'fan': {
+        // Poison Sting: projéteis venoshock em leque
+        const count = attack.projectileCount ?? 3;
+        const spreadAngle = 30 * (Math.PI / 180);
+        const baseAngle = Phaser.Math.Angle.Between(boss.x, boss.y, playerX, playerY);
+
+        for (let i = 0; i < count; i++) {
+          const offset = (i - (count - 1) / 2) * spreadAngle;
+          const angle = baseAngle + offset;
+
+          const proj = this.enemyProjectiles.get(boss.x, boss.y, 'atk-venoshock') as Phaser.Physics.Arcade.Sprite | null;
+          if (!proj) continue;
+
+          proj.setActive(true).setVisible(true).setScale(1.2).setDepth(7);
+          proj.setData('damage', attack.damage);
+          proj.setData('homing', false);
+          proj.setData('speed', 140);
+          proj.setTint(0xaa44ff);
+          proj.setRotation(angle);
+
+          if (this.anims.exists('anim-venoshock')) {
+            proj.play('anim-venoshock');
+          }
+
+          const body = proj.body as Phaser.Physics.Arcade.Body;
+          body.enable = true;
+          body.setVelocity(Math.cos(angle) * 140, Math.sin(angle) * 140);
+
+          this.time.delayedCall(5000, () => {
+            if (proj.active) {
+              this.enemyProjectiles.killAndHide(proj);
+              body.enable = false;
+            }
+          });
+        }
+        break;
+      }
+
+      case 'aoe-tremor': {
+        // Thrash: AoE tremor com animação
+        const radius = attack.aoeRadius ?? 150;
+        boss.setTint(0xff8800);
+        this.cameras.main.shake(400, 0.008);
+        SoundManager.playBossLand();
+
+        // Thrash sprite animation on boss
+        const thrash = this.add.sprite(boss.x, boss.y, 'atk-thrash').setScale(3).setDepth(12);
+        thrash.play('anim-thrash');
+        thrash.once('animationcomplete', () => thrash.destroy());
+
+        // Expanding AoE circle
+        const circle = this.add.circle(boss.x, boss.y, 0, 0xff4400, 0.3).setDepth(3);
+        this.tweens.add({
+          targets: circle,
+          radius: { from: 0, to: radius },
+          alpha: { from: 0.4, to: 0 },
+          duration: 600,
+          onComplete: () => circle.destroy(),
+        });
+
+        // Damage check
+        const dist = Phaser.Math.Distance.Between(boss.x, boss.y, playerX, playerY);
+        if (dist < radius) {
+          this.player.takeDamage(attack.damage, this.time.now);
+          this.emitStats();
+          if (this.player.isDead()) this.gameOver();
+        }
+
+        this.time.delayedCall(300, () => { if (boss.active) boss.clearTint(); });
+        break;
+      }
+
+      case 'aoe-land': {
+        // Body Slam: pula e aterrissa com stomp animation
+        const radius = attack.aoeRadius ?? 180;
+        boss.setTint(0xffdd00);
+
+        this.tweens.add({
+          targets: boss,
+          y: boss.y - 80,
+          duration: 400,
+          ease: 'Quad.Out',
+          yoyo: true,
+          onComplete: () => {
+            if (!boss.active) return;
+            boss.clearTint();
+            SoundManager.playBossLand();
+            this.cameras.main.shake(500, 0.012);
+
+            // Stomp impact animation
+            const stomp = this.add.sprite(boss.x, boss.y, 'atk-stomp').setScale(6).setDepth(12);
+            stomp.play('anim-stomp');
+            stomp.once('animationcomplete', () => stomp.destroy());
+
+            // Expanding AoE circle
+            const circle = this.add.circle(boss.x, boss.y, 0, 0xffaa00, 0.3).setDepth(3);
+            this.tweens.add({
+              targets: circle,
+              radius: { from: 0, to: radius },
+              alpha: { from: 0.5, to: 0 },
+              duration: 500,
+              onComplete: () => circle.destroy(),
+            });
+
+            const dist = Phaser.Math.Distance.Between(boss.x, boss.y, playerX, playerY);
+            if (dist < radius) {
+              this.player.takeDamage(attack.damage, this.time.now);
+              this.emitStats();
+              if (this.player.isDead()) this.gameOver();
+            }
+          },
+        });
+        break;
+      }
+    }
+  }
+
+  // ── Debug Mode ──────────────────────────────────────────────────────
+  private showDebugMenu(): void {
+    const { width, height } = this.cameras.main;
+
+    // Container no world space (segue câmera)
+    const overlay = this.add.container(0, 0).setDepth(1000).setScrollFactor(0);
+
+    // Fundo escuro
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.9)
+      .setScrollFactor(0);
+    bg.setInteractive();
+    overlay.add(bg);
+
+    // Título
+    overlay.add(this.add.text(width / 2, 40, 'DEBUGGER - CENARIOS', {
+      fontSize: '20px', color: '#44aaff', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setScrollFactor(0));
+
+    overlay.add(this.add.text(width / 2, 65, 'Selecione um cenário de teste', {
+      fontSize: '11px', color: '#888888', fontFamily: 'monospace',
+    }).setOrigin(0.5).setScrollFactor(0));
+
+    // ── Lista de cenários ────────────────────────────────────────────
+    const scenarios: { name: string; desc: string; color: number; key: string }[] = [
+      { name: 'Evolucao de Ataques', desc: 'Charmeleon Lv16, todos ataques Lv8, held items, XP pronto', color: 0xff8800, key: 'attackEvolution' },
+      { name: 'Evolucao Charmeleon', desc: 'Charmander Lv15, XP quase cheio -> evolui ao pegar XP', color: 0xffdd44, key: 'evoCharmeleon' },
+      { name: 'Evolucao Charizard', desc: 'Charmeleon Lv35, XP quase cheio -> evolui para Charizard', color: 0xff4400, key: 'evoCharizard' },
+      { name: 'Boss Fight', desc: 'Lv10 com 3 ataques, Raticate spawna imediatamente', color: 0xff2222, key: 'bossFight' },
+      { name: 'Gacha Box', desc: 'Boss com 1 HP -> dropa gacha box instantaneamente', color: 0xffaa00, key: 'gachaBox' },
+      { name: 'Todos os Inimigos', desc: 'Spawna 1 de cada inimigo + boss em circulo', color: 0x44ff44, key: 'allEnemies' },
+    ];
+
+    const startY = 100;
+    const itemH = 55;
+    scenarios.forEach((sc, i) => {
+      const y = startY + i * itemH;
+      const btnGfx = this.add.graphics().setScrollFactor(0);
+
+      const drawBtn = (hover: boolean): void => {
+        btnGfx.clear();
+        btnGfx.fillStyle(hover ? 0x1e1e44 : 0x111133, 0.95);
+        btnGfx.fillRoundedRect(width / 2 - 220, y, 440, itemH - 8, 8);
+        btnGfx.lineStyle(1, hover ? sc.color : 0x333366, hover ? 1 : 0.5);
+        btnGfx.strokeRoundedRect(width / 2 - 220, y, 440, itemH - 8, 8);
+        // Barra lateral colorida
+        btnGfx.fillStyle(sc.color, hover ? 0.8 : 0.4);
+        btnGfx.fillRect(width / 2 - 220, y + 4, 4, itemH - 16);
+      };
+      drawBtn(false);
+      overlay.add(btnGfx);
+
+      overlay.add(this.add.text(width / 2 - 205, y + 10, sc.name.toUpperCase(), {
+        fontSize: '13px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      }).setScrollFactor(0));
+
+      overlay.add(this.add.text(width / 2 - 205, y + 28, sc.desc, {
+        fontSize: '10px', color: '#888888', fontFamily: 'monospace',
+      }).setScrollFactor(0));
+
+      const hitbox = this.add.rectangle(width / 2, y + (itemH - 8) / 2, 440, itemH - 8, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true }).setScrollFactor(0);
+      hitbox.on('pointerover', () => drawBtn(true));
+      hitbox.on('pointerout', () => drawBtn(false));
+      hitbox.on('pointerdown', () => {
+        SoundManager.playStart();
+        overlay.destroy(true);
+        this.setupDebugScenario(sc.key);
+      });
+      overlay.add(hitbox);
+    });
+
+    // Botão voltar
+    const backBtn = this.add.text(width / 2, startY + scenarios.length * itemH + 15, 'Voltar ao Menu', {
+      fontSize: '12px', color: '#666666', fontFamily: 'monospace',
+    }).setOrigin(0.5).setScrollFactor(0).setInteractive({ useHandCursor: true });
+    backBtn.on('pointerover', () => backBtn.setColor('#ffffff'));
+    backBtn.on('pointerout', () => backBtn.setColor('#666666'));
+    backBtn.on('pointerdown', () => {
+      SoundManager.playClick();
+      this.scene.stop('UIScene');
+      this.scene.start('SelectScene');
+    });
+    overlay.add(backBtn);
+  }
+
+  private setupDebugScenario(key: string): void {
+    const p = this.player;
+
+    switch (key) {
+      case 'attackEvolution': {
+        // Charmeleon Lv16, todos ataques Lv8, held items, XP quase cheio
+        p.stats.level = 16;
+        p.stats.form = 'stage1';
+        p.evolve('stage1');
+        p.stats.hp = p.stats.maxHp;
+
+        // Adicionar ataques e upar para Lv8
+        const attacksToAdd: { type: import('../types').AttackType; create: () => import('../types').Attack }[] = [
+          { type: 'fireSpin', create: () => new FireSpin(this, p) },
+        ];
+        for (const atk of attacksToAdd) {
+          const instance = atk.create();
+          p.addAttack(atk.type, instance);
+          if (atk.type === 'fireSpin') this.setupFireSpinCollisions(instance as FireSpin);
+          for (let i = 0; i < 7; i++) instance.upgrade();
+        }
+        // Upgrade ember existente para Lv8
+        const ember = p.getAttack('ember');
+        if (ember) { for (let i = 0; i < 7; i++) ember.upgrade(); }
+
+        // Held items
+        p.addHeldItem('charcoal');
+        p.addHeldItem('wideLens');
+        p.addHeldItem('scopeLens');
+        p.addHeldItem('razorClaw');
+
+        // XP quase cheio -> próximo XP = level up com evoluções
+        p.stats.xp = p.stats.xpToNext - 1;
+
+        // Spawna 1 XP gem perto
+        this.time.delayedCall(500, () => {
+          this.spawnXpGem(p.x + 60, p.y, 5);
+        });
+        break;
+      }
+
+      case 'evoCharmeleon': {
+        // Charmander Lv15, XP quase cheio -> evolui para Charmeleon
+        p.stats.level = 15;
+        p.stats.xp = p.stats.xpToNext - 1;
+
+        this.time.delayedCall(500, () => {
+          this.spawnXpGem(p.x + 60, p.y, 5);
+        });
+        break;
+      }
+
+      case 'evoCharizard': {
+        // Charmeleon Lv35, XP quase cheio -> evolui para Charizard
+        p.stats.level = 35;
+        p.stats.form = 'stage1';
+        p.evolve('stage1');
+        p.stats.hp = p.stats.maxHp;
+        p.stats.xp = p.stats.xpToNext - 1;
+
+        this.time.delayedCall(500, () => {
+          this.spawnXpGem(p.x + 60, p.y, 5);
+        });
+        break;
+      }
+
+      case 'bossFight': {
+        // Lv10 com 3 ataques, Raticate spawna imediatamente
+        p.stats.level = 10;
+        p.stats.hp = p.stats.maxHp;
+
+        const fs = new FireSpin(this, p);
+        p.addAttack('fireSpin', fs);
+        this.setupFireSpinCollisions(fs);
+        for (let i = 0; i < 4; i++) fs.upgrade();
+
+        const emberAtk = p.getAttack('ember');
+        if (emberAtk) { for (let i = 0; i < 4; i++) emberAtk.upgrade(); }
+
+        // Spawnar boss imediatamente (sem delay de warning)
+        this.time.delayedCall(500, () => {
+          this.spawnBoss('raticate');
+        });
+        break;
+      }
+
+      case 'gachaBox': {
+        // Boss com 1 HP -> dropa gacha box instantaneamente
+        p.stats.level = 10;
+        p.stats.hp = p.stats.maxHp;
+
+        const emberAtk2 = p.getAttack('ember');
+        if (emberAtk2) { for (let i = 0; i < 7; i++) emberAtk2.upgrade(); }
+
+        // Spawnar boss fraco (override HP after spawn)
+        this.time.delayedCall(500, () => {
+          const config = ENEMIES['raticate'] as BossConfig;
+          if (!config) return;
+          const pos = { x: p.x + 100, y: p.y };
+          const boss = new Boss(this, pos.x, pos.y, config);
+          this.enemyGroup.add(boss);
+          // Reduzir HP para 1 para morrer ao primeiro hit
+          boss.takeDamage(config.hp - 1);
+          this.events.emit('boss-spawned', {
+            name: config.name, hp: 1, maxHp: config.hp, boss,
+          });
+        });
+        break;
+      }
+
+      case 'allEnemies': {
+        // Spawna 1 de cada tipo de inimigo em círculo ao redor do player
+        p.stats.level = 10;
+        p.stats.hp = 999;
+        p.stats.maxHp = 999;
+
+        const enemyTypes: import('../types').EnemyType[] = [
+          'rattata', 'pidgey', 'zubat', 'geodude', 'gastly', 'caterpie', 'weedle',
+          'spearow', 'ekans', 'oddish', 'mankey', 'haunter', 'machop', 'golbat',
+        ];
+        const radius = 200;
+        const angleStep = (Math.PI * 2) / enemyTypes.length;
+
+        enemyTypes.forEach((type, i) => {
+          const config = ENEMIES[type];
+          if (!config) return;
+          const ex = p.x + Math.cos(angleStep * i) * radius;
+          const ey = p.y + Math.sin(angleStep * i) * radius;
+          const enemy = new Enemy(this, ex, ey, config);
+          this.enemyGroup.add(enemy);
+        });
+
+        // Bosses em círculo maior
+        const bossTypes: import('../types').EnemyType[] = ['raticate', 'arbok', 'nidoking', 'snorlax'];
+        const bossRadius = 350;
+        const bossAngleStep = (Math.PI * 2) / bossTypes.length;
+        bossTypes.forEach((type, i) => {
+          const config = ENEMIES[type] as BossConfig;
+          if (!config) return;
+          const bx = p.x + Math.cos(bossAngleStep * i) * bossRadius;
+          const by = p.y + Math.sin(bossAngleStep * i) * bossRadius;
+          const boss = new Boss(this, bx, by, config);
+          this.enemyGroup.add(boss);
+        });
+        break;
+      }
+    }
+
+    // Resumir o jogo após setup
+    this.isPaused = false;
+    this.physics.resume();
+    this.emitStats();
+
+    // HUD de debug com botão de level up
+    this.addDebugHUD();
+  }
+
+  private getDisplayRerolls(): number {
+    return this.debugMode ? 99 : this.player.stats.rerolls;
+  }
+
+  private addDebugHUD(): void {
+    const { width } = this.cameras.main;
+    const btnX = width - 70;
+    const btnY = 25;
+    const btnW = 110;
+    const btnH = 28;
+
+    const btnGfx = this.add.graphics().setScrollFactor(0).setDepth(500);
+    const drawBtn = (hover: boolean): void => {
+      btnGfx.clear();
+      btnGfx.fillStyle(hover ? 0x44bb44 : 0x228822, 0.85);
+      btnGfx.fillRoundedRect(btnX - btnW / 2, btnY - btnH / 2, btnW, btnH, 6);
+      btnGfx.lineStyle(1, hover ? 0x66dd66 : 0x33aa33);
+      btnGfx.strokeRoundedRect(btnX - btnW / 2, btnY - btnH / 2, btnW, btnH, 6);
+    };
+    drawBtn(false);
+
+    this.add.text(btnX, btnY, 'LEVEL UP', {
+      fontSize: '11px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(501);
+
+    const hitbox = this.add.rectangle(btnX, btnY, btnW, btnH, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true }).setScrollFactor(0).setDepth(502);
+    hitbox.on('pointerover', () => drawBtn(true));
+    hitbox.on('pointerout', () => drawBtn(false));
+    hitbox.on('pointerdown', () => {
+      if (this.isPaused) return;
+      SoundManager.playClick();
+      const needed = this.player.stats.xpToNext - this.player.stats.xp;
+      const leveled = this.player.addXp(needed);
+      if (leveled) this.triggerLevelUp();
+    });
   }
 
   private gameOver(): void {

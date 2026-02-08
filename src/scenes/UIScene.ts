@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import type { UpgradeOption, PlayerState, HeldItemType, AttackType } from '../types';
+import type { UpgradeOption, PlayerState, HeldItemType, AttackType, GachaRewardType } from '../types';
 import { SoundManager } from '../audio/SoundManager';
+import { Boss } from '../entities/Boss';
 
 interface StatsData extends PlayerState {
   time: number;
@@ -27,6 +28,9 @@ export class UIScene extends Phaser.Scene {
   private levelUpContainer!: Phaser.GameObjects.Container;
   private gameOverContainer!: Phaser.GameObjects.Container;
   private evolutionContainer!: Phaser.GameObjects.Container;
+  private bossHpContainer!: Phaser.GameObjects.Container;
+  private gachaContainer!: Phaser.GameObjects.Container;
+  private activeBoss: Boss | null = null;
 
   private readonly textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
     fontSize: '14px',
@@ -75,6 +79,8 @@ export class UIScene extends Phaser.Scene {
     this.levelUpContainer = this.add.container(0, 0).setDepth(200).setVisible(false);
     this.gameOverContainer = this.add.container(0, 0).setDepth(200).setVisible(false);
     this.evolutionContainer = this.add.container(0, 0).setDepth(250).setVisible(false);
+    this.bossHpContainer = this.add.container(0, 0).setDepth(150).setVisible(false);
+    this.gachaContainer = this.add.container(0, 0).setDepth(300).setVisible(false);
 
     // ── Botão Mute ─────────────────────────────────────────────────
     const muteBtn = this.add.text(width - 10, 30, SoundManager.isMuted() ? '🔇' : '🔊', {
@@ -94,6 +100,20 @@ export class UIScene extends Phaser.Scene {
     gameScene.events.on('pokemon-evolved', (data: { fromName: string; toName: string; form: string; newSlots: number }) => {
       this.showEvolutionOverlay(data.fromName, data.toName);
     });
+
+    // ── Boss events ──────────────────────────────────────────────────
+    gameScene.events.on('boss-warning', (name: string) => this.showBossWarning(name));
+    gameScene.events.on('boss-spawned', (data: { name: string; hp: number; maxHp: number; boss: Boss }) => {
+      this.activeBoss = data.boss;
+      this.showBossHpBar(data.name, data.hp, data.maxHp);
+    });
+    gameScene.events.on('boss-killed', () => {
+      this.activeBoss = null;
+      this.bossHpContainer.setVisible(false);
+    });
+
+    // ── Gacha ────────────────────────────────────────────────────────
+    gameScene.events.on('show-gacha', () => this.showGachaOverlay());
   }
 
   private updateHUD(stats: StatsData): void {
@@ -351,6 +371,168 @@ export class UIScene extends Phaser.Scene {
       this.tweens.add({
         targets: [bg, text1, text2, text3], alpha: 0, duration: 300,
         onComplete: () => this.evolutionContainer.setVisible(false),
+      });
+    });
+  }
+
+  // ── Boss Warning ────────────────────────────────────────────────────
+  private showBossWarning(name: string): void {
+    const { width, height } = this.cameras.main;
+
+    // Flash vermelho
+    const flash = this.add.rectangle(width / 2, height / 2, width, height, 0xff0000, 0.3).setDepth(140);
+    this.tweens.add({ targets: flash, alpha: 0, duration: 300, onComplete: () => flash.destroy() });
+
+    // Texto
+    const text = this.add.text(width / 2, height / 2, `WILD ${name.toUpperCase()} APPEARED!`, {
+      fontSize: '28px', color: '#ff4444', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 5,
+    }).setOrigin(0.5).setAlpha(0).setDepth(160);
+
+    this.tweens.add({
+      targets: text, alpha: 1, scaleX: { from: 0.5, to: 1 }, scaleY: { from: 0.5, to: 1 },
+      duration: 500, ease: 'Back.Out',
+    });
+
+    this.time.delayedCall(2500, () => {
+      this.tweens.add({ targets: text, alpha: 0, duration: 300, onComplete: () => text.destroy() });
+    });
+  }
+
+  // ── Boss HP Bar ───────────────────────────────────────────────────
+  private showBossHpBar(name: string, _hp: number, _maxHp: number): void {
+    const { width } = this.cameras.main;
+    this.bossHpContainer.removeAll(true);
+
+    // Nome
+    const nameText = this.add.text(width / 2, 55, name, {
+      fontSize: '14px', color: '#FFD700', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5);
+    this.bossHpContainer.add(nameText);
+
+    // Barra
+    const barBg = this.add.graphics();
+    barBg.fillStyle(0x333333, 0.8);
+    barBg.fillRoundedRect(width / 2 - 200, 70, 400, 14, 4);
+    this.bossHpContainer.add(barBg);
+
+    const barFill = this.add.graphics();
+    barFill.fillStyle(0x44dd44);
+    barFill.fillRoundedRect(width / 2 - 200, 70, 400, 14, 4);
+    this.bossHpContainer.add(barFill);
+
+    // Salvar referência para update
+    barFill.setData('barFill', true);
+
+    this.bossHpContainer.setVisible(true);
+  }
+
+  override update(): void {
+    // Atualizar boss HP bar
+    if (this.activeBoss && this.activeBoss.active && this.bossHpContainer.visible) {
+      const { width } = this.cameras.main;
+      const barFill = this.bossHpContainer.getAll().find(
+        c => c instanceof Phaser.GameObjects.Graphics && c.getData('barFill')
+      ) as Phaser.GameObjects.Graphics | undefined;
+      if (barFill) {
+        barFill.clear();
+        const hpRatio = Math.max(0, this.activeBoss.getHp() / this.activeBoss.getMaxHp());
+        const color = hpRatio > 0.5 ? 0x44dd44 : hpRatio > 0.25 ? 0xdddd44 : 0xdd4444;
+        barFill.fillStyle(color);
+        barFill.fillRoundedRect(width / 2 - 200, 70, 400 * hpRatio, 14, 4);
+      }
+    } else if (this.activeBoss && !this.activeBoss.active) {
+      this.activeBoss = null;
+      this.bossHpContainer.setVisible(false);
+    }
+  }
+
+  // ── Gacha Overlay ─────────────────────────────────────────────────
+  private showGachaOverlay(): void {
+    const { width, height } = this.cameras.main;
+    this.gachaContainer.removeAll(true);
+
+    // Fundo escuro
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8);
+    this.gachaContainer.add(bg);
+
+    // Pokeball girando
+    const pokeball = this.add.image(width / 2, height / 2 - 30, 'gacha-box').setScale(3);
+    this.gachaContainer.add(pokeball);
+
+    this.tweens.add({
+      targets: pokeball,
+      angle: 720,
+      duration: 2000,
+      ease: 'Cubic.InOut',
+      onComplete: () => this.revealGachaReward(),
+    });
+
+    this.gachaContainer.setVisible(true);
+  }
+
+  private revealGachaReward(): void {
+    const { width, height } = this.cameras.main;
+
+    // Roll reward
+    const roll = Math.random() * 100;
+    let rewardType: GachaRewardType;
+    let rewardName: string;
+    let rewardColor: string;
+
+    if (roll < 35) {
+      rewardType = 'skillUpgrade';
+      rewardName = 'SKILL UPGRADE!';
+      rewardColor = '#44ff44';
+    } else if (roll < 60) {
+      rewardType = 'heldItem';
+      rewardName = 'HELD ITEM!';
+      rewardColor = '#44aaff';
+    } else if (roll < 80) {
+      rewardType = 'rareCandy';
+      rewardName = 'RARE CANDY!';
+      rewardColor = '#FFD700';
+    } else if (roll < 95) {
+      rewardType = 'evolutionStone';
+      rewardName = 'EVOLUTION STONE!';
+      rewardColor = '#ff8800';
+    } else {
+      rewardType = 'maxRevive';
+      rewardName = 'MAX REVIVE!';
+      rewardColor = '#ff44ff';
+    }
+
+    // Texto do resultado
+    const resultText = this.add.text(width / 2, height / 2 + 30, rewardName, {
+      fontSize: '24px', color: rewardColor, fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 4,
+    }).setOrigin(0.5).setAlpha(0);
+    this.gachaContainer.add(resultText);
+
+    this.tweens.add({
+      targets: resultText, alpha: 1, scaleX: { from: 0.5, to: 1 }, scaleY: { from: 0.5, to: 1 },
+      duration: 400, ease: 'Back.Out',
+    });
+
+    // Botão continuar
+    const continueBtn = this.add.text(width / 2, height / 2 + 80, '[ CONTINUAR ]', {
+      fontSize: '18px', color: '#ffcc00', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setAlpha(0);
+    this.gachaContainer.add(continueBtn);
+
+    this.time.delayedCall(500, () => {
+      continueBtn.setAlpha(1);
+      continueBtn.setInteractive({ useHandCursor: true });
+
+      continueBtn.on('pointerover', () => { continueBtn.setColor('#ffffff'); SoundManager.playHover(); });
+      continueBtn.on('pointerout', () => continueBtn.setColor('#ffcc00'));
+      continueBtn.on('pointerdown', () => {
+        SoundManager.playClick();
+        this.gachaContainer.setVisible(false);
+        const gameScene = this.scene.get('GameScene');
+        gameScene.events.emit('gacha-reward', rewardType);
       });
     });
   }

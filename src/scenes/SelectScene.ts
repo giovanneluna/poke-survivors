@@ -3,23 +3,20 @@ import { STARTERS } from '../config';
 import type { StarterConfig } from '../config';
 import { SoundManager } from '../audio/SoundManager';
 
-const TEST_MODE_PASSWORD = 'lulu';
-
 export class SelectScene extends Phaser.Scene {
   private selectedIndex = 0;
   private cards: Phaser.GameObjects.Container[] = [];
   private cardGraphics: Phaser.GameObjects.Graphics[] = [];
-  private passwordOverlay!: Phaser.GameObjects.Container;
-  private passwordInput = '';
-  private passwordDisplay!: Phaser.GameObjects.Text;
-  private passwordError!: Phaser.GameObjects.Text;
-  private keydownHandler: ((event: KeyboardEvent) => void) | null = null;
+  private phaseOverlay: Phaser.GameObjects.Container | null = null;
+  private passwordOverlay: Phaser.GameObjects.Container | null = null;
+  private passwordKeyHandler: ((event: KeyboardEvent) => void) | null = null;
 
   constructor() {
     super({ key: 'SelectScene' });
   }
 
   create(): void {
+    this.phaseOverlay = null;
     const { width, height } = this.cameras.main;
 
     // ── Background ───────────────────────────────────────────────────
@@ -69,7 +66,7 @@ export class SelectScene extends Phaser.Scene {
     const btnBg = this.add.graphics().setDepth(10);
     this.drawStartButton(btnBg, width / 2, btnY, btnW, btnH, false);
 
-    const btnText = this.add.text(width / 2, btnY, '⚔  COMEÇAR!', {
+    const btnText = this.add.text(width / 2, btnY, 'COMEÇAR!', {
       fontSize: '18px',
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -93,28 +90,12 @@ export class SelectScene extends Phaser.Scene {
     btnHitbox.on('pointerdown', () => {
       const selected = STARTERS[this.selectedIndex];
       if (!selected.unlocked) return;
-      SoundManager.playStart();
-      this.cameras.main.fade(500, 0, 0, 0, false, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
-        if (progress >= 1) {
-          this.scene.start('GameScene');
-        }
-      });
+      SoundManager.playClick();
+      this.showPhaseSelection();
     });
 
-    // ── Botão "MODO TESTE" ───────────────────────────────────────────
-    const testBtn = this.add.text(width - 20, height - 25, 'MODO TESTE', {
-      fontSize: '12px',
-      color: '#44aaff',
-      fontFamily: 'monospace',
-      fontStyle: 'bold',
-    }).setOrigin(1, 0.5).setDepth(10).setInteractive({ useHandCursor: true });
-
-    testBtn.on('pointerover', () => { testBtn.setColor('#ffffff'); SoundManager.playHover(); });
-    testBtn.on('pointerout', () => testBtn.setColor('#44aaff'));
-    testBtn.on('pointerdown', () => { SoundManager.playClick(); this.showPasswordPrompt(); });
-
     // ── Botão "Voltar" ───────────────────────────────────────────────
-    const backBtn = this.add.text(20, height - 25, '← Voltar', {
+    const backBtn = this.add.text(20, height - 25, '<- Voltar', {
       fontSize: '12px',
       color: '#666666',
       fontFamily: 'monospace',
@@ -129,6 +110,239 @@ export class SelectScene extends Phaser.Scene {
 
     // ── Fade in ──────────────────────────────────────────────────────
     this.cameras.main.fadeIn(400, 0, 0, 0);
+  }
+
+  // ── Overlay de seleção de fase ─────────────────────────────────────
+  private showPhaseSelection(): void {
+    if (this.phaseOverlay) return;
+
+    const { width, height } = this.cameras.main;
+    this.phaseOverlay = this.add.container(0, 0).setDepth(200);
+
+    // Fundo escuro
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85);
+    bg.setInteractive();
+    this.phaseOverlay.add(bg);
+
+    // Título
+    this.phaseOverlay.add(this.add.text(width / 2, height / 2 - 120, 'SELECIONE A FASE', {
+      fontSize: '22px', color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 4,
+    }).setOrigin(0.5));
+
+    // ── Card: Fase 1 — Fire Red ──────────────────────────────────────
+    const card1X = width / 2 - 130;
+    const cardY = height / 2 + 10;
+    this.createPhaseCard(card1X, cardY, 'FASE 1', 'FIRE RED', 0xff4400, 0xff6622,
+      'Jogo completo com\ninimigos, bosses\ne evoluções.', () => {
+        this.startGame(false);
+      });
+
+    // ── Card: Fase Dev — Debugger ────────────────────────────────────
+    const card2X = width / 2 + 130;
+    this.createPhaseCard(card2X, cardY, 'FASE DEV', 'DEBUGGER', 0x44aaff, 0x66ccff,
+      'Cenários de teste\npré-configurados\npara debugging.', () => {
+        this.showPasswordPrompt();
+      });
+
+    // Botão cancelar
+    const cancelBtn = this.add.text(width / 2, height / 2 + 145, 'Cancelar', {
+      fontSize: '12px', color: '#666666', fontFamily: 'monospace',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    cancelBtn.on('pointerover', () => cancelBtn.setColor('#ffffff'));
+    cancelBtn.on('pointerout', () => cancelBtn.setColor('#666666'));
+    cancelBtn.on('pointerdown', () => {
+      SoundManager.playClick();
+      this.hidePhaseSelection();
+    });
+    this.phaseOverlay.add(cancelBtn);
+
+    // Esc para cancelar
+    this.input.keyboard?.once('keydown-ESC', () => {
+      SoundManager.playClick();
+      this.hidePhaseSelection();
+    });
+  }
+
+  private createPhaseCard(
+    cx: number, cy: number,
+    title: string, subtitle: string,
+    color: number, hoverColor: number,
+    description: string,
+    onClick: () => void,
+  ): void {
+    if (!this.phaseOverlay) return;
+
+    const cardW = 200;
+    const cardH = 180;
+
+    const gfx = this.add.graphics();
+    const drawCard = (hover: boolean): void => {
+      gfx.clear();
+      // Sombra
+      gfx.fillStyle(0x000000, 0.5);
+      gfx.fillRoundedRect(cx - cardW / 2 + 3, cy - cardH / 2 + 3, cardW, cardH, 12);
+      // Fundo
+      gfx.fillStyle(hover ? 0x1e1e44 : 0x151530, 0.95);
+      gfx.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
+      // Borda
+      gfx.lineStyle(2, hover ? hoverColor : color, hover ? 1 : 0.7);
+      gfx.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
+      // Barra superior colorida
+      gfx.fillStyle(color, hover ? 0.4 : 0.2);
+      gfx.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, 40, { tl: 12, tr: 12, bl: 0, br: 0 });
+    };
+
+    drawCard(false);
+    this.phaseOverlay.add(gfx);
+
+    // Título
+    this.phaseOverlay.add(this.add.text(cx, cy - cardH / 2 + 14, title, {
+      fontSize: '14px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5));
+
+    // Subtítulo
+    const subColor = color === 0xff4400 ? '#ff6622' : '#66ccff';
+    this.phaseOverlay.add(this.add.text(cx, cy - cardH / 2 + 32, subtitle, {
+      fontSize: '10px', color: subColor, fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5));
+
+    // Descrição
+    this.phaseOverlay.add(this.add.text(cx, cy + 10, description, {
+      fontSize: '11px', color: '#aaaaaa', fontFamily: 'monospace',
+      align: 'center', lineSpacing: 4,
+    }).setOrigin(0.5));
+
+    // Hitbox interativo
+    const hitbox = this.add.rectangle(cx, cy, cardW, cardH, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true });
+    hitbox.on('pointerover', () => { drawCard(true); SoundManager.playHover(); });
+    hitbox.on('pointerout', () => drawCard(false));
+    hitbox.on('pointerdown', () => {
+      SoundManager.playStart();
+      onClick();
+    });
+    this.phaseOverlay.add(hitbox);
+  }
+
+  private showPasswordPrompt(): void {
+    if (this.passwordOverlay) return;
+
+    const { width, height } = this.cameras.main;
+    this.passwordOverlay = this.add.container(0, 0).setDepth(300);
+
+    // Fundo escuro sobre o overlay de fases
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7);
+    bg.setInteractive();
+    this.passwordOverlay.add(bg);
+
+    this.passwordOverlay.add(this.add.text(width / 2, height / 2 - 60, 'ACESSO RESTRITO', {
+      fontSize: '16px', color: '#44aaff', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5));
+
+    this.passwordOverlay.add(this.add.text(width / 2, height / 2 - 35, 'Digite a senha:', {
+      fontSize: '12px', color: '#888888', fontFamily: 'monospace',
+    }).setOrigin(0.5));
+
+    // Caixa de input visual
+    const boxGfx = this.add.graphics();
+    boxGfx.fillStyle(0x111133, 0.95);
+    boxGfx.fillRoundedRect(width / 2 - 80, height / 2 - 15, 160, 30, 6);
+    boxGfx.lineStyle(1, 0x44aaff, 0.5);
+    boxGfx.strokeRoundedRect(width / 2 - 80, height / 2 - 15, 160, 30, 6);
+    this.passwordOverlay.add(boxGfx);
+
+    let password = '';
+    const pwDisplay = this.add.text(width / 2, height / 2, '', {
+      fontSize: '18px', color: '#ffffff', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5);
+    this.passwordOverlay.add(pwDisplay);
+
+    const errorText = this.add.text(width / 2, height / 2 + 25, '', {
+      fontSize: '11px', color: '#ff4444', fontFamily: 'monospace',
+    }).setOrigin(0.5);
+    this.passwordOverlay.add(errorText);
+
+    this.passwordOverlay.add(this.add.text(width / 2, height / 2 + 55, 'ESC para cancelar', {
+      fontSize: '10px', color: '#555555', fontFamily: 'monospace',
+    }).setOrigin(0.5));
+
+    const cleanup = (): void => {
+      if (this.passwordKeyHandler) {
+        window.removeEventListener('keydown', this.passwordKeyHandler);
+        this.passwordKeyHandler = null;
+      }
+      if (this.passwordOverlay) {
+        this.passwordOverlay.destroy(true);
+        this.passwordOverlay = null;
+      }
+    };
+
+    const onKeyDown = (event: KeyboardEvent): void => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (event.key === 'Escape') {
+        SoundManager.playClick();
+        cleanup();
+        return;
+      }
+      if (event.key === 'Backspace') {
+        password = password.slice(0, -1);
+        pwDisplay.setText('*'.repeat(password.length));
+        return;
+      }
+      if (event.key === 'Enter') {
+        if (password === 'lulu') {
+          cleanup();
+          this.hidePhaseSelection();
+          this.startGame(true);
+        } else {
+          errorText.setText('Senha incorreta!');
+          password = '';
+          pwDisplay.setText('');
+          this.time.delayedCall(1500, () => { if (errorText.active) errorText.setText(''); });
+        }
+        return;
+      }
+      if (event.key.length === 1 && password.length < 20) {
+        password += event.key;
+        pwDisplay.setText('*'.repeat(password.length));
+      }
+    };
+
+    this.passwordKeyHandler = onKeyDown;
+    window.addEventListener('keydown', onKeyDown);
+
+    // Cleanup automático se a scene for destruída
+    this.events.once('shutdown', cleanup);
+  }
+
+  private hidePhaseSelection(): void {
+    if (this.passwordKeyHandler) {
+      window.removeEventListener('keydown', this.passwordKeyHandler);
+      this.passwordKeyHandler = null;
+    }
+    if (this.passwordOverlay) {
+      this.passwordOverlay.destroy(true);
+      this.passwordOverlay = null;
+    }
+    if (this.phaseOverlay) {
+      this.phaseOverlay.destroy(true);
+      this.phaseOverlay = null;
+    }
+  }
+
+  private startGame(debugMode: boolean): void {
+    const starterKey = STARTERS[this.selectedIndex].key;
+    this.cameras.main.fade(500, 0, 0, 0, false, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
+      if (progress >= 1) {
+        this.scene.start('GameScene', { debugMode, starterKey });
+      }
+    });
   }
 
   private createCharacterCard(
@@ -151,12 +365,10 @@ export class SelectScene extends Phaser.Scene {
     sprite.setScale(3);
 
     if (!starter.unlocked) {
-      // Silhueta preta — frame estático para não gerar silhuetas estranhas
       sprite.setFrame(0);
       sprite.setTint(0x000000);
     } else {
       sprite.play(`${starter.sprite.key}-down`);
-      // Flutuação animada
       this.tweens.add({
         targets: sprite,
         y: sprite.y - 5,
@@ -217,9 +429,8 @@ export class SelectScene extends Phaser.Scene {
 
     // ── Overlay de lock ──────────────────────────────────────────────
     if (!starter.unlocked) {
-      // Cadeado
-      const lockText = this.add.text(cx, cy + 75, '🔒', {
-        fontSize: '28px',
+      const lockText = this.add.text(cx, cy + 75, 'X', {
+        fontSize: '28px', color: '#444444', fontFamily: 'monospace', fontStyle: 'bold',
       }).setOrigin(0.5);
       container.add(lockText);
 
@@ -241,7 +452,6 @@ export class SelectScene extends Phaser.Scene {
         SoundManager.playClick();
         this.selectCard(index);
       } else {
-        // Shake no card travado
         this.tweens.add({
           targets: container,
           x: container.x + 5,
@@ -280,14 +490,12 @@ export class SelectScene extends Phaser.Scene {
     const totalWidth = STARTERS.length * cardWidth + (STARTERS.length - 1) * gap;
     const startX = (width - totalWidth) / 2;
 
-    // Redesenha o card anterior (deseleciona)
     if (prevIndex !== index && STARTERS[prevIndex].unlocked) {
       const prevCx = startX + prevIndex * (cardWidth + gap) + cardWidth / 2;
       const prevCy = this.cameras.main.height / 2 + 20;
       this.drawCard(this.cardGraphics[prevIndex], prevCx, prevCy, cardWidth, cardHeight, true, false);
     }
 
-    // Desenha o card selecionado
     const cx = startX + index * (cardWidth + gap) + cardWidth / 2;
     const cy = this.cameras.main.height / 2 + 20;
     this.drawCard(this.cardGraphics[index], cx, cy, cardWidth, cardHeight, true, true);
@@ -324,10 +532,8 @@ export class SelectScene extends Phaser.Scene {
 
     // Borda
     if (selected && unlocked) {
-      // Borda dourada brilhante
       g.lineStyle(3, 0xffcc00);
       g.strokeRoundedRect(x, y, w, h, 12);
-      // Glow interno
       g.lineStyle(1, 0xffcc00, 0.3);
       g.strokeRoundedRect(x + 3, y + 3, w - 6, h - 6, 10);
     } else if (hover && unlocked) {
@@ -346,152 +552,6 @@ export class SelectScene extends Phaser.Scene {
       g.fillStyle(0xffffff, selected ? 0.06 : 0.03);
       g.fillRoundedRect(x + 4, y + 2, w - 8, h * 0.3, { tl: 10, tr: 10, bl: 0, br: 0 });
     }
-  }
-
-  private showPasswordPrompt(): void {
-    const { width, height } = this.cameras.main;
-    this.passwordInput = '';
-
-    this.passwordOverlay = this.add.container(0, 0).setDepth(100);
-
-    // Fundo escuro
-    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.8);
-    bg.setInteractive(); // Bloqueia cliques nos elementos abaixo
-    this.passwordOverlay.add(bg);
-
-    // Caixa do prompt
-    const boxW = 300;
-    const boxH = 200;
-    const boxGfx = this.add.graphics();
-    boxGfx.fillStyle(0x1a1a2e, 0.98);
-    boxGfx.fillRoundedRect(width / 2 - boxW / 2, height / 2 - boxH / 2, boxW, boxH, 12);
-    boxGfx.lineStyle(2, 0x44aaff, 0.8);
-    boxGfx.strokeRoundedRect(width / 2 - boxW / 2, height / 2 - boxH / 2, boxW, boxH, 12);
-    this.passwordOverlay.add(boxGfx);
-
-    // Ícone de cadeado
-    const lockIcon = this.add.text(width / 2, height / 2 - 70, '🔒', {
-      fontSize: '28px',
-    }).setOrigin(0.5);
-    this.passwordOverlay.add(lockIcon);
-
-    // Título
-    const title = this.add.text(width / 2, height / 2 - 42, 'MODO TESTE', {
-      fontSize: '16px', color: '#44aaff', fontFamily: 'monospace', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 3,
-    }).setOrigin(0.5);
-    this.passwordOverlay.add(title);
-
-    // Label
-    const label = this.add.text(width / 2, height / 2 - 18, 'Digite a senha:', {
-      fontSize: '12px', color: '#888888', fontFamily: 'monospace',
-    }).setOrigin(0.5);
-    this.passwordOverlay.add(label);
-
-    // Campo de input visual
-    const inputW = 200;
-    const inputH = 32;
-    const inputGfx = this.add.graphics();
-    inputGfx.fillStyle(0x0a0a1a, 0.9);
-    inputGfx.fillRoundedRect(width / 2 - inputW / 2, height / 2 - inputH / 2 + 5, inputW, inputH, 6);
-    inputGfx.lineStyle(1, 0x44aaff, 0.5);
-    inputGfx.strokeRoundedRect(width / 2 - inputW / 2, height / 2 - inputH / 2 + 5, inputW, inputH, 6);
-    this.passwordOverlay.add(inputGfx);
-
-    // Texto mascarado (dots)
-    this.passwordDisplay = this.add.text(width / 2, height / 2 + 5, '|', {
-      fontSize: '18px', color: '#ffffff', fontFamily: 'monospace',
-    }).setOrigin(0.5);
-    this.passwordOverlay.add(this.passwordDisplay);
-
-    // Cursor piscante
-    this.tweens.add({
-      targets: this.passwordDisplay, alpha: 0.5, duration: 500,
-      yoyo: true, repeat: -1, ease: 'Sine.InOut',
-    });
-
-    // Mensagem de erro (inicialmente invisível)
-    this.passwordError = this.add.text(width / 2, height / 2 + 34, '', {
-      fontSize: '11px', color: '#ff4444', fontFamily: 'monospace',
-    }).setOrigin(0.5);
-    this.passwordOverlay.add(this.passwordError);
-
-    // Hint
-    const hint = this.add.text(width / 2, height / 2 + 55, 'Enter para confirmar  •  Esc para cancelar', {
-      fontSize: '9px', color: '#555555', fontFamily: 'monospace',
-    }).setOrigin(0.5);
-    this.passwordOverlay.add(hint);
-
-    // Captura de teclas via DOM (mais confiável para texto)
-    this.keydownHandler = (event: KeyboardEvent) => {
-      if (!this.passwordOverlay?.visible) return;
-
-      if (event.key === 'Escape') {
-        this.hidePasswordPrompt();
-        return;
-      }
-
-      if (event.key === 'Enter') {
-        if (this.passwordInput === TEST_MODE_PASSWORD) {
-          SoundManager.playStart();
-          this.hidePasswordPrompt();
-          this.cameras.main.fade(400, 0, 0, 0, false, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
-            if (progress >= 1) this.scene.start('ShowcaseScene');
-          });
-        } else {
-          SoundManager.playClick();
-          this.passwordError.setText('Senha incorreta!');
-          this.passwordInput = '';
-          this.passwordDisplay.setText('|');
-
-          // Shake na caixa
-          this.tweens.add({
-            targets: this.passwordOverlay, x: 5, duration: 40,
-            yoyo: true, repeat: 3,
-            onComplete: () => { this.passwordOverlay.x = 0; },
-          });
-        }
-        return;
-      }
-
-      if (event.key === 'Backspace') {
-        this.passwordInput = this.passwordInput.slice(0, -1);
-      } else if (event.key.length === 1 && this.passwordInput.length < 20) {
-        this.passwordInput += event.key;
-        this.passwordError.setText('');
-      }
-
-      const masked = '•'.repeat(this.passwordInput.length);
-      this.passwordDisplay.setText(masked.length > 0 ? masked : '|');
-
-      // Parar blink quando há texto, restaurar quando vazio
-      if (this.passwordInput.length > 0) {
-        this.passwordDisplay.setAlpha(1);
-        this.tweens.killTweensOf(this.passwordDisplay);
-      } else {
-        this.tweens.add({
-          targets: this.passwordDisplay, alpha: 0.5, duration: 500,
-          yoyo: true, repeat: -1, ease: 'Sine.InOut',
-        });
-      }
-    };
-
-    window.addEventListener('keydown', this.keydownHandler);
-  }
-
-  private hidePasswordPrompt(): void {
-    if (this.keydownHandler) {
-      window.removeEventListener('keydown', this.keydownHandler);
-      this.keydownHandler = null;
-    }
-    if (this.passwordOverlay) {
-      this.passwordOverlay.destroy(true);
-    }
-    this.passwordInput = '';
-  }
-
-  shutdown(): void {
-    this.hidePasswordPrompt();
   }
 
   private drawStartButton(g: Phaser.GameObjects.Graphics, x: number, y: number, w: number, h: number, hover: boolean): void {

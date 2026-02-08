@@ -40,7 +40,15 @@ export type AttackCategory =
   | 'aura';        // Smokescreen
 
 // ── Tipos de Inimigo e Direção ────────────────────────────────────
-export type EnemyType = 'rattata' | 'pidgey' | 'zubat' | 'geodude' | 'gastly' | 'caterpie' | 'weedle';
+export type EnemyType =
+  // Existentes
+  | 'rattata' | 'pidgey' | 'zubat' | 'geodude' | 'gastly' | 'caterpie' | 'weedle'
+  // Novos comuns (Phase 1)
+  | 'spearow' | 'ekans' | 'oddish' | 'mankey'
+  // Novos elite (Phase 1)
+  | 'haunter' | 'machop' | 'golbat'
+  // Bosses (Phase 1)
+  | 'raticate' | 'arbok' | 'nidoking' | 'snorlax';
 export type Direction = 'down' | 'downRight' | 'right' | 'upRight' | 'up' | 'upLeft' | 'left' | 'downLeft';
 
 // ── Held Items (expandido) ────────────────────────────────────────
@@ -49,7 +57,7 @@ export type HeldItemType =
   | 'dragonFang' | 'sharpBeak' | 'silkScarf' | 'shellBell'
   | 'scopeLens' | 'razorClaw' | 'focusBand' | 'metronome' | 'magnet';
 
-export type PickupType = 'oranBerry' | 'magnetBurst' | 'rareCandy' | 'pokeballBomb';
+export type PickupType = 'oranBerry' | 'magnetBurst' | 'rareCandy' | 'pokeballBomb' | 'gachaBox';
 export type DestructibleType = 'tallGrass' | 'berryBush' | 'rockSmash' | 'treasureChest';
 
 // ── Sprite sheet config (PMDCollab format) ─────────────────────────
@@ -82,9 +90,10 @@ export interface AttackPoolEntry {
 
 // ── Configurações de Inimigos ─────────────────────────────────────
 export interface EnemyContactEffect {
-  readonly type: 'slow';
+  readonly type: 'slow' | 'poison';
   readonly durationMs: number;
-  readonly multiplier: number;
+  readonly multiplier?: number; // para slow
+  readonly dps?: number;        // para poison (damage per second)
 }
 
 export interface EnemyConfig {
@@ -111,6 +120,36 @@ export interface EnemyRangedConfig {
   readonly effect?: 'slow';
   readonly effectDurationMs?: number;
 }
+
+// ── Boss Config ─────────────────────────────────────────────────────
+export interface BossAttackConfig {
+  readonly name: string;
+  readonly pattern: 'charge' | 'fan' | 'aoe-tremor' | 'aoe-land';
+  readonly damage: number;
+  readonly cooldownMs: number;
+  readonly range?: number;
+  readonly projectileCount?: number;
+  readonly aoeRadius?: number;
+}
+
+export interface BossConfig extends EnemyConfig {
+  readonly isBoss: true;
+  readonly bossAttack: BossAttackConfig;
+}
+
+// ── Phase Config ────────────────────────────────────────────────────
+export interface BossSpawnConfig {
+  readonly type: EnemyType;
+  readonly timeSeconds: number;
+}
+
+export interface PhaseConfig {
+  readonly waves: readonly WaveConfig[];
+  readonly bosses: readonly BossSpawnConfig[];
+}
+
+// ── Gacha Rewards ───────────────────────────────────────────────────
+export type GachaRewardType = 'skillUpgrade' | 'heldItem' | 'rareCandy' | 'evolutionStone' | 'maxRevive';
 
 // ── Held Items (Passivos) ──────────────────────────────────────────
 export interface HeldItemConfig {

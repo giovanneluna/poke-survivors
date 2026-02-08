@@ -1,4 +1,6 @@
-import type { EnemyConfig, WaveConfig } from '../../types';
+import type { EnemyConfig, BossConfig, WaveConfig, BossSpawnConfig } from '../../types';
+
+// ── Existentes ──────────────────────────────────────────────────────
 import { RATTATA } from './rattata';
 import { PIDGEY } from './pidgey';
 import { ZUBAT } from './zubat';
@@ -7,7 +9,27 @@ import { GASTLY } from './gastly';
 import { CATERPIE } from './caterpie';
 import { WEEDLE } from './weedle';
 
-export const ENEMIES: Readonly<Record<string, EnemyConfig>> = {
+// ── Novos comuns (Phase 1) ──────────────────────────────────────────
+import { SPEAROW } from './spearow';
+import { EKANS } from './ekans';
+import { ODDISH } from './oddish';
+import { MANKEY } from './mankey';
+
+// ── Novos elite (Phase 1) ───────────────────────────────────────────
+import { HAUNTER } from './haunter';
+import { MACHOP } from './machop';
+import { GOLBAT } from './golbat';
+
+// ── Bosses (Phase 1) ───────────────────────────────────────────────
+import { RATICATE } from './raticate';
+import { ARBOK } from './arbok';
+import { NIDOKING } from './nidoking';
+import { SNORLAX } from './snorlax';
+
+// ── Phase ───────────────────────────────────────────────────────────
+import { PHASE1 } from './phases/phase1';
+
+export const ENEMIES: Readonly<Record<string, EnemyConfig | BossConfig>> = {
   rattata: RATTATA,
   pidgey: PIDGEY,
   zubat: ZUBAT,
@@ -15,34 +37,19 @@ export const ENEMIES: Readonly<Record<string, EnemyConfig>> = {
   gastly: GASTLY,
   caterpie: CATERPIE,
   weedle: WEEDLE,
+  spearow: SPEAROW,
+  ekans: EKANS,
+  oddish: ODDISH,
+  mankey: MANKEY,
+  haunter: HAUNTER,
+  machop: MACHOP,
+  golbat: GOLBAT,
+  raticate: RATICATE,
+  arbok: ARBOK,
+  nidoking: NIDOKING,
+  snorlax: SNORLAX,
 } as const;
 
-// Waves: 8 ondas, 30s cada (difficultyIntervalMs = 30_000)
-// Gastly só aparece a partir da Wave 6 (~3 min)
-// Caterpie/Weedle nas primeiras waves para variedade + slow
-export const WAVES: readonly WaveConfig[] = [
-  // Wave 0 (0:00): Intro fácil
-  { enemies: [{ type: 'rattata', weight: 2 }, { type: 'caterpie', weight: 1 }],
-    spawnRate: 1400, maxEnemies: 25 },
-  // Wave 1 (0:30): Mais variedade
-  { enemies: [{ type: 'rattata', weight: 2 }, { type: 'caterpie', weight: 1 }, { type: 'weedle', weight: 1 }, { type: 'pidgey', weight: 1 }],
-    spawnRate: 1200, maxEnemies: 35 },
-  // Wave 2 (1:00): Zubat aparece
-  { enemies: [{ type: 'pidgey', weight: 2 }, { type: 'weedle', weight: 2 }, { type: 'zubat', weight: 1 }],
-    spawnRate: 1000, maxEnemies: 45 },
-  // Wave 3 (1:30): Geodude aparece
-  { enemies: [{ type: 'zubat', weight: 2 }, { type: 'geodude', weight: 1 }, { type: 'pidgey', weight: 1 }, { type: 'rattata', weight: 1 }],
-    spawnRate: 900, maxEnemies: 50 },
-  // Wave 4 (2:00): Mais rocks
-  { enemies: [{ type: 'geodude', weight: 2 }, { type: 'zubat', weight: 2 }, { type: 'weedle', weight: 1 }],
-    spawnRate: 800, maxEnemies: 55 },
-  // Wave 5 (2:30): Transição
-  { enemies: [{ type: 'geodude', weight: 2 }, { type: 'zubat', weight: 1 }, { type: 'caterpie', weight: 1 }],
-    spawnRate: 700, maxEnemies: 60 },
-  // Wave 6 (3:00): Gastly entra!
-  { enemies: [{ type: 'gastly', weight: 2 }, { type: 'geodude', weight: 1 }, { type: 'zubat', weight: 1 }],
-    spawnRate: 600, maxEnemies: 65 },
-  // Wave 7 (3:30+): Endgame
-  { enemies: [{ type: 'gastly', weight: 3 }, { type: 'geodude', weight: 2 }],
-    spawnRate: 500, maxEnemies: 70 },
-] as const;
+export const ACTIVE_PHASE = PHASE1;
+export const WAVES: readonly WaveConfig[] = ACTIVE_PHASE.waves;
+export const BOSS_SCHEDULE: readonly BossSpawnConfig[] = ACTIVE_PHASE.bosses;

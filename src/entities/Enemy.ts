@@ -94,6 +94,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     return 'upLeft';
   }
 
+  shouldDespawn(): boolean {
+    return true;
+  }
+
+  getHp(): number { return this.hp; }
+  getMaxHp(): number { return this.maxHp; }
+
   takeDamage(amount: number): boolean {
     this.hp -= amount;
 

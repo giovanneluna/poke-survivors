@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PLAYER, CHARMANDER_FORMS } from '../config';
+import type { StarterConfig } from '../config';
 import type { PlayerState, Attack, AttackType, Direction, SpriteConfig, HeldItemType, PokemonForm, PokemonFormConfig } from '../types';
 import { formIndex } from '../types';
 
@@ -20,13 +21,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private shadow: Phaser.GameObjects.Image;
   private slowUntil = 0;
   private readonly slowMultiplier = 0.4;
+  private poisonUntil = 0;
+  private poisonDps = 0;
+  private readonly forms: readonly PokemonFormConfig[];
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
-    super(scene, x, y, PLAYER.sprite.key);
+  constructor(scene: Phaser.Scene, x: number, y: number, starterConfig?: StarterConfig) {
+    const sprite = starterConfig?.sprite ?? PLAYER.sprite;
+    super(scene, x, y, sprite.key);
     scene.add.existing(this as Phaser.GameObjects.GameObject);
     scene.physics.add.existing(this as Phaser.GameObjects.GameObject);
 
-    this.spriteConfig = PLAYER.sprite;
+    this.spriteConfig = sprite;
+    this.forms = starterConfig?.forms ?? CHARMANDER_FORMS;
     this.setScale(1.5);
     this.setDepth(10);
     this.setCollideWorldBounds(true);
@@ -90,6 +96,30 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return time < this.slowUntil;
   }
 
+  // ── Poison effect ────────────────────────────────────────────────
+  applyPoison(dps: number, durationMs: number, time: number): void {
+    this.poisonUntil = time + durationMs;
+    this.poisonDps = dps;
+  }
+
+  isPoisoned(time: number): boolean {
+    return time < this.poisonUntil;
+  }
+
+  updatePoison(time: number, delta: number): void {
+    if (!this.isPoisoned(time)) return;
+    this.stats.hp -= this.poisonDps * (delta / 1000);
+    // Tint roxo pulsante
+    if (Math.floor(time / 200) % 2 === 0) {
+      this.setTint(0xaa44ff);
+    } else {
+      this.clearTint();
+    }
+    if (time >= this.poisonUntil) {
+      this.clearTint();
+    }
+  }
+
   getLastDirection(): Phaser.Math.Vector2 { return this.lastDirection.clone(); }
 
   takeDamage(amount: number, time: number): boolean {
@@ -120,7 +150,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   // ── Evolução do Pokémon ────────────────────────────────────────────
   evolve(targetForm: PokemonForm): PokemonFormConfig | null {
-    const formConfig = CHARMANDER_FORMS.find(f => f.form === targetForm);
+    const formConfig = this.forms.find(f => f.form === targetForm);
     if (!formConfig) return null;
     if (formIndex(targetForm) <= formIndex(this.stats.form)) return null;
 

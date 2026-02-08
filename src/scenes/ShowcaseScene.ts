@@ -5,6 +5,7 @@ import { SoundManager } from "../audio/SoundManager"
 import type {
   AttackType,
   EnemyConfig,
+  BossConfig,
   AttackCategory,
   PokemonForm,
 } from "../types"
@@ -108,6 +109,10 @@ export class ShowcaseScene extends Phaser.Scene {
     // ══ INIMIGOS ════════════════════════════════════════════════════
     y = this.addSectionHeader(y, "INIMIGOS")
     y = this.addEnemiesSection(y)
+
+    // ══ BOSSES ═══════════════════════════════════════════════════════
+    y = this.addSectionHeader(y, "BOSSES")
+    y = this.addBossesSection(y)
 
     // ── Botão Voltar ────────────────────────────────────────────────
     y += 30
@@ -554,11 +559,15 @@ export class ShowcaseScene extends Phaser.Scene {
     return y
   }
 
+  private isBoss(config: EnemyConfig | BossConfig): config is BossConfig {
+    return 'isBoss' in config && (config as BossConfig).isBoss === true;
+  }
+
   private addEnemiesSection(y: number): number {
-    const enemyKeys = Object.keys(ENEMIES)
+    const enemyKeys = Object.keys(ENEMIES).filter(k => !this.isBoss(ENEMIES[k]))
 
     for (const key of enemyKeys) {
-      const enemy: EnemyConfig = ENEMIES[key]
+      const enemy = ENEMIES[key]
 
       // Faixa de fundo
       const rowBg = this.add.graphics()
@@ -670,6 +679,90 @@ export class ShowcaseScene extends Phaser.Scene {
       }
 
       y += ROW_HEIGHT
+    }
+    return y
+  }
+
+  private addBossesSection(y: number): number {
+    const bossKeys = Object.keys(ENEMIES).filter(k => this.isBoss(ENEMIES[k]))
+
+    // Map boss attack pattern to sprite/anim keys
+    const bossAttackSprites: Record<string, { atkKey: string; animKey: string; scale: number }> = {
+      'charge': { atkKey: 'atk-bite', animKey: 'anim-bite', scale: 2.0 },
+      'fan': { atkKey: 'atk-venoshock', animKey: 'anim-venoshock', scale: 1.5 },
+      'aoe-tremor': { atkKey: 'atk-thrash', animKey: 'anim-thrash', scale: 2.5 },
+      'aoe-land': { atkKey: 'atk-stomp', animKey: 'anim-stomp', scale: 4.0 },
+    }
+
+    for (const key of bossKeys) {
+      const boss = ENEMIES[key] as BossConfig
+
+      // Faixa de fundo dourada
+      const rowBg = this.add.graphics()
+      rowBg.fillStyle(0xFFD700, 0.05)
+      rowBg.fillRect(0, y - ROW_HEIGHT / 2 + 5, this.cameras.main.width, ROW_HEIGHT - 10)
+      rowBg.lineStyle(1, 0xFFD700, 0.2)
+      rowBg.strokeRect(0, y - ROW_HEIGHT / 2 + 5, this.cameras.main.width, ROW_HEIGHT - 10)
+
+      // Walk sprite animado (maior que inimigos normais)
+      const sprKey = boss.sprite.key
+      const animKey = `${sprKey}-right`
+      const sprite = this.add.sprite(LABEL_X + 30, y, sprKey)
+      sprite.setScale(3.5)
+      if (this.anims.exists(animKey)) {
+        sprite.play(animKey)
+      }
+
+      // Badge BOSS
+      const badgeBg = this.add.graphics()
+      badgeBg.fillStyle(0xff0000, 0.3)
+      badgeBg.fillRoundedRect(LABEL_X + 60, y - 28, 45, 16, 4)
+      badgeBg.lineStyle(1, 0xff0000, 0.6)
+      badgeBg.strokeRoundedRect(LABEL_X + 60, y - 28, 45, 16, 4)
+
+      this.add.text(LABEL_X + 82, y - 20, "BOSS", {
+        fontSize: "10px", color: "#ff4444", fontFamily: "monospace", fontStyle: "bold",
+      }).setOrigin(0.5, 0.5)
+
+      // Nome
+      this.add.text(LABEL_X + 70, y - 6, boss.name.toUpperCase(), {
+        fontSize: "14px", color: "#FFD700", fontFamily: "monospace", fontStyle: "bold",
+      }).setOrigin(0, 0.5)
+
+      // Stats
+      const statsText = `HP:${boss.hp}  SPD:${boss.speed}  DMG:${boss.damage}  XP:${boss.xpValue}`
+      this.add.text(LABEL_X + 70, y + 12, statsText, {
+        fontSize: "9px", color: "#aaaaaa", fontFamily: "monospace",
+      }).setOrigin(0, 0.5)
+
+      // Ataque especial info
+      const atkInfo = `${boss.bossAttack.name} (${boss.bossAttack.pattern}) — DMG:${boss.bossAttack.damage}`
+      this.add.text(LABEL_X + 70, y + 26, atkInfo, {
+        fontSize: "8px", color: "#ff8844", fontFamily: "monospace",
+      }).setOrigin(0, 0.5)
+
+      // Boss attack sprite demo
+      const atkMapping = bossAttackSprites[boss.bossAttack.pattern]
+      if (atkMapping && this.textures.exists(atkMapping.atkKey)) {
+        const spawnBossAtk = (): void => {
+          const atkSprite = this.add.sprite(DEMO_START_X, y, atkMapping.atkKey)
+          atkSprite.setScale(atkMapping.scale)
+          if (this.anims.exists(atkMapping.animKey)) {
+            atkSprite.play({ key: atkMapping.animKey, repeat: 0 })
+          }
+          this.tweens.add({
+            targets: atkSprite,
+            x: DEMO_END_X,
+            duration: 1500,
+            onComplete: () => { if (atkSprite.active) atkSprite.destroy() },
+          })
+        }
+        spawnBossAtk()
+        const timer = this.time.addEvent({ delay: 2500, callback: spawnBossAtk, loop: true })
+        this.activeTimers.push(timer)
+      }
+
+      y += ROW_HEIGHT + 10
     }
     return y
   }

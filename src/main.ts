@@ -31,4 +31,8 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [BootScene, TitleScene, SelectScene, GameScene, UIScene, ShowcaseScene],
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+// Debug: expor game globalmente para testes
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(window as unknown as Record<string, unknown>).__GAME = game;

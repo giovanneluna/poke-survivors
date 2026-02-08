@@ -91,6 +91,12 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('atk-rock-slide', 'assets/attacks/rock-slide-sheet.png', { frameWidth: 48, frameHeight: 96 });
     this.load.spritesheet('atk-rock-throw', 'assets/attacks/rock-throw-sheet.png', { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet('atk-hyper-voice', 'assets/attacks/hyper-voice-sheet.png', { frameWidth: 96, frameHeight: 28 });
+
+    // Boss attack spritesheets
+    this.load.spritesheet('atk-bite', 'assets/attacks/bite-sheet.png', { frameWidth: 32, frameHeight: 48 });
+    this.load.spritesheet('atk-venoshock', 'assets/attacks/venoshock-sheet.png', { frameWidth: 32, frameHeight: 80 });
+    this.load.spritesheet('atk-thrash', 'assets/attacks/thrash-sheet.png', { frameWidth: 48, frameHeight: 32 });
+    this.load.spritesheet('atk-stomp', 'assets/attacks/stomp-sheet.png', { frameWidth: 16, frameHeight: 16 });
   }
 
   private loadSpritesheet(sprite: SpriteConfig): void {
@@ -292,6 +298,32 @@ export class BootScene extends Phaser.Scene {
       key: 'anim-hyper-voice',
       frames: this.anims.generateFrameNumbers('atk-hyper-voice', { start: 0, end: 3 }),
       frameRate: 12, repeat: 0,
+    });
+
+    // ── Boss attack animations ───────────────────────────────────────
+    // Bite / Hyper Fang (12 frames, play once)
+    this.anims.create({
+      key: 'anim-bite',
+      frames: this.anims.generateFrameNumbers('atk-bite', { start: 0, end: 11 }),
+      frameRate: 24, repeat: 0,
+    });
+    // Venoshock / Poison Sting (13 frames, play once)
+    this.anims.create({
+      key: 'anim-venoshock',
+      frames: this.anims.generateFrameNumbers('atk-venoshock', { start: 0, end: 12 }),
+      frameRate: 20, repeat: 0,
+    });
+    // Thrash (7 frames, play once)
+    this.anims.create({
+      key: 'anim-thrash',
+      frames: this.anims.generateFrameNumbers('atk-thrash', { start: 0, end: 6 }),
+      frameRate: 14, repeat: 0,
+    });
+    // Stomp / Body Slam (10 frames, play once)
+    this.anims.create({
+      key: 'anim-stomp',
+      frames: this.anims.generateFrameNumbers('atk-stomp', { start: 0, end: 9 }),
+      frameRate: 18, repeat: 0,
     });
   }
 
@@ -619,6 +651,16 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0x4488bb, 0.5);
     g.fillEllipse(10, 16, 8, 4);
     g.generateTexture('tornado', 20, 20);
+
+    // ── Gacha Box (pokeball dourada) ──────────────────────────────
+    g.clear();
+    g.fillStyle(0xFFD700); g.fillCircle(16, 16, 14);  // corpo dourado
+    g.fillStyle(0xFFE44D, 0.5); g.fillCircle(16, 12, 12); // metade superior mais clara
+    g.fillStyle(0x8B6914); g.fillRect(2, 14, 28, 3);  // linha central escura
+    g.fillStyle(0xFFD700); g.fillRect(2, 15, 28, 1);   // destaque na linha
+    g.fillStyle(0xffffff); g.fillCircle(16, 16, 4);    // botão central branco
+    g.fillStyle(0xFFD700); g.fillCircle(16, 16, 2);    // centro do botão dourado
+    g.generateTexture('gacha-box', 32, 32);
 
     // ── Shards para Title Screen ──────────────────────────────────
     // Shard vermelho (fogo)
