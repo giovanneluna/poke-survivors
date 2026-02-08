@@ -17,6 +17,6 @@ export const GOLBAT: EnemyConfig = {
     cooldownMs: 3500,
     range: 280,
     homing: false,
-    projectileScale: 0.6,
+    projectileScale: 0.8,
   },
 };

@@ -100,6 +100,12 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('atk-rock-throw', 'assets/attacks/rock-throw-sheet.png', { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet('atk-hyper-voice', 'assets/attacks/hyper-voice-sheet.png', { frameWidth: 96, frameHeight: 28 });
 
+    // Enemy projectile spritesheets (real sprites from pokemonAutoChess)
+    this.load.spritesheet('atk-psybeam', 'assets/attacks/psybeam-sheet.png', { frameWidth: 32, frameHeight: 240 });
+    this.load.spritesheet('atk-psychic', 'assets/attacks/psychic-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-bonemerang', 'assets/attacks/bonemerang-sheet.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('atk-explosion', 'assets/attacks/explosion-sheet.png', { frameWidth: 168, frameHeight: 128 });
+
     // Boss attack spritesheets
     this.load.spritesheet('atk-bite', 'assets/attacks/bite-sheet.png', { frameWidth: 32, frameHeight: 48 });
     this.load.spritesheet('atk-venoshock', 'assets/attacks/venoshock-sheet.png', { frameWidth: 32, frameHeight: 80 });
@@ -116,6 +122,10 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('atk-water-range', 'assets/attacks/water-range-sheet.png', { frameWidth: 8, frameHeight: 8 });
     this.load.spritesheet('atk-water-hit', 'assets/attacks/water-hit-sheet.png', { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet('atk-ice-range', 'assets/attacks/ice-range-sheet.png', { frameWidth: 64, frameHeight: 56 });
+    this.load.spritesheet('atk-wave-splash', 'assets/attacks/wave-splash-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-sparkling-aria', 'assets/attacks/sparkling-aria-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-water-melee', 'assets/attacks/water-melee-sheet.png', { frameWidth: 56, frameHeight: 56 });
+    this.load.spritesheet('atk-origin-pulse', 'assets/attacks/origin-pulse-sheet.png', { frameWidth: 128, frameHeight: 32 });
   }
 
   private loadSpritesheet(sprite: SpriteConfig): void {
@@ -321,6 +331,30 @@ export class BootScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('atk-hyper-voice', { start: 0, end: 3 }),
       frameRate: 12, repeat: 0,
     });
+    // Psybeam (15 frames, looping) - Venonat/Butterfree/Venomoth projectile
+    this.anims.create({
+      key: 'anim-psybeam',
+      frames: this.anims.generateFrameNumbers('atk-psybeam', { start: 0, end: 14 }),
+      frameRate: 18, repeat: -1,
+    });
+    // Psychic (17 frames, looping) - Hypno/Alakazam/Drowzee projectile
+    this.anims.create({
+      key: 'anim-psychic',
+      frames: this.anims.generateFrameNumbers('atk-psychic', { start: 0, end: 16 }),
+      frameRate: 18, repeat: -1,
+    });
+    // Bonemerang (8 frames, looping) - Cubone/Marowak projectile
+    this.anims.create({
+      key: 'anim-bonemerang',
+      frames: this.anims.generateFrameNumbers('atk-bonemerang', { start: 0, end: 7 }),
+      frameRate: 14, repeat: -1,
+    });
+    // Explosion (18 frames, play once) - Electrode death effect
+    this.anims.create({
+      key: 'anim-explosion',
+      frames: this.anims.generateFrameNumbers('atk-explosion', { start: 0, end: 17 }),
+      frameRate: 24, repeat: 0,
+    });
 
     // ── Boss attack animations ───────────────────────────────────────
     // Bite / Hyper Fang (12 frames, play once)
@@ -402,6 +436,30 @@ export class BootScene extends Phaser.Scene {
       key: 'anim-ice-range',
       frames: this.anims.generateFrameNumbers('atk-ice-range', { start: 0, end: 13 }),
       frameRate: 16, repeat: -1,
+    });
+    // Wave Splash (9 frames, looping — Bubble projectile)
+    this.anims.create({
+      key: 'anim-wave-splash',
+      frames: this.anims.generateFrameNumbers('atk-wave-splash', { start: 0, end: 8 }),
+      frameRate: 14, repeat: -1,
+    });
+    // Sparkling Aria (44 frames, looping — BubbleBeam projectile)
+    this.anims.create({
+      key: 'anim-sparkling-aria',
+      frames: this.anims.generateFrameNumbers('atk-sparkling-aria', { start: 0, end: 43 }),
+      frameRate: 20, repeat: -1,
+    });
+    // Water Melee splash (8 frames, looping — Scald projectile)
+    this.anims.create({
+      key: 'anim-water-melee',
+      frames: this.anims.generateFrameNumbers('atk-water-melee', { start: 0, end: 7 }),
+      frameRate: 14, repeat: -1,
+    });
+    // Origin Pulse (4 frames, looping — WaterSpout projectile)
+    this.anims.create({
+      key: 'anim-origin-pulse',
+      frames: this.anims.generateFrameNumbers('atk-origin-pulse', { start: 0, end: 3 }),
+      frameRate: 10, repeat: -1,
     });
   }
 
@@ -501,10 +559,30 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xcceeFF, 0.3); g.fillCircle(6, 6, 2);
     g.generateTexture('supersonic-wave', 12, 12);
 
-    // ── XP Gem ───────────────────────────────────────────────────
+    // ── XP Gems (4 tiers) ─────────────────────────────────────────
+    // Tier 1: Azul (1 XP) — diamante pequeno
     g.clear(); g.fillStyle(0x44bbff);
     g.fillTriangle(5, 0, 10, 5, 5, 10); g.fillTriangle(5, 0, 0, 5, 5, 10);
     g.generateTexture('xp-gem', 10, 10);
+
+    // Tier 2: Verde (5 XP) — diamante medio com brilho
+    g.clear(); g.fillStyle(0x22dd44);
+    g.fillTriangle(5, 0, 10, 5, 5, 10); g.fillTriangle(5, 0, 0, 5, 5, 10);
+    g.fillStyle(0x88ff88, 0.5); g.fillTriangle(5, 1, 8, 5, 5, 5);
+    g.generateTexture('xp-gem-green', 10, 10);
+
+    // Tier 3: Vermelho (25 XP) — diamante grande com brilho
+    g.clear(); g.fillStyle(0xff3333);
+    g.fillTriangle(6, 0, 12, 6, 6, 12); g.fillTriangle(6, 0, 0, 6, 6, 12);
+    g.fillStyle(0xff8888, 0.5); g.fillTriangle(6, 1, 9, 6, 6, 6);
+    g.generateTexture('xp-gem-red', 12, 12);
+
+    // Tier 4: Roxo (100 XP) — diamante brilhante com glow
+    g.clear(); g.fillStyle(0xaa44ff);
+    g.fillTriangle(7, 0, 14, 7, 7, 14); g.fillTriangle(7, 0, 0, 7, 7, 14);
+    g.fillStyle(0xdd88ff, 0.6); g.fillTriangle(7, 2, 11, 7, 7, 7);
+    g.fillStyle(0xffffff, 0.3); g.fillTriangle(7, 1, 9, 5, 7, 5);
+    g.generateTexture('xp-gem-purple', 14, 14);
 
     // ── Sombra ───────────────────────────────────────────────────
     g.clear(); g.fillStyle(0x000000, 0.25); g.fillEllipse(8, 4, 16, 8);
@@ -569,6 +647,24 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xffffff); g.fillCircle(6, 6, 2);
     g.fillStyle(0x333333); g.fillCircle(6, 6, 1);
     g.generateTexture('pickup-bomb', 12, 12);
+
+    // XP Share - estrela roxa com brilho
+    g.clear(); g.fillStyle(0xaa44ff);
+    g.fillTriangle(6, 0, 8, 4, 12, 5); g.fillTriangle(12, 5, 8, 7, 10, 12);
+    g.fillTriangle(10, 12, 6, 9, 2, 12); g.fillTriangle(2, 12, 4, 7, 0, 5);
+    g.fillTriangle(0, 5, 4, 4, 6, 0);
+    g.fillStyle(0xdd88ff, 0.7); g.fillCircle(6, 6, 2);
+    g.generateTexture('pickup-xp-share', 12, 12);
+
+    // Duplicator - seta dupla verde
+    g.clear(); g.fillStyle(0x44dd44);
+    g.fillTriangle(3, 0, 6, 4, 0, 4);
+    g.fillRect(1, 4, 4, 4);
+    g.fillStyle(0x66ff66);
+    g.fillTriangle(9, 0, 12, 4, 6, 4);
+    g.fillRect(7, 4, 4, 4);
+    g.fillStyle(0xffffff, 0.3); g.fillRect(2, 1, 2, 2); g.fillRect(8, 1, 2, 2);
+    g.generateTexture('pickup-duplicator', 12, 8);
 
     // Held Items textures
     // Charcoal
@@ -751,11 +847,21 @@ export class BootScene extends Phaser.Scene {
     g.generateTexture('tornado', 20, 20);
 
     // ── Phase 2-4 enemy projectiles/effects ───────────────────────
-    // Confusion wave (Venonat, Venomoth, Butterfree, Drowzee)
-    g.clear(); g.fillStyle(0xff66aa, 0.7); g.fillCircle(6, 6, 6);
-    g.fillStyle(0xcc44aa, 0.5); g.fillCircle(6, 6, 4);
-    g.fillStyle(0xff88cc, 0.3); g.fillCircle(5, 4, 2);
-    g.generateTexture('confusion-wave', 12, 12);
+    // Confusion wave (Venonat, Venomoth, Butterfree) — psychic energy rings
+    g.clear();
+    g.lineStyle(2, 0x9933ff, 0.6); g.strokeCircle(8, 8, 7);
+    g.lineStyle(1.5, 0xcc44ff, 0.8); g.strokeCircle(8, 8, 5);
+    g.fillStyle(0xdd66ff, 0.9); g.fillCircle(8, 8, 3);
+    g.fillStyle(0xffaaff, 0.5); g.fillCircle(7, 6, 1.5);
+    g.generateTexture('confusion-wave', 16, 16);
+
+    // Supersonic wave (Golbat) — sound wave arcs
+    g.clear();
+    g.lineStyle(2, 0x7744cc, 0.5); g.strokeCircle(10, 6, 10);
+    g.lineStyle(1.5, 0x9966dd, 0.7); g.strokeCircle(10, 6, 7);
+    g.lineStyle(1, 0xbb88ff, 0.9); g.strokeCircle(10, 6, 4);
+    g.fillStyle(0xcc99ff, 0.6); g.fillCircle(10, 6, 2);
+    g.generateTexture('supersonic-wave', 20, 12);
 
     // Psychic projectile (Hypno, Alakazam)
     g.clear(); g.fillStyle(0xff44aa); g.fillCircle(6, 6, 6);

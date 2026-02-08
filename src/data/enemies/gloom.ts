@@ -8,7 +8,7 @@ export const GLOOM: EnemyConfig = {
   hp: 60,
   speed: 30,
   damage: 5,
-  xpValue: 12,
+  xpValue: 30,
   scale: 1.0,
   contactEffect: {
     type: 'slow',

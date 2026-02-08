@@ -8,7 +8,7 @@ export const KAKUNA: EnemyConfig = {
   hp: 130,
   speed: 15,
   damage: 3,
-  xpValue: 5,
+  xpValue: 12,
   scale: 1.0,
   contactEffect: {
     type: 'poison',

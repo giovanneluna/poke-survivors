@@ -74,7 +74,7 @@ export type HeldItemType =
   | 'scopeLens' | 'razorClaw' | 'focusBand' | 'metronome' | 'magnet'
   | 'mysticWater' | 'neverMeltIce';
 
-export type PickupType = 'oranBerry' | 'magnetBurst' | 'rareCandy' | 'pokeballBomb' | 'gachaBox';
+export type PickupType = 'oranBerry' | 'magnetBurst' | 'rareCandy' | 'pokeballBomb' | 'gachaBox' | 'xpShare' | 'duplicator';
 export type DestructibleType = 'tallGrass' | 'berryBush' | 'rockSmash' | 'treasureChest';
 
 // ── Sprite sheet config (PMDCollab format) ─────────────────────────
@@ -288,6 +288,9 @@ export interface PlayerState {
   speed: number;
   baseSpeed: number;
   magnetRange: number;
+  hpRegen: number;
+  xpMultiplier: number;
+  projectileBonus: number;
   xp: number;
   xpToNext: number;
   level: number;

@@ -8,14 +8,14 @@ export const CUBONE: EnemyConfig = {
   hp: 80,
   speed: 35,
   damage: 12,
-  xpValue: 10,
+  xpValue: 25,
   scale: 1.0,
   boomerang: {
-    projectileKey: 'bone-projectile',
+    projectileKey: 'atk-bonemerang',
     damage: 10,
     speed: 120,
     cooldownMs: 3500,
     range: 250,
-    projectileScale: 1.0,
+    projectileScale: 2.0,
   },
 };

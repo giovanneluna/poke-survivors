@@ -8,20 +8,33 @@ import type { GameContext } from './GameContext';
 export class PickupSystem {
   constructor(private readonly ctx: GameContext) {}
 
-  // ── XP Gems ───────────────────────────────────────────────────────
-  spawnXpGem(x: number, y: number, count: number): void {
+  // ── XP Gems (tiered) ──────────────────────────────────────────────
+  private static readonly XP_TIERS: ReadonlyArray<{ threshold: number; texture: string; value: number; scale: number }> = [
+    { threshold: 100, texture: 'xp-gem-purple', value: 100, scale: 1.8 },
+    { threshold: 25,  texture: 'xp-gem-red',    value: 25,  scale: 1.5 },
+    { threshold: 5,   texture: 'xp-gem-green',  value: 5,   scale: 1.3 },
+    { threshold: 1,   texture: 'xp-gem',        value: 1,   scale: 1.2 },
+  ];
+
+  spawnXpGem(x: number, y: number, totalXp: number): void {
     const scene = this.ctx.scene;
-    for (let i = 0; i < count; i++) {
-      const ox = Phaser.Math.Between(-8, 8);
-      const oy = Phaser.Math.Between(-8, 8);
-      const gem = this.ctx.xpGems.get(x + ox, y + oy, 'xp-gem') as Phaser.Physics.Arcade.Sprite | null;
-      if (!gem) continue;
-      gem.setActive(true).setVisible(true).setScale(1.2).setDepth(3);
-      gem.setData('xpValue', 1);
-      const body = gem.body as Phaser.Physics.Arcade.Body;
-      body.enable = true;
-      body.reset(x + ox, y + oy);
-      scene.tweens.add({ targets: gem, y: gem.y - 10, scaleX: 1.5, scaleY: 1.5, duration: 150, yoyo: true, ease: 'Quad.Out' });
+    let remaining = totalXp;
+
+    for (const tier of PickupSystem.XP_TIERS) {
+      while (remaining >= tier.threshold) {
+        remaining -= tier.value;
+        const ox = Phaser.Math.Between(-10, 10);
+        const oy = Phaser.Math.Between(-10, 10);
+        const gem = this.ctx.xpGems.get(x + ox, y + oy, tier.texture) as Phaser.Physics.Arcade.Sprite | null;
+        if (!gem) continue;
+        gem.setTexture(tier.texture);
+        gem.setActive(true).setVisible(true).setScale(tier.scale).setDepth(3);
+        gem.setData('xpValue', tier.value);
+        const body = gem.body as Phaser.Physics.Arcade.Body;
+        body.enable = true;
+        body.reset(x + ox, y + oy);
+        scene.tweens.add({ targets: gem, y: gem.y - 10, scaleX: tier.scale + 0.3, scaleY: tier.scale + 0.3, duration: 150, yoyo: true, ease: 'Quad.Out' });
+      }
     }
   }
 
@@ -110,6 +123,8 @@ export class PickupSystem {
       rareCandy: 'pickup-candy',
       pokeballBomb: 'pickup-bomb',
       gachaBox: 'gacha-box',
+      xpShare: 'pickup-xp-share',
+      duplicator: 'pickup-duplicator',
     };
     const pickup = new Pickup(this.ctx.scene, x, y, type, textureMap[type]);
     this.ctx.pickups.add(pickup);
@@ -163,6 +178,18 @@ export class PickupSystem {
       case 'gachaBox':
         scene.events.emit('pause-game');
         scene.events.emit('show-gacha');
+        break;
+
+      case 'xpShare':
+        player.stats.xpMultiplier = 2;
+        SoundManager.playPickupItem();
+        this.showPickupNotification('XP SHARE! XP x2!', 0xaa44ff);
+        break;
+
+      case 'duplicator':
+        player.stats.projectileBonus += 1;
+        SoundManager.playPickupItem();
+        this.showPickupNotification('DUPLICATOR! +1 Projétil!', 0x44dd44);
         break;
     }
 

@@ -36,7 +36,7 @@ export const UPGRADE_DEFS: Readonly<Record<string, UpgradeOption>> = {
   upgradeHeatWave:     { id: 'upgradeHeatWave',     name: 'Heat Wave+',      description: 'Mais raio e dano',               icon: 'item-pp-up', color: 0xff4400 },
   upgradeDracoMeteor:  { id: 'upgradeDracoMeteor',  name: 'Draco Meteor+',   description: 'Mais meteoros e explosão',        icon: 'item-pp-up', color: 0x9966ff },
   // Stats passivos
-  maxHpUp:         { id: 'maxHpUp',         name: 'Leftovers',     description: '+25 HP máximo',                icon: 'item-leftovers',    color: 0xff4444 },
+  maxHpUp:         { id: 'maxHpUp',         name: 'Leftovers',     description: '+10 HP máximo, +0.5 HP/s regen', icon: 'item-leftovers',  color: 0xff4444 },
   speedUp:         { id: 'speedUp',         name: 'Quick Claw',    description: '+15% velocidade de movimento', icon: 'item-quick-claw',   color: 0x44aaff },
   magnetUp:        { id: 'magnetUp',        name: 'Magnet',        description: '+40% alcance de coleta de XP', icon: 'item-magnet',       color: 0xaa44ff },
   // Held Items como upgrades

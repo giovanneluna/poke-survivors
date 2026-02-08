@@ -8,6 +8,6 @@ export const METAPOD: EnemyConfig = {
   hp: 120,
   speed: 15,
   damage: 2,
-  xpValue: 5,
+  xpValue: 12,
   scale: 1.0,
 };

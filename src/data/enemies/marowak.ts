@@ -8,14 +8,14 @@ export const MAROWAK: EnemyConfig = {
   hp: 160,
   speed: 40,
   damage: 18,
-  xpValue: 18,
+  xpValue: 60,
   scale: 1.1,
   boomerang: {
-    projectileKey: 'bone-projectile',
+    projectileKey: 'atk-bonemerang',
     damage: 18,
     speed: 150,
     cooldownMs: 3000,
     range: 300,
-    projectileScale: 1.2,
+    projectileScale: 2.5,
   },
 };

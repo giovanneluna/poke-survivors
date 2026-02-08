@@ -8,7 +8,7 @@ export const PARASECT: EnemyConfig = {
   hp: 150,
   speed: 25,
   damage: 15,
-  xpValue: 15,
+  xpValue: 55,
   scale: 1.2,
   contactEffect: {
     type: 'poison',

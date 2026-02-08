@@ -306,8 +306,9 @@ export class UpgradeSystem {
     // Stats
     switch (upgradeId) {
       case 'maxHpUp':
-        player.stats.maxHp += 25;
-        player.stats.hp = Math.min(player.stats.hp + 25, player.stats.maxHp);
+        player.stats.maxHp += 10;
+        player.stats.hp = Math.min(player.stats.hp + 10, player.stats.maxHp);
+        player.stats.hpRegen += 0.5;
         break;
       case 'speedUp':
         player.stats.speed = Math.floor(player.stats.speed * 1.15);

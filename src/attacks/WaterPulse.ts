@@ -58,7 +58,7 @@ export class WaterPulse implements Attack {
       }))
       .sort((a, b) => a.dist - b.dist);
 
-    const count = Math.min(this.projectileCount, sorted.length);
+    const count = Math.min(this.projectileCount + this.player.stats.projectileBonus, sorted.length);
 
     for (let i = 0; i < count; i++) {
       const target = sorted[i].enemy;
@@ -90,8 +90,9 @@ export class WaterPulse implements Attack {
       bullet.play('anim-water-pulse');
 
       const body = bullet.body as Phaser.Physics.Arcade.Body;
-      body.checkCollision.none = false;
       body.enable = true;
+      body.reset(this.player.x, this.player.y);
+      body.checkCollision.none = false;
 
       this.scene.physics.moveToObject(bullet, target, 250);
 

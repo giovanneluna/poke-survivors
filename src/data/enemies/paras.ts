@@ -8,7 +8,7 @@ export const PARAS: EnemyConfig = {
   hp: 45,
   speed: 35,
   damage: 10,
-  xpValue: 8,
+  xpValue: 20,
   scale: 1.0,
   contactEffect: {
     type: 'poison',

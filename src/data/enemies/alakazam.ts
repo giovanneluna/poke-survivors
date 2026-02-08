@@ -8,19 +8,19 @@ export const ALAKAZAM: EnemyConfig = {
   hp: 90,
   speed: 50,
   damage: 12,
-  xpValue: 25,
+  xpValue: 110,
   scale: 1.0,
   teleport: {
     cooldownMs: 5000,
     range: 150,
   },
   rangedAttack: {
-    projectileKey: 'psychic-projectile',
+    projectileKey: 'atk-psychic',
     damage: 15,
     speed: 160,
     cooldownMs: 3000,
     range: 350,
     homing: true,
-    projectileScale: 1.0,
+    projectileScale: 0.7,
   },
 };

@@ -54,6 +54,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       speed: PLAYER.startSpeed,
       baseSpeed: PLAYER.startSpeed,
       magnetRange: PLAYER.startMagnetRange,
+      hpRegen: 0,
+      xpMultiplier: 1,
+      projectileBonus: 0,
       xp: 0,
       xpToNext: PLAYER.baseXpToLevel,
       level: 1,
@@ -155,7 +158,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   addXp(amount: number): boolean {
-    this.stats.xp += amount;
+    this.stats.xp += Math.floor(amount * this.stats.xpMultiplier);
     if (this.stats.xp >= this.stats.xpToNext) {
       this.stats.xp -= this.stats.xpToNext;
       this.stats.level++;

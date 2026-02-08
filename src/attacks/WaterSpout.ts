@@ -38,7 +38,7 @@ export class WaterSpout implements Attack {
     this.cooldown = ATTACKS.waterSpout.baseCooldown;
 
     this.bullets = scene.physics.add.group({
-      defaultKey: 'atk-water-range',
+      defaultKey: 'atk-origin-pulse',
       maxSize: 40,
     });
 
@@ -54,16 +54,17 @@ export class WaterSpout implements Attack {
     const baseAngle = Math.atan2(dir.y, dir.x);
 
     // Dispara N cannon blasts com leve spread entre eles
-    for (let i = 0; i < this.projectileCount; i++) {
+    const totalProjectiles = this.projectileCount + this.player.stats.projectileBonus;
+    for (let i = 0; i < totalProjectiles; i++) {
       // Spread angular: distribute simetricamente em torno do angulo base
       const spreadStep = 0.15; // ~8.6 graus entre cada
-      const offset = (i - (this.projectileCount - 1) / 2) * spreadStep;
+      const offset = (i - (totalProjectiles - 1) / 2) * spreadStep;
       const angle = baseAngle + offset;
 
       const bullet = this.bullets.get(
         this.player.x,
         this.player.y,
-        'atk-water-range'
+        'atk-origin-pulse'
       ) as Phaser.Physics.Arcade.Sprite | null;
 
       if (!bullet) continue;
@@ -71,13 +72,14 @@ export class WaterSpout implements Attack {
       const currentFireId = ++this.fireId;
       bullet.setData('fireId', currentFireId);
       bullet.setData('hasHit', false);
-      bullet.setActive(true).setVisible(true).setScale(6);
+      bullet.setActive(true).setVisible(true).setScale(1);
       bullet.setDepth(8);
-      bullet.play('anim-water-range');
+      bullet.play('anim-origin-pulse');
 
       const body = bullet.body as Phaser.Physics.Arcade.Body;
-      body.checkCollision.none = false;
       body.enable = true;
+      body.reset(this.player.x, this.player.y);
+      body.checkCollision.none = false;
       body.setVelocity(
         Math.cos(angle) * WaterSpout.SPEED,
         Math.sin(angle) * WaterSpout.SPEED

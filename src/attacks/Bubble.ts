@@ -38,8 +38,8 @@ export class Bubble implements Attack {
     this.cooldown = ATTACKS.bubble.baseCooldown;
 
     this.bullets = scene.physics.add.group({
-      defaultKey: 'atk-water-range',
-      maxSize: 60,
+      defaultKey: 'atk-wave-splash',
+      maxSize: 120,
     });
 
     this.timer = scene.time.addEvent({
@@ -77,20 +77,22 @@ export class Bubble implements Attack {
       const bubble = this.bullets.get(
         this.player.x,
         this.player.y,
-        'atk-water-range'
+        'atk-wave-splash'
       ) as Phaser.Physics.Arcade.Sprite | null;
 
       if (!bubble) continue;
 
       const currentFireId = ++this.fireId;
       bubble.setData('fireId', currentFireId);
-      bubble.setActive(true).setVisible(true).setScale(3).setAlpha(0.7);
+      bubble.setActive(true).setVisible(true).setScale(1.5).setAlpha(0.8);
       bubble.setDepth(8);
-      bubble.play('anim-water-range');
+      bubble.play('anim-wave-splash');
 
       const body = bubble.body as Phaser.Physics.Arcade.Body;
-      body.checkCollision.none = false;
       body.enable = true;
+      body.reset(this.player.x, this.player.y);
+      body.checkCollision.none = false;
+      body.setCircle(12, -8, -8);
 
       // Spread aleatorio de +/-15 graus
       const spreadDeg = Phaser.Math.FloatBetween(-15, 15);
@@ -112,8 +114,8 @@ export class Bubble implements Attack {
         tint: [0x44aaff, 0x88ccff, 0xaaddff],
       });
 
-      // Auto-destruir apos 2.5s (so se ainda for o mesmo disparo)
-      this.scene.time.delayedCall(2500, () => {
+      // Auto-destruir apos 1.8s (so se ainda for o mesmo disparo)
+      this.scene.time.delayedCall(1800, () => {
         if (bubble.active && bubble.getData('fireId') === currentFireId) {
           this.popBubble(bubble);
         }

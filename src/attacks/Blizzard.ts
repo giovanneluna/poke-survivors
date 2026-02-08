@@ -67,7 +67,7 @@ export class Blizzard implements Attack {
 
     // Seleciona alvos ALEATORIOS (nao mais proximos)
     const shuffled = Phaser.Utils.Array.Shuffle([...enemies]);
-    const count = Math.min(this.projectileCount, shuffled.length);
+    const count = Math.min(this.projectileCount + this.player.stats.projectileBonus, shuffled.length);
 
     for (let i = 0; i < count; i++) {
       const target = shuffled[i];
@@ -90,8 +90,9 @@ export class Blizzard implements Attack {
         bullet.play('anim-ice-range');
 
         const body = bullet.body as Phaser.Physics.Arcade.Body;
-        body.checkCollision.none = false;
         body.enable = true;
+        body.reset(this.player.x, this.player.y);
+        body.checkCollision.none = false;
 
         // Velocidade inicial em direcao ao alvo
         const angleToTarget = Math.atan2(

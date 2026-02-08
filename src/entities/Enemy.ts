@@ -27,6 +27,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private lastTeleportTime = 0;
   private lastBoomerangTime = 0;
   lastHealTick = 0;
+  private isDead = false;
 
   // ── Status effects (passiva do starter) ───────────────────────────
   private burnDps = 0;
@@ -88,7 +89,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   isWet(time: number): boolean { return time < this.wetUntil; }
 
   moveToward(target: Phaser.Math.Vector2): void {
-    if (!this.active || !this.body) return;
+    if (!this.active || !this.body || this.isDead) return;
 
     // Wet slow: reduz velocidade de movimento
     let effectiveSpeed = this.speed;
@@ -188,7 +189,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
    * - Chance to apply burn or wet on hit
    */
   takeDamage(amount: number): boolean {
-    if (!this.scene) return false;
+    if (!this.scene || this.isDead) return false;
     const passive = getPassive();
     let finalAmount = amount;
     const now = this.scene.time.now;
@@ -233,7 +234,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   private drawHpBar(): void {
-    if (!this.scene) return;
+    if (!this.scene || this.isDead) return;
     if (!this.hpBar) {
       this.hpBar = this.scene.add.graphics().setDepth(15);
     }
@@ -252,18 +253,29 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   private die(): void {
+    if (this.isDead) return;
+    this.isDead = true;
+
     if (this.scene && this.scene.add) {
       // Death explosion (Electrode) — emit event before cleanup
       if (this.deathExplosion) {
         const cfg = this.deathExplosion;
-        const circle = this.scene.add.circle(this.x, this.y, 0, 0xff4400, 0.5).setDepth(12);
-        this.scene.tweens.add({
-          targets: circle,
-          radius: { from: 0, to: cfg.radius },
-          alpha: { from: 0.5, to: 0 },
-          duration: 400,
-          onComplete: () => circle.destroy(),
-        });
+        // Use real explosion sprite if available, fallback to circle
+        if (this.scene.anims.exists('anim-explosion')) {
+          const explosionSprite = this.scene.add.sprite(this.x, this.y, 'atk-explosion')
+            .setDepth(12).setScale(1.2);
+          explosionSprite.play('anim-explosion');
+          explosionSprite.once('animationcomplete', () => explosionSprite.destroy());
+        } else {
+          const circle = this.scene.add.circle(this.x, this.y, 0, 0xff4400, 0.5).setDepth(12);
+          this.scene.tweens.add({
+            targets: circle,
+            radius: { from: 0, to: cfg.radius },
+            alpha: { from: 0.5, to: 0 },
+            duration: 400,
+            onComplete: () => circle.destroy(),
+          });
+        }
         this.scene.cameras.main.shake(200, 0.006);
         this.scene.events.emit('enemy-explosion', {
           x: this.x, y: this.y, damage: cfg.damage, radius: cfg.radius,
@@ -294,6 +306,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   cleanup(): void {
+    this.isDead = true;
     if (this.hpBar) { this.hpBar.destroy(); this.hpBar = null; }
     if (this.shadow) { this.shadow.destroy(); this.shadow = null; }
     this.destroy();
@@ -301,7 +314,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   preUpdate(time: number, delta: number): void {
     super.preUpdate(time, delta);
-    if (!this.scene) return;
+    if (!this.scene || this.isDead) return;
 
     // ── Burn DoT (Blaze passive) ──────────────────────────────────
     if (this.isBurning(time)) {
@@ -327,9 +340,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.wetUntil = 0;
     }
 
-    // HP bar
-    if (this.hpBar && this.hp < this.maxHp) {
-      this.drawHpBar();
+    // HP bar — show when damaged, hide when full HP (prevents ghost bars from heal aura)
+    if (this.hpBar) {
+      if (this.hp < this.maxHp) {
+        this.drawHpBar();
+      } else {
+        this.hpBar.clear();
+      }
     }
   }
 }

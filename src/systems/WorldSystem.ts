@@ -69,6 +69,10 @@ export class WorldSystem {
     if (noise > 0.7 && rand < 0.3) return 'tile-flowers';
     if (noise < -0.6 && rand < 0.2) return 'tile-dirt';
     if (rand < 0.02) return 'tile-rock';
+    // Clusters de árvores espalhados pelo mapa
+    const treeNoise = Math.sin(col * 1.3 + row * 0.5) * Math.cos(col * 0.4 + row * 1.1);
+    if (treeNoise > 0.5 && rand < 0.4) return 'tile-tree';
+    if (rand < 0.04) return 'tile-tree';
     if (rand < 0.15) return 'tile-grass-2';
     return 'tile-grass-1';
   }

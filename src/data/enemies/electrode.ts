@@ -8,7 +8,7 @@ export const ELECTRODE: EnemyConfig = {
   hp: 60,
   speed: 100,
   damage: 15,
-  xpValue: 20,
+  xpValue: 90,
   scale: 1.0,
   deathExplosion: {
     damage: 30,

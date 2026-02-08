@@ -32,7 +32,7 @@ export class Scald implements Attack {
     this.cooldown = ATTACKS.scald.baseCooldown;
 
     this.bullets = scene.physics.add.group({
-      defaultKey: 'atk-water-range',
+      defaultKey: 'atk-water-melee',
       maxSize: 50,
     });
 
@@ -56,7 +56,7 @@ export class Scald implements Attack {
       }))
       .sort((a, b) => a.dist - b.dist);
 
-    const count = Math.min(this.projectileCount, sorted.length);
+    const count = Math.min(this.projectileCount + this.player.stats.projectileBonus, sorted.length);
 
     for (let i = 0; i < count; i++) {
       const target = sorted[i].enemy;
@@ -75,18 +75,19 @@ export class Scald implements Attack {
       }
 
       const bullet = this.bullets.get(
-        this.player.x, this.player.y, 'atk-water-range'
+        this.player.x, this.player.y, 'atk-water-melee'
       ) as Phaser.Physics.Arcade.Sprite | null;
       if (!bullet) continue;
 
       const currentFireId = ++this.fireId;
       bullet.setData('fireId', currentFireId);
-      bullet.setActive(true).setVisible(true).setScale(5).setDepth(8);
-      bullet.play('anim-water-range');
+      bullet.setActive(true).setVisible(true).setScale(0.8).setDepth(8);
+      bullet.play('anim-water-melee');
 
       const body = bullet.body as Phaser.Physics.Arcade.Body;
-      body.checkCollision.none = false;
       body.enable = true;
+      body.reset(this.player.x, this.player.y);
+      body.checkCollision.none = false;
 
       this.scene.physics.moveToObject(bullet, target, 280);
 

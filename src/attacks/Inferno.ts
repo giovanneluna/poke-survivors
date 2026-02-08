@@ -55,7 +55,7 @@ export class Inferno implements Attack {
       }))
       .sort((a, b) => a.dist - b.dist);
 
-    const count = Math.min(this.projectileCount, sorted.length);
+    const count = Math.min(this.projectileCount + this.player.stats.projectileBonus, sorted.length);
 
     for (let i = 0; i < count; i++) {
       const target = sorted[i].enemy;
@@ -81,8 +81,9 @@ export class Inferno implements Attack {
       bullet.setActive(true).setVisible(true).setScale(2.5).setDepth(8);
       bullet.play('anim-ember');
       const body = bullet.body as Phaser.Physics.Arcade.Body;
-      body.checkCollision.none = false;
       body.enable = true;
+      body.reset(this.player.x, this.player.y);
+      body.checkCollision.none = false;
 
       this.scene.physics.moveToObject(bullet, target, 280);
 

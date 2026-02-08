@@ -39,7 +39,7 @@ export class BubbleBeam implements Attack {
     this.cooldown = ATTACKS.bubbleBeam.baseCooldown;
 
     this.bullets = scene.physics.add.group({
-      defaultKey: 'atk-water-range',
+      defaultKey: 'atk-sparkling-aria',
       maxSize: 80,
     });
 
@@ -76,19 +76,20 @@ export class BubbleBeam implements Attack {
     // Dispara N bolhas com spread uniforme de +/-20 graus
     for (let i = 0; i < this.bubblesPerBurst; i++) {
       const bubble = this.bullets.get(
-        this.player.x, this.player.y, 'atk-water-range'
+        this.player.x, this.player.y, 'atk-sparkling-aria'
       ) as Phaser.Physics.Arcade.Sprite | null;
       if (!bubble) continue;
 
       const currentFireId = ++this.fireId;
       bubble.setData('fireId', currentFireId);
-      bubble.setActive(true).setVisible(true).setScale(3.5).setAlpha(0.8);
+      bubble.setActive(true).setVisible(true).setScale(0.8).setAlpha(0.9);
       bubble.setDepth(8);
-      bubble.play('anim-water-range');
+      bubble.play('anim-sparkling-aria');
 
       const body = bubble.body as Phaser.Physics.Arcade.Body;
-      body.checkCollision.none = false;
       body.enable = true;
+      body.reset(this.player.x, this.player.y);
+      body.checkCollision.none = false;
 
       // Spread uniforme de -20 a +20 graus
       const spreadRange = 40; // total degrees

@@ -73,7 +73,7 @@ export class GameScene extends Phaser.Scene {
 
     // ── Physics groups ──────────────────────────────────────────────
     this.enemyGroup = this.physics.add.group({ classType: Enemy, runChildUpdate: false });
-    this.xpGems = this.physics.add.group({ defaultKey: 'xp-gem', maxSize: 1500 });
+    this.xpGems = this.physics.add.group({ defaultKey: 'xp-gem', maxSize: 500 });
     this.destructibles = this.physics.add.staticGroup();
     this.pickups = this.physics.add.group();
     this.enemyProjectiles = this.physics.add.group({ defaultKey: 'atk-shadow-ball', maxSize: 60 });
@@ -288,6 +288,15 @@ export class GameScene extends Phaser.Scene {
     this.player.handleMovement(time, this.joystick?.direction);
     this.player.updateAttacks(time, delta);
     this.player.updatePoison(time, delta);
+
+    // HP regen (Leftovers)
+    if (this.player.stats.hpRegen > 0 && this.player.stats.hp < this.player.stats.maxHp) {
+      this.player.stats.hp = Math.min(
+        this.player.stats.maxHp,
+        this.player.stats.hp + this.player.stats.hpRegen * (delta / 1000),
+      );
+    }
+
     if (this.player.isDead()) { this.gameOver(); return; }
 
     // Enemy movement + attacks
