@@ -12,7 +12,7 @@ export const ARBOK: BossConfig = {
   scale: 1.5,
   isBoss: true,
   bossAttack: {
-    name: 'Poison Sting',
+    name: 'Gunk Shot',
     pattern: 'fan',
     damage: 20,
     cooldownMs: 3500,

@@ -3,6 +3,7 @@ import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
+import { setDamageSource } from '../systems/DamageTracker';
 
 /**
  * Gyro Ball: evolucao do Rapid Spin.
@@ -124,6 +125,7 @@ export class GyroBall implements Attack {
         }
       }
 
+      setDamageSource(this.type);
       const killed = enemy.takeDamage(pulseDmg);
       if (killed) {
         this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);

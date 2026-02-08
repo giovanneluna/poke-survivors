@@ -11,6 +11,7 @@ interface StatsData extends PlayerState {
   formName: string;
   heldItems: HeldItemType[];
   attacks: Array<{ type: AttackType; level: number }>;
+  damageTotals: Record<string, number>;
 }
 
 interface GameOverData {
@@ -39,6 +40,9 @@ export class UIScene extends Phaser.Scene {
   private devPanelOpen = false;
   private devSearchText = '';
   private devPanelKeyHandler: ((event: KeyboardEvent) => void) | null = null;
+  private pauseContainer!: Phaser.GameObjects.Container;
+  private damageContainer!: Phaser.GameObjects.Container;
+  private userPaused = false;
 
   private readonly textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
     fontSize: '14px',
@@ -100,6 +104,24 @@ export class UIScene extends Phaser.Scene {
       SoundManager.setMuted(nowMuted);
       muteBtn.setText(nowMuted ? '🔇' : '🔊');
     });
+
+    // ── Botão Pause ──────────────────────────────────────────────────
+    const pauseBtn = this.add.text(width - 10, 52, '⏸', {
+      fontSize: '16px',
+    }).setOrigin(1, 0).setDepth(100).setInteractive({ useHandCursor: true });
+
+    this.pauseContainer = this.add.container(0, 0).setDepth(180).setVisible(false);
+    this.userPaused = false;
+
+    pauseBtn.on('pointerdown', () => {
+      if (this.userPaused) return;
+      this.userPaused = true;
+      pauseBtn.setText('▶');
+      this.showPauseOverlay(pauseBtn);
+    });
+
+    // ── Damage Tracker (abaixo de kills/mute/pause) ──────────────────
+    this.damageContainer = this.add.container(width - 10, 72).setDepth(100);
 
     const gameScene = this.scene.get('GameScene');
     gameScene.events.on('stats-update', (stats: StatsData) => this.updateHUD(stats));
@@ -221,6 +243,68 @@ export class UIScene extends Phaser.Scene {
         this.attacksContainer.add(atkText);
       });
     }
+
+    // Damage tracker (top-right, below pause button)
+    this.updateDamageDisplay(stats.damageTotals);
+  }
+
+  // ── Damage Display ───────────────────────────────────────────────
+  private updateDamageDisplay(damageTotals: Record<string, number> | undefined): void {
+    this.damageContainer.removeAll(true);
+    if (!damageTotals) return;
+
+    const entries = Object.entries(damageTotals)
+      .filter(([, dmg]) => dmg > 0)
+      .sort((a, b) => b[1] - a[1]);
+
+    if (entries.length === 0) return;
+
+    const maxVisible = 8;
+    entries.slice(0, maxVisible).forEach(([type, dmg], i) => {
+      const name = type.charAt(0).toUpperCase() + type.slice(1);
+      const dmgStr = dmg >= 1000 ? `${(dmg / 1000).toFixed(1)}k` : Math.floor(dmg).toString();
+      const text = this.add.text(0, i * 13, `${name} ${dmgStr}`, {
+        fontSize: '9px', color: '#cccccc', fontFamily: 'monospace',
+        stroke: '#000000', strokeThickness: 2,
+      }).setOrigin(1, 0);
+      this.damageContainer.add(text);
+    });
+  }
+
+  // ── Pause Overlay ──────────────────────────────────────────────────
+  private showPauseOverlay(pauseBtn: Phaser.GameObjects.Text): void {
+    const { width, height } = this.cameras.main;
+    const gameScene = this.scene.get('GameScene');
+    gameScene.events.emit('pause-game');
+
+    this.pauseContainer.removeAll(true);
+
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.6);
+    this.pauseContainer.add(bg);
+
+    const title = this.add.text(width / 2, height / 2 - 30, 'PAUSADO', {
+      fontSize: '32px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 5,
+    }).setOrigin(0.5);
+    this.pauseContainer.add(title);
+
+    const resumeBtn = this.add.text(width / 2, height / 2 + 20, '[ CONTINUAR ]', {
+      fontSize: '18px', color: '#ffcc00', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    this.pauseContainer.add(resumeBtn);
+
+    resumeBtn.on('pointerover', () => { resumeBtn.setColor('#ffffff'); SoundManager.playHover(); });
+    resumeBtn.on('pointerout', () => resumeBtn.setColor('#ffcc00'));
+    resumeBtn.on('pointerdown', () => {
+      SoundManager.playClick();
+      this.userPaused = false;
+      pauseBtn.setText('⏸');
+      this.pauseContainer.setVisible(false);
+      gameScene.events.emit('resume-game');
+    });
+
+    this.pauseContainer.setVisible(true);
   }
 
   private showLevelUp(options: UpgradeOption[], level: number, rerolls: number = 0): void {

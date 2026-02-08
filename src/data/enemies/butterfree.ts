@@ -1,9 +1,9 @@
-import type { EnemyConfig } from '../../types';
-import { SPRITES } from '../sprites';
+import type { EnemyConfig } from "../../types"
+import { SPRITES } from "../sprites"
 
 export const BUTTERFREE: EnemyConfig = {
-  key: 'butterfree',
-  name: 'Butterfree',
+  key: "butterfree",
+  name: "Butterfree",
   sprite: SPRITES.butterfree,
   hp: 70,
   speed: 65,
@@ -11,14 +11,16 @@ export const BUTTERFREE: EnemyConfig = {
   xpValue: 60,
   scale: 1.0,
   rangedAttack: {
-    projectileKey: 'atk-psybeam',
+    projectileKey: "atk-psybeam",
     damage: 10,
     speed: 110,
     cooldownMs: 3000,
-    range: 280,
+    range: 300,
     homing: false,
-    projectileScale: 0.6,
-    effect: 'confusion',
+    projectileScale: 0.5,
+    effect: "confusion",
     effectDurationMs: 2500,
+    beam: true,
+    beamLength: 200,
   },
-};
+}

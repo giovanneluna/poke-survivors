@@ -3,6 +3,7 @@ import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
+import { setDamageSource } from '../systems/DamageTracker';
 
 /**
  * Liquidation: golpe aquatico 360° no cluster de inimigos mais denso.
@@ -124,6 +125,7 @@ export class Liquidation implements Attack {
       if (typeof enemy.takeDamage === 'function') {
         // Dano com falloff suave pelo centro
         const falloff = 1 - (dist / this.radius) * 0.3;
+        setDamageSource(this.type);
         const killed = enemy.takeDamage(Math.floor(this.damage * falloff));
         if (killed) {
           this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);

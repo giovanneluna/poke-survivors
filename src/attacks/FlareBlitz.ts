@@ -3,6 +3,7 @@ import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
+import { setDamageSource } from '../systems/DamageTracker';
 
 /**
  * Flare Blitz: dash devastador em chamas com recoil.
@@ -106,6 +107,7 @@ export class FlareBlitz implements Attack {
       if (typeof enemy.takeDamage === 'function') {
         // Dano aumentado se na explosão
         const dmg = inExplosion ? Math.floor(this.damage * 1.3) : this.damage;
+        setDamageSource(this.type);
         const killed = enemy.takeDamage(dmg);
         if (killed) {
           this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);

@@ -5,6 +5,7 @@ import type {
   EnemyBoomerangConfig, EnemySlowAuraConfig,
 } from '../types';
 import { getPassive } from '../systems/PassiveSystem';
+import { recordDamage } from '../systems/DamageTracker';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private hp: number;
@@ -28,6 +29,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private lastBoomerangTime = 0;
   lastHealTick = 0;
   private isDead = false;
+  private speedMultiplier = 1;
 
   // ── Status effects (passiva do starter) ───────────────────────────
   private burnDps = 0;
@@ -80,6 +82,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   isBurning(time: number): boolean { return time < this.burnUntil; }
 
+  // ── Enrage (boss timer) ──────────────────────────────────────────
+  applyEnrage(speedMult: number): void {
+    this.speedMultiplier = speedMult;
+  }
+
   // ── Status effects: wet ───────────────────────────────────────────
   applyWet(speedMult: number, durationMs: number, time: number): void {
     this.wetSpeedMult = speedMult;
@@ -91,8 +98,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   moveToward(target: Phaser.Math.Vector2): void {
     if (!this.active || !this.body || this.isDead) return;
 
-    // Wet slow: reduz velocidade de movimento
-    let effectiveSpeed = this.speed;
+    // Speed: aplica multiplicadores (enrage, wet)
+    let effectiveSpeed = this.speed * this.speedMultiplier;
     if (this.isWet(this.scene.time.now)) {
       effectiveSpeed *= this.wetSpeedMult;
     }
@@ -217,6 +224,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.hp -= finalAmount;
+    recordDamage(finalAmount);
 
     // Hit flash
     this.setTint(0xffffff);

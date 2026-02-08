@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
+import { setDamageSource } from '../systems/DamageTracker';
 
 /**
  * Ember: dispara bolas de fogo no inimigo mais próximo.
@@ -66,6 +67,7 @@ export class Ember implements Attack {
       if (sorted[i].dist < 20) {
         const enemy = target as unknown as import('../entities/Enemy').Enemy;
         if (typeof enemy.takeDamage === 'function') {
+          setDamageSource(this.type);
           const killed = enemy.takeDamage(this.damage);
           if (killed) {
             this.scene.events.emit('cone-attack-kill', target.x, target.y, enemy.xpValue);

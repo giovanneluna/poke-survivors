@@ -694,7 +694,7 @@ export class ShowcaseScene extends Phaser.Scene {
       { atkKey: string; animKey: string; scale: number }
     > = {
       charge: { atkKey: "atk-bite", animKey: "anim-bite", scale: 2.0 },
-      fan: { atkKey: "atk-venoshock", animKey: "anim-venoshock", scale: 1.5 },
+      fan: { atkKey: "atk-gunk-shot", animKey: "anim-gunk-shot", scale: 1.5 },
       "aoe-tremor": {
         atkKey: "atk-thrash",
         animKey: "anim-thrash",

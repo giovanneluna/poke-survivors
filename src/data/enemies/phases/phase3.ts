@@ -18,8 +18,8 @@ export const PHASE3: PhaseConfig = {
     // Wave 43 (21:30): P2 elites reforçam, preparando pro duo
     { enemies: [{ type: 'parasect', weight: 2 }, { type: 'venomoth', weight: 2 }, { type: 'cubone', weight: 1 }, { type: 'venonat', weight: 1 }],
       spawnRate: 72, maxEnemies: 178 },
-    // Wave 44 (22:00): PSYCHIC DUO — Hypno + Marowak (stun homing + bone boomerang)
-    { enemies: [{ type: 'hypno', weight: 2 }, { type: 'marowak', weight: 2 }, { type: 'butterfree', weight: 1 }, { type: 'venomoth', weight: 1 }],
+    // Wave 44 (22:00): PSYCHIC DUO + CROBAT — Hypno + Marowak + Crobat introduction
+    { enemies: [{ type: 'hypno', weight: 2 }, { type: 'marowak', weight: 2 }, { type: 'crobat', weight: 1 }, { type: 'venomoth', weight: 1 }],
       spawnRate: 70, maxEnemies: 180 },
     // Wave 45 (22:30): Duo se integra ao roster
     { enemies: [{ type: 'hypno', weight: 2 }, { type: 'marowak', weight: 1 }, { type: 'venomoth', weight: 2 }, { type: 'parasect', weight: 1 }],
@@ -36,8 +36,8 @@ export const PHASE3: PhaseConfig = {
     // Wave 48 (24:00): Post-Gengar intensity
     { enemies: [{ type: 'marowak', weight: 2 }, { type: 'hypno', weight: 2 }, { type: 'parasect', weight: 1 }, { type: 'venonat', weight: 1 }],
       spawnRate: 60, maxEnemies: 190 },
-    // Wave 49 (24:30): Confusion swarm
-    { enemies: [{ type: 'venomoth', weight: 3 }, { type: 'butterfree', weight: 2 }, { type: 'hypno', weight: 1 }],
+    // Wave 49 (24:30): Confusion swarm + Crobat air attack
+    { enemies: [{ type: 'venomoth', weight: 2 }, { type: 'butterfree', weight: 2 }, { type: 'crobat', weight: 1 }, { type: 'hypno', weight: 1 }],
       spawnRate: 58, maxEnemies: 192 },
     // Wave 50 (25:00): Tank avalanche
     { enemies: [{ type: 'parasect', weight: 2 }, { type: 'marowak', weight: 2 }, { type: 'cubone', weight: 2 }],
@@ -57,8 +57,8 @@ export const PHASE3: PhaseConfig = {
     // Wave 54 (27:00): Post-respawn
     { enemies: [{ type: 'hypno', weight: 2 }, { type: 'marowak', weight: 2 }, { type: 'venomoth', weight: 2 }],
       spawnRate: 48, maxEnemies: 205 },
-    // Wave 55 (27:30): Elite swarm
-    { enemies: [{ type: 'venomoth', weight: 3 }, { type: 'hypno', weight: 2 }, { type: 'butterfree', weight: 1 }],
+    // Wave 55 (27:30): Elite swarm + Crobat
+    { enemies: [{ type: 'venomoth', weight: 2 }, { type: 'hypno', weight: 2 }, { type: 'crobat', weight: 1 }, { type: 'butterfree', weight: 1 }],
       spawnRate: 46, maxEnemies: 208 },
     // Wave 56 (28:00): Stun + bone combo
     { enemies: [{ type: 'hypno', weight: 3 }, { type: 'marowak', weight: 2 }, { type: 'parasect', weight: 1 }],

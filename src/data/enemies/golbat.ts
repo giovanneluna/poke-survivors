@@ -1,9 +1,9 @@
-import type { EnemyConfig } from '../../types';
-import { SPRITES } from '../sprites';
+import type { EnemyConfig } from "../../types"
+import { SPRITES } from "../sprites"
 
 export const GOLBAT: EnemyConfig = {
-  key: 'golbat',
-  name: 'Golbat',
+  key: "golbat",
+  name: "Golbat",
   sprite: SPRITES.golbat,
   hp: 50,
   speed: 90,
@@ -11,12 +11,12 @@ export const GOLBAT: EnemyConfig = {
   xpValue: 12,
   scale: 0.8,
   rangedAttack: {
-    projectileKey: 'atk-hyper-voice',
+    projectileKey: "atk-air-slash",
     damage: 8,
-    speed: 100,
+    speed: 120,
     cooldownMs: 3500,
     range: 280,
     homing: false,
-    projectileScale: 0.8,
+    projectileScale: 1.2,
   },
-};
+}

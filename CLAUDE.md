@@ -17,6 +17,7 @@ Vampire Survivors clone com tema Pokémon. Phaser 3.90 + TypeScript + Vite.
 - Sistema de poison por contato (Ekans) implementado no `Player.ts`
 - Gacha box: drop de bosses → overlay UIScene → reward aleatório
 - SFX procedural via Web Audio API (`src/audio/SoundManager.ts`)
+- **Pool compartilhado `enemyProjectiles`**: Group Phaser (maxSize 60) reutilizado entre todos inimigos/bosses. `Group.get()` recicla sprites SEM trocar textura. **OBRIGATÓRIO**: chamar `setTexture(key)` + `body.reset(x,y)` + `play(animKey)` em todo local que obtém sprite do pool.
 
 ## Regras
 - Não usar `any` - TypeScript strict
@@ -110,9 +111,29 @@ Vampire Survivors clone com tema Pokémon. Phaser 3.90 + TypeScript + Vite.
   - `fire-blast-sheet.png` — 12 frames, 72x73 (estrela do Fire Blast)
   - `blast-burn-sheet.png` — 15 frames, 80x80 (explosão do Blast Burn)
   - `bite-sheet.png` — 12 frames, 32x48 (boss Raticate — Hyper Fang/BITE)
-  - `venoshock-sheet.png` — 13 frames, 32x80 (boss Arbok — Poison Sting/VENOSHOCK)
+  - `venoshock-sheet.png` — 13 frames, 32x80 (VENOSHOCK genérico)
   - `thrash-sheet.png` — 7 frames, 48x32 (boss Nidoking — Thrash/THRASH)
   - `stomp-sheet.png` — 10 frames, 16x16 (boss Snorlax — Body Slam/STOMP)
+  - `wave-splash-sheet.png` — 9 frames, 32x32 (Bubble — WAVE_SPLASH)
+  - `sparkling-aria-sheet.png` — 44 frames, 64x64 (BubbleBeam — SPARKLING_ARIA)
+  - `water-melee-sheet.png` — 8 frames, 56x56 (Scald — WATER/melee)
+  - `origin-pulse-sheet.png` — 4 frames, 128x32 (WaterSpout — ORIGIN_PULSE)
+  - `water-cell-sheet.png` — 7 frames, 64x32 (WATER/cell — disponível, não usado)
+- **Pasta `poison-dark/`** (sprites de veneno e dark, prontas para uso):
+  - `gunk-shot-sheet.png` — 45 frames, 32x32 (boss Arbok — Gunk Shot)
+  - `cross-poison-sheet.png` — 6 frames, 32x32
+  - `sludge-wave-sheet.png` — 8 frames, 32x32
+  - `smog-sheet.png` — 9 frames, 50x50
+  - `screech-sheet.png` — 7 frames, 32x32
+  - `iron-tail-sheet.png` — 7 frames, 40x40
+  - `acid-spray-sheet.png` — 32 frames, 80x80
+  - `night-slash-sheet.png` — 15 frames, 56x64
+  - `poison-hit-sheet.png` — 5 frames, 32x32
+  - `poison-melee-sheet.png` — 11 frames, 56x64
+  - `poison-range-sheet.png` — 4 frames, 16x16
+  - `dark-hit-sheet.png` — 13 frames, 64x62
+  - `dark-melee-sheet.png` — 7 frames, 64x64
+  - `dark-range-sheet.png` — 6 frames, 32x32
 - **Como adicionar novo ataque:**
   1. Achar o nome no repo (ex: `WATER_GUN`, `THUNDER_SHOCK`, `RAZOR_LEAF`)
   2. Baixar frames: `for i in $(seq 0 N); do f=$(printf "%03d" $i); curl -o "${f}.png" "https://raw.githubusercontent.com/keldaanCommunity/pokemonAutoChess/main/app/public/src/assets/abilities%7Btps%7D/{NOME}/${f}.png"; done`

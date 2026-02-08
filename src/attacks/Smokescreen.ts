@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
+import { setDamageSource } from '../systems/DamageTracker';
 
 /**
  * Smokescreen: aura de fumaça ao redor do jogador que causa slow.
@@ -60,6 +61,7 @@ export class Smokescreen implements Attack {
       if (this.tickDamage > 0) {
         const enemy = enemySprite as unknown as Enemy;
         if (typeof enemy.takeDamage === 'function') {
+          setDamageSource(this.type);
           const killed = enemy.takeDamage(this.tickDamage);
           if (killed) {
             this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);

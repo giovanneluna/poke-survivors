@@ -3,6 +3,7 @@ import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
+import { setDamageSource } from '../systems/DamageTracker';
 
 /**
  * Draco Meteor: chuva de meteoros apocalíptica.
@@ -113,6 +114,7 @@ export class DracoMeteor implements Attack {
               if (typeof enemy.takeDamage === 'function') {
                 // Dano máximo no centro, diminui com distância
                 const falloff = 1 - (dist / this.impactRadius) * 0.5;
+                setDamageSource(this.type);
                 const killed = enemy.takeDamage(Math.floor(this.damage * falloff));
                 if (killed) {
                   this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);

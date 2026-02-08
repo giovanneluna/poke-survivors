@@ -3,6 +3,7 @@ import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
+import { setDamageSource } from '../systems/DamageTracker';
 
 /**
  * Inferno: evolução do Ember.
@@ -64,6 +65,7 @@ export class Inferno implements Attack {
       if (sorted[i].dist < 20) {
         const enemy = target as unknown as Enemy;
         if (typeof enemy.takeDamage === 'function') {
+          setDamageSource(this.type);
           const killed = enemy.takeDamage(this.damage);
           if (killed) {
             this.scene.events.emit('cone-attack-kill', target.x, target.y, enemy.xpValue);
@@ -132,6 +134,7 @@ export class Inferno implements Attack {
       if (!enemy.active) continue;
       const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
       if (dist <= this.explosionRadius) {
+        setDamageSource(this.type);
         const killed = enemy.takeDamage(Math.floor(this.damage * 0.6));
         if (killed) {
           this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);

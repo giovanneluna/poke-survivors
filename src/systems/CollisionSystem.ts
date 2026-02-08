@@ -6,6 +6,7 @@ import { Pickup } from '../entities/Pickup';
 import { SoundManager } from '../audio/SoundManager';
 import type { GameContext } from './GameContext';
 import type { PickupSystem } from './PickupSystem';
+import { setDamageSource, clearDamageSource } from './DamageTracker';
 
 export class CollisionSystem {
   private readonly attackColliders = new Map<string, Phaser.Physics.Arcade.Collider[]>();
@@ -124,7 +125,9 @@ export class CollisionSystem {
       body.checkCollision.none = true; body.enable = false;
       SoundManager.playHit();
       this.pickupSystem.playHitEffect(hitX, hitY, hitElement);
+      setDamageSource(attackType);
       const killed = enemy.takeDamage(getDamage());
+      clearDamageSource();
       if (killed) { SoundManager.playEnemyDeath(); this.onEnemyKilled(enemy); }
     }));
 
@@ -165,7 +168,9 @@ export class CollisionSystem {
       if (scene.time.now - lastHit < hitCooldownMs) return;
       hitCooldowns.set(enemyId, scene.time.now);
       this.pickupSystem.playHitEffect(enemy.x, enemy.y, hitElement);
+      setDamageSource(attackType);
       const killed = enemy.takeDamage(getDamage());
+      clearDamageSource();
       if (killed) { this.onEnemyKilled(enemy); hitCooldowns.delete(enemyId); }
     }));
 
@@ -206,7 +211,9 @@ export class CollisionSystem {
       bullets.killAndHide(bullet);
       const body = bullet.body as Phaser.Physics.Arcade.Body;
       body.checkCollision.none = true; body.enable = false;
+      setDamageSource(attackType);
       const killed = enemy.takeDamage(getDamage());
+      clearDamageSource();
       if (killed) { this.onEnemyKilled(enemy); }
       explodeAt(enemy.x, enemy.y);
     }));

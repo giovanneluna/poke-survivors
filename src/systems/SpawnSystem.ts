@@ -10,6 +10,15 @@ export class SpawnSystem {
   private spawnTimer!: Phaser.Time.TimerEvent;
   private difficultyLevel = 0;
 
+  // ── Boss queue system (sequencial) ────────────────────────────────
+  private bossQueueIndex = 0;
+  private readonly activeBosses: Map<Boss, number> = new Map(); // boss → spawnTime
+  private readonly enragedBosses: Set<Boss> = new Set();
+  private waitingForBossDeath = false;
+  private static readonly BOSS_NEXT_DELAY_MS = 180_000; // 3 min entre bosses
+  private static readonly BOSS_ENRAGE_MS = 180_000;     // 3 min para enrage
+  private static readonly BOSS_ENRAGE_SPEED = 1.3;      // +30% speed
+
   constructor(private readonly ctx: GameContext) {}
 
   // ── Iniciar spawning (modo normal) ────────────────────────────────
@@ -25,11 +34,12 @@ export class SpawnSystem {
       delay: SPAWN.difficultyIntervalMs, loop: true, callback: () => this.increaseDifficulty(),
     });
 
-    // Boss spawn timers (with scaling support)
-    for (const bossSpawn of BOSS_SCHEDULE) {
+    // Boss queue: primeiro boss no tempo original, depois sequencial
+    this.bossQueueIndex = 0;
+    if (BOSS_SCHEDULE.length > 0) {
       scene.time.addEvent({
-        delay: bossSpawn.timeSeconds * 1000,
-        callback: () => this.spawnBossWithConfig(bossSpawn),
+        delay: BOSS_SCHEDULE[0].timeSeconds * 1000,
+        callback: () => this.spawnNextBoss(),
       });
     }
   }
@@ -63,7 +73,13 @@ export class SpawnSystem {
 
       // Ranged attacks
       const attack = enemy.tryRangedAttack(playerX, playerY, time);
-      if (attack) this.fireEnemyProjectile(enemy, attack.config);
+      if (attack) {
+        if (attack.config.beam) {
+          this.fireEnemyBeam(enemy, attack.config);
+        } else {
+          this.fireEnemyProjectile(enemy, attack.config);
+        }
+      }
 
       // Boomerang attacks (Cubone/Marowak)
       const boom = enemy.tryBoomerang(playerX, playerY, time);
@@ -79,6 +95,9 @@ export class SpawnSystem {
         player.applySlow(500, time);
       }
     });
+
+    // ── Boss enrage & queue ────────────────────────────────────────
+    this.updateBossQueue(time);
 
     // Homing projectiles (Shadow Ball)
     this.ctx.enemyProjectiles.getChildren().forEach(child => {
@@ -158,13 +177,20 @@ export class SpawnSystem {
     if (!proj) return;
 
     proj.setActive(true).setVisible(true).setScale(config.projectileScale ?? 1).setDepth(7);
+    proj.setTexture(config.projectileKey);
     proj.setData('damage', config.damage);
     proj.setData('homing', false);
     proj.setData('effect', null);
     proj.setData('effectDuration', 0);
 
+    const animKey = config.projectileKey.replace('atk-', 'anim-');
+    if (scene.anims.exists(animKey)) {
+      proj.play(animKey);
+    }
+
     const body = proj.body as Phaser.Physics.Arcade.Body;
     body.enable = true;
+    body.reset(enemy.x, enemy.y);
 
     const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
     body.setVelocity(Math.cos(angle) * config.speed, Math.sin(angle) * config.speed);
@@ -186,6 +212,56 @@ export class SpawnSystem {
         }
       });
     });
+  }
+
+  // ── Boss queue: spawn sequencial ────────────────────────────────
+  private spawnNextBoss(): void {
+    if (this.bossQueueIndex >= BOSS_SCHEDULE.length) return;
+    const spawn = BOSS_SCHEDULE[this.bossQueueIndex];
+    this.bossQueueIndex++;
+    this.waitingForBossDeath = true;
+    this.spawnBossWithConfig(spawn);
+  }
+
+  private updateBossQueue(time: number): void {
+    // Limpa bosses mortos do tracking
+    for (const [boss, _spawnTime] of this.activeBosses) {
+      if (!boss.active) {
+        this.activeBosses.delete(boss);
+        this.enragedBosses.delete(boss);
+      }
+    }
+
+    // Se todos os bosses morreram, agendar próximo da fila
+    if (this.waitingForBossDeath && this.activeBosses.size === 0) {
+      this.waitingForBossDeath = false;
+      if (this.bossQueueIndex < BOSS_SCHEDULE.length) {
+        this.ctx.scene.time.addEvent({
+          delay: SpawnSystem.BOSS_NEXT_DELAY_MS,
+          callback: () => this.spawnNextBoss(),
+        });
+      }
+    }
+
+    // Enrage: boss vivo há mais de 3 min → +30% speed
+    for (const [boss, spawnTime] of this.activeBosses) {
+      if (this.enragedBosses.has(boss)) continue;
+      if (time - spawnTime > SpawnSystem.BOSS_ENRAGE_MS) {
+        this.enragedBosses.add(boss);
+        boss.applyEnrage(SpawnSystem.BOSS_ENRAGE_SPEED);
+        boss.setTint(0xff4444);
+
+        // Visual: texto de aviso
+        const txt = this.ctx.scene.add.text(boss.x, boss.y - 40, 'ENRAGED!', {
+          fontSize: '14px', color: '#ff4444', fontFamily: 'monospace',
+          stroke: '#000', strokeThickness: 3,
+        }).setOrigin(0.5).setDepth(50);
+        this.ctx.scene.tweens.add({
+          targets: txt, y: txt.y - 30, alpha: 0, duration: 1500,
+          onComplete: () => txt.destroy(),
+        });
+      }
+    }
   }
 
   // ── Boss spawning with scaling ──────────────────────────────────
@@ -222,6 +298,9 @@ export class SpawnSystem {
       const boss = new Boss(scene, pos.x, pos.y, scaledConfig);
       this.ctx.enemyGroup.add(boss);
       SoundManager.playBossSpawn();
+
+      // Trackear boss para enrage e queue sequencial
+      this.activeBosses.set(boss, scene.time.now);
 
       scene.events.emit('boss-spawned', {
         name: label,
@@ -264,6 +343,7 @@ export class SpawnSystem {
     if (!proj) return;
 
     proj.setActive(true).setVisible(true).setScale(config.projectileScale ?? 0.6).setDepth(7);
+    proj.setTexture(config.projectileKey);
     proj.setData('damage', config.damage);
     proj.setData('homing', config.homing);
     proj.setData('speed', config.speed);
@@ -277,6 +357,11 @@ export class SpawnSystem {
 
     const body = proj.body as Phaser.Physics.Arcade.Body;
     body.enable = true;
+    body.reset(enemy.x, enemy.y);
+
+    // Rotacionar projétil na direção de viagem
+    const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+    proj.setRotation(angle);
 
     scene.physics.moveToObject(proj, player, config.speed);
 
@@ -286,6 +371,108 @@ export class SpawnSystem {
         body.enable = false;
       }
     });
+  }
+
+  /**
+   * Beam direcional: sprite aparece no inimigo, rotacionado na direção do player.
+   * Não viaja — fica parado, joga animação, causa dano ao longo da linha, e desaparece.
+   */
+  private fireEnemyBeam(enemy: Enemy, config: EnemyRangedConfig): void {
+    const scene = this.ctx.scene;
+    const player = this.ctx.player;
+    const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+    const beamLen = config.beamLength ?? config.range;
+
+    // Posição central do beam (metade entre inimigo e ponta)
+    const cx = enemy.x + Math.cos(angle) * beamLen * 0.5;
+    const cy = enemy.y + Math.sin(angle) * beamLen * 0.5;
+
+    const beam = scene.add.sprite(cx, cy, config.projectileKey);
+    beam.setScale(config.projectileScale ?? 0.6);
+    beam.setDepth(7);
+    beam.setAlpha(0.9);
+    // Sprite psybeam é vertical (32x240), rotacionar -90° + ângulo de tiro
+    beam.setRotation(angle - Math.PI / 2);
+
+    const animKey = config.projectileKey.replace('atk-', 'anim-');
+    if (scene.anims.exists(animKey)) {
+      beam.play(animKey);
+    }
+
+    // Flash de aviso antes do beam
+    beam.setAlpha(0.3);
+    scene.tweens.add({
+      targets: beam,
+      alpha: 0.95,
+      duration: 150,
+    });
+
+    // Dano ao player se estiver na linha do beam
+    const beamWidth = 20;
+    const px = player.x;
+    const py = player.y;
+    const startX = enemy.x;
+    const startY = enemy.y;
+    const endX = enemy.x + Math.cos(angle) * beamLen;
+    const endY = enemy.y + Math.sin(angle) * beamLen;
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const len = Math.sqrt(dx * dx + dy * dy);
+
+    if (len > 0) {
+      const perpDist = Math.abs(
+        (dy * (px - startX) - dx * (py - startY)) / len
+      );
+      const projT = ((px - startX) * dx + (py - startY) * dy) / (len * len);
+
+      if (perpDist <= beamWidth && projT >= -0.05 && projT <= 1.05) {
+        const took = player.takeDamage(config.damage, scene.time.now);
+        if (took) {
+          const effect = config.effect ?? null;
+          const duration = config.effectDurationMs ?? 0;
+          if (effect === 'confusion') {
+            player.applyConfusion(duration, scene.time.now);
+          } else if (effect === 'stun') {
+            player.applyStun(duration, scene.time.now);
+          } else if (effect === 'slow') {
+            player.applySlow(duration, scene.time.now);
+          }
+          scene.events.emit('stats-refresh');
+          if (player.isDead()) scene.events.emit('player-died');
+        }
+      }
+    }
+
+    // Particulas ao longo do beam
+    const steps = 4;
+    for (let i = 0; i < steps; i++) {
+      const t = (i + 0.5) / steps;
+      const ppx = startX + dx * t;
+      const ppy = startY + dy * t;
+      scene.add.particles(ppx, ppy, 'dragon-particle', {
+        speed: { min: 10, max: 40 },
+        lifespan: 300,
+        quantity: 3,
+        scale: { start: 1.2, end: 0 },
+        tint: [0x9944ff, 0xbb66ff, 0xdd88ff],
+        emitting: false,
+      }).explode();
+    }
+
+    // Destruir após animação ou timeout
+    const cleanup = () => {
+      if (beam.active) {
+        scene.tweens.add({
+          targets: beam,
+          alpha: 0,
+          duration: 200,
+          onComplete: () => beam.destroy(),
+        });
+      }
+    };
+
+    beam.once('animationcomplete', cleanup);
+    scene.time.delayedCall(1500, cleanup);
   }
 
   // ── Boss attacks ──────────────────────────────────────────────────
@@ -333,22 +520,24 @@ export class SpawnSystem {
           const offset = (i - (count - 1) / 2) * spreadAngle;
           const angle = baseAngle + offset;
 
-          const proj = this.ctx.enemyProjectiles.get(boss.x, boss.y, 'atk-venoshock') as Phaser.Physics.Arcade.Sprite | null;
+          const proj = this.ctx.enemyProjectiles.get(boss.x, boss.y, 'atk-gunk-shot') as Phaser.Physics.Arcade.Sprite | null;
           if (!proj) continue;
 
-          proj.setActive(true).setVisible(true).setScale(1.2).setDepth(7);
+          proj.setActive(true).setVisible(true).setScale(1.5).setDepth(7);
+          proj.setTexture('atk-gunk-shot');
           proj.setData('damage', attack.damage);
           proj.setData('homing', false);
           proj.setData('speed', 140);
           proj.setTint(0xaa44ff);
           proj.setRotation(angle);
 
-          if (scene.anims.exists('anim-venoshock')) {
-            proj.play('anim-venoshock');
+          if (scene.anims.exists('anim-gunk-shot')) {
+            proj.play('anim-gunk-shot');
           }
 
           const body = proj.body as Phaser.Physics.Arcade.Body;
           body.enable = true;
+          body.reset(boss.x, boss.y);
           body.setVelocity(Math.cos(angle) * 140, Math.sin(angle) * 140);
 
           scene.time.delayedCall(5000, () => {
@@ -465,6 +654,7 @@ export class SpawnSystem {
               if (!proj) continue;
 
               proj.setActive(true).setVisible(true).setScale(1).setDepth(7);
+              proj.setTexture('atk-shadow-ball');
               proj.setData('damage', attack.damage);
               proj.setData('homing', false);
               proj.setData('speed', 160);
@@ -477,6 +667,7 @@ export class SpawnSystem {
 
               const body = proj.body as Phaser.Physics.Arcade.Body;
               body.enable = true;
+              body.reset(boss.x, boss.y);
               body.setVelocity(Math.cos(angle) * 160, Math.sin(angle) * 160);
 
               scene.time.delayedCall(4000, () => {

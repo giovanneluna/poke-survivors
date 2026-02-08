@@ -15,6 +15,7 @@ import { AttackFactory } from '../systems/AttackFactory';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { DebugSystem } from '../systems/DebugSystem';
 import { PassiveSystem, getPassive } from '../systems/PassiveSystem';
+import { resetDamageTotals, getDamageTotals } from '../systems/DamageTracker';
 
 export class GameScene extends Phaser.Scene {
   player!: Player;
@@ -57,6 +58,7 @@ export class GameScene extends Phaser.Scene {
     this.gameTime = 0;
     this.rerollLocked = false;
     this.joystick = null;
+    resetDamageTotals();
 
     this.physics.world.setBounds(0, 0, GAME.worldWidth, GAME.worldHeight);
 
@@ -423,6 +425,7 @@ export class GameScene extends Phaser.Scene {
       time: Math.floor(this.gameTime / 1000),
       heldItems: this.player.getHeldItems(),
       attacks: this.player.getAllAttacks().map(a => ({ type: a.type, level: a.level })),
+      damageTotals: Object.fromEntries(getDamageTotals()),
     });
   }
 }

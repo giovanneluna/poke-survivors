@@ -3,6 +3,7 @@ import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
+import { setDamageSource } from '../systems/DamageTracker';
 
 /**
  * Heat Wave: onda de calor 360° devastadora.
@@ -88,6 +89,7 @@ export class HeatWave implements Attack {
           if (typeof enemy.takeDamage === 'function') {
             // Dano diminui com distância
             const falloff = 1 - (dist / this.maxRadius) * 0.4;
+            setDamageSource(this.type);
             const killed = enemy.takeDamage(Math.floor(this.damage * falloff));
             if (killed) {
               this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);

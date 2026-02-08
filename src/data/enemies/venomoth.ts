@@ -1,9 +1,9 @@
-import type { EnemyConfig } from '../../types';
-import { SPRITES } from '../sprites';
+import type { EnemyConfig } from "../../types"
+import { SPRITES } from "../sprites"
 
 export const VENOMOTH: EnemyConfig = {
-  key: 'venomoth',
-  name: 'Venomoth',
+  key: "venomoth",
+  name: "Venomoth",
   sprite: SPRITES.venomoth,
   hp: 80,
   speed: 80,
@@ -11,14 +11,16 @@ export const VENOMOTH: EnemyConfig = {
   xpValue: 60,
   scale: 1.0,
   rangedAttack: {
-    projectileKey: 'atk-psybeam',
+    projectileKey: "atk-psybeam",
     damage: 12,
     speed: 120,
     cooldownMs: 2800,
-    range: 300,
+    range: 350,
     homing: false,
     projectileScale: 0.5,
-    effect: 'confusion',
+    effect: "confusion",
     effectDurationMs: 3000,
+    beam: true,
+    beamLength: 250,
   },
-};
+}

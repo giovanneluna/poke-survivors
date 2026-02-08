@@ -3,6 +3,7 @@ import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
+import { setDamageSource } from '../systems/DamageTracker';
 
 /**
  * Dragon Pulse: beam dracônico que perfura tudo.
@@ -92,6 +93,7 @@ export class DragonPulse implements Attack {
 
       const enemy = enemySprite as unknown as Enemy;
       if (typeof enemy.takeDamage === 'function') {
+        setDamageSource(this.type);
         const killed = enemy.takeDamage(this.damage);
         if (killed) {
           this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);

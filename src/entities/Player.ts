@@ -4,6 +4,7 @@ import type { StarterConfig } from '../config';
 import type { PlayerState, Attack, AttackType, Direction, SpriteConfig, HeldItemType, PokemonForm, PokemonFormConfig } from '../types';
 import { formIndex } from '../types';
 import { getPassive } from '../systems/PassiveSystem';
+import { setDamageSource, clearDamageSource } from '../systems/DamageTracker';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   readonly stats: PlayerState;
@@ -306,7 +307,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   updateAttacks(time: number, delta: number): void {
     for (const attack of this.attacks.values()) {
+      setDamageSource(attack.type);
       attack.update(time, delta);
+      clearDamageSource();
     }
   }
 }

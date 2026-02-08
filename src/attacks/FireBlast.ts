@@ -3,6 +3,7 @@ import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
+import { setDamageSource } from '../systems/DamageTracker';
 
 /**
  * Fire Blast: evolução do Fire Spin.
@@ -80,6 +81,7 @@ export class FireBlast implements Attack {
       if (!enemy.active) continue;
       const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
       if (dist <= this.pulseRadius) {
+        setDamageSource(this.type);
         enemy.takeDamage(Math.floor(this.damage * 0.5));
       }
     }

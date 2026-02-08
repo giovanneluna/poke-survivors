@@ -109,6 +109,7 @@ export class BootScene extends Phaser.Scene {
     // Boss attack spritesheets
     this.load.spritesheet('atk-bite', 'assets/attacks/bite-sheet.png', { frameWidth: 32, frameHeight: 48 });
     this.load.spritesheet('atk-venoshock', 'assets/attacks/venoshock-sheet.png', { frameWidth: 32, frameHeight: 80 });
+    this.load.spritesheet('atk-gunk-shot', 'assets/attacks/poison-dark/gunk-shot-sheet.png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('atk-thrash', 'assets/attacks/thrash-sheet.png', { frameWidth: 48, frameHeight: 32 });
     this.load.spritesheet('atk-stomp', 'assets/attacks/stomp-sheet.png', { frameWidth: 16, frameHeight: 16 });
 
@@ -368,6 +369,12 @@ export class BootScene extends Phaser.Scene {
       key: 'anim-venoshock',
       frames: this.anims.generateFrameNumbers('atk-venoshock', { start: 0, end: 12 }),
       frameRate: 20, repeat: 0,
+    });
+    // Gunk Shot / Arbok fan attack (45 frames, loop)
+    this.anims.create({
+      key: 'anim-gunk-shot',
+      frames: this.anims.generateFrameNumbers('atk-gunk-shot', { start: 0, end: 44 }),
+      frameRate: 24, repeat: -1,
     });
     // Thrash (7 frames, play once)
     this.anims.create({

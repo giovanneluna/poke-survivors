@@ -62,7 +62,7 @@ export type EnemyType =
   // Phase 3 — Elites
   | 'butterfree' | 'parasect' | 'venomoth' | 'hypno' | 'marowak'
   // Phase 4 — Elites avançados
-  | 'alakazam' | 'electrode'
+  | 'alakazam' | 'electrode' | 'crobat'
   // Novos Bosses
   | 'beedrill' | 'vileplume' | 'primeape' | 'gengar';
 export type Direction = 'down' | 'downRight' | 'right' | 'upRight' | 'up' | 'upLeft' | 'left' | 'downLeft';
@@ -175,6 +175,10 @@ export interface EnemyRangedConfig {
   readonly projectileScale?: number;
   readonly effect?: 'slow' | 'confusion' | 'stun';
   readonly effectDurationMs?: number;
+  /** Se true, ataque é um beam direcional (não projétil). Dispara na direção do player e fica parado. */
+  readonly beam?: boolean;
+  /** Comprimento do beam em pixels (default: range) */
+  readonly beamLength?: number;
 }
 
 // ── Boss Config ─────────────────────────────────────────────────────

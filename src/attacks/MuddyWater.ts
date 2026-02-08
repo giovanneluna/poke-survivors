@@ -3,6 +3,7 @@ import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
+import { setDamageSource } from '../systems/DamageTracker';
 
 /**
  * Muddy Water: evolucao do Water Pulse.
@@ -73,6 +74,7 @@ export class MuddyWater implements Attack {
       if (sorted[i].dist < 20) {
         const enemy = target as unknown as Enemy;
         if (typeof enemy.takeDamage === 'function') {
+          setDamageSource(this.type);
           const killed = enemy.takeDamage(this.damage);
           if (killed) {
             this.scene.events.emit('cone-attack-kill', target.x, target.y, enemy.xpValue);
@@ -161,6 +163,7 @@ export class MuddyWater implements Attack {
         // Hit confirmado
         const enemy = enemySprite as unknown as Enemy;
         if (typeof enemy.takeDamage === 'function') {
+          setDamageSource(this.type);
           const killed = enemy.takeDamage(this.damage);
           if (killed) {
             this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);

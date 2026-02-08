@@ -3,6 +3,7 @@ import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
+import { setDamageSource } from '../systems/DamageTracker';
 
 /**
  * Crabhammer: evolucao do Aqua Tail.
@@ -122,6 +123,7 @@ export class Crabhammer implements Attack {
           });
         }
 
+        setDamageSource(this.type);
         const killed = enemy.takeDamage(finalDamage);
         if (killed) {
           this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);

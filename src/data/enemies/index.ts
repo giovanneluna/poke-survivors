@@ -42,6 +42,9 @@ import { VENOMOTH } from './venomoth';
 import { HYPNO } from './hypno';
 import { MAROWAK } from './marowak';
 
+// ── Phase 3 elite (evolução) ────────────────────────────────────────
+import { CROBAT } from './crobat';
+
 // ── Phase 4 elite ───────────────────────────────────────────────────
 import { ALAKAZAM } from './alakazam';
 import { ELECTRODE } from './electrode';
@@ -92,6 +95,8 @@ export const ENEMIES: Readonly<Record<string, EnemyConfig | BossConfig>> = {
   venomoth: VENOMOTH,
   hypno: HYPNO,
   marowak: MAROWAK,
+  // Phase 3 elite (evolução)
+  crobat: CROBAT,
   // Phase 4
   alakazam: ALAKAZAM,
   electrode: ELECTRODE,

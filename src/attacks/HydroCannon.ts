@@ -3,6 +3,7 @@ import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
+import { setDamageSource } from '../systems/DamageTracker';
 
 /**
  * Hydro Cannon: ultimate devastador do Blastoise.
@@ -224,6 +225,7 @@ export class HydroCannon implements Attack {
       const enemy = enemySprite as unknown as Enemy;
       if (typeof enemy.takeDamage === 'function') {
         const falloff = 1 - (dist / radius) * 0.4;
+        setDamageSource(this.type);
         const killed = enemy.takeDamage(Math.floor(damage * falloff));
         if (killed) {
           this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);

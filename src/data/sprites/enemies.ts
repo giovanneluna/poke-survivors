@@ -47,6 +47,7 @@ export const ENEMY_SPRITES: Readonly<Record<string, SpriteConfig>> = {
   // ── Phase 4 elite ───────────────────────────────────────────────
   alakazam:  { key: 'alakazam-walk',  path: 'assets/pokemon/alakazam-walk.png',  frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
   electrode: { key: 'electrode-walk', path: 'assets/pokemon/electrode-walk.png', frameWidth: 32, frameHeight: 40, frameCount: 7,  directions: 8 },
+  crobat:    { key: 'crobat-walk',    path: 'assets/pokemon/crobat-walk.png',    frameWidth: 40, frameHeight: 56, frameCount: 8,  directions: 8 },
 
   // ── Bosses (Phase 2-3) ─────────────────────────────────────────
   beedrill:  { key: 'beedrill-walk',  path: 'assets/pokemon/beedrill-walk.png',  frameWidth: 32, frameHeight: 48, frameCount: 4,  directions: 8 },

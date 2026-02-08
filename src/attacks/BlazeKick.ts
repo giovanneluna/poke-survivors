@@ -3,6 +3,7 @@ import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
+import { setDamageSource } from '../systems/DamageTracker';
 
 /**
  * Blaze Kick: chute flamejante com AoE de fogo.
@@ -86,6 +87,7 @@ export class BlazeKick implements Attack {
       if (typeof enemy.takeDamage === 'function') {
         // Alvo direto recebe dano cheio, splash recebe 60%
         const dmg = enemySprite === closest ? this.damage : Math.floor(this.damage * 0.6);
+        setDamageSource(this.type);
         const killed = enemy.takeDamage(dmg);
         if (killed) {
           this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
