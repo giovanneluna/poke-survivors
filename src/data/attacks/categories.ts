@@ -63,4 +63,33 @@ export const ATTACK_CATEGORIES: Readonly<Record<AttackType, AttackCategory>> = {
   // Squirtle prime
   rainDance: 'area',
   hydroCannon: 'area',
+  // ── Bulbasaur base ─────────────────────────────────────────────────
+  vineWhip: 'cone',
+  razorLeaf: 'projectile',
+  leechSeed: 'projectile',
+  growl: 'aura',
+  poisonPowder2: 'aura',
+  // Ivysaur
+  sleepPowder: 'cone',
+  stunSpore: 'area',
+  leafBlade: 'cone',
+  sludgeBomb: 'projectile',
+  // Venusaur
+  solarBeam: 'projectile',
+  petalDance: 'area',
+  gigaDrain: 'area',
+  energyBall: 'projectile',
+  frenzyPlant: 'area',
+  petalBlizzard: 'area',
+  // Bulbasaur evoluções
+  powerWhip: 'cone',
+  leafStorm: 'area',
+  seedBomb: 'area',
+  bodySlam2: 'dash',
+  toxic: 'aura',
+  spore: 'area',
+  solarBlade: 'cone',
+  sludgeWave2: 'area',
+  hyperBeam2: 'projectile',
+  floraBurst: 'area',
 } as const;

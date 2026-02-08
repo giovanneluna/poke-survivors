@@ -10,6 +10,7 @@ export class SelectScene extends Phaser.Scene {
   private cardGraphics: Phaser.GameObjects.Graphics[] = [];
   private phaseOverlay: Phaser.GameObjects.Container | null = null;
   private devConfigOverlay: Phaser.GameObjects.Container | null = null;
+  private wipOverlay: Phaser.GameObjects.Container | null = null;
   private devKeyHandler: ((event: KeyboardEvent) => void) | null = null;
 
   constructor() {
@@ -40,7 +41,7 @@ export class SelectScene extends Phaser.Scene {
       strokeThickness: 4,
     }).setOrigin(0.5).setDepth(10);
 
-    this.add.text(width / 2, 60, 'Apenas o Charmander está disponível por enquanto', {
+    this.add.text(width / 2, 60, 'Selecione seu starter e comece a aventura!', {
       fontSize: '10px',
       color: '#888888',
       fontFamily: 'monospace',
@@ -92,6 +93,13 @@ export class SelectScene extends Phaser.Scene {
       const selected = STARTERS[this.selectedIndex];
       if (!selected.unlocked) return;
       SoundManager.playClick();
+
+      const host = window.location.hostname;
+      const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+      if (selected.key === 'bulbasaur' && !isLocal) {
+        this.showWipWarning();
+        return;
+      }
       this.showPhaseSelection();
     });
 
@@ -111,6 +119,105 @@ export class SelectScene extends Phaser.Scene {
 
     // ── Fade in ──────────────────────────────────────────────────────
     this.cameras.main.fadeIn(400, 0, 0, 0);
+  }
+
+  // ── Overlay WIP Warning ───────────────────────────────────────────
+  private showWipWarning(): void {
+    if (this.wipOverlay) return;
+
+    const { width, height } = this.cameras.main;
+    this.wipOverlay = this.add.container(0, 0).setDepth(200);
+
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85);
+    bg.setInteractive();
+    this.wipOverlay.add(bg);
+
+    // Ícone de alerta
+    this.wipOverlay.add(this.add.text(width / 2, height / 2 - 70, '!', {
+      fontSize: '40px', color: '#ff8800', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 6,
+    }).setOrigin(0.5));
+
+    this.wipOverlay.add(this.add.text(width / 2, height / 2 - 30, 'EM DESENVOLVIMENTO', {
+      fontSize: '18px', color: '#ff8800', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 4,
+    }).setOrigin(0.5));
+
+    this.wipOverlay.add(this.add.text(width / 2, height / 2 + 5, 'Bulbasaur ainda não está completo.\nAlguns ataques e efeitos podem\nnão funcionar corretamente.', {
+      fontSize: '12px', color: '#aaaaaa', fontFamily: 'monospace',
+      align: 'center', lineSpacing: 4,
+    }).setOrigin(0.5));
+
+    this.wipOverlay.add(this.add.text(width / 2, height / 2 + 45, 'Deseja continuar mesmo assim?', {
+      fontSize: '12px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5));
+
+    // Botão SIM
+    const yesGfx = this.add.graphics();
+    const btnW = 120;
+    const btnH = 35;
+    const btnY = height / 2 + 85;
+    const drawYes = (hover: boolean): void => {
+      yesGfx.clear();
+      yesGfx.fillStyle(hover ? 0x44bb44 : 0x228822, 0.95);
+      yesGfx.fillRoundedRect(width / 2 - btnW - 10, btnY - btnH / 2, btnW, btnH, 8);
+      yesGfx.lineStyle(2, hover ? 0x66dd66 : 0x33aa33);
+      yesGfx.strokeRoundedRect(width / 2 - btnW - 10, btnY - btnH / 2, btnW, btnH, 8);
+    };
+    drawYes(false);
+    this.wipOverlay.add(yesGfx);
+
+    const yesText = this.add.text(width / 2 - btnW / 2 - 10, btnY, 'SIM, JOGAR', {
+      fontSize: '12px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    this.wipOverlay.add(yesText);
+
+    const yesHit = this.add.rectangle(width / 2 - btnW / 2 - 10, btnY, btnW, btnH, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true });
+    yesHit.on('pointerover', () => { drawYes(true); SoundManager.playHover(); });
+    yesHit.on('pointerout', () => drawYes(false));
+    yesHit.on('pointerdown', () => {
+      SoundManager.playClick();
+      this.wipOverlay?.destroy(true);
+      this.wipOverlay = null;
+      this.showPhaseSelection();
+    });
+    this.wipOverlay.add(yesHit);
+
+    // Botão NÃO
+    const noGfx = this.add.graphics();
+    const drawNo = (hover: boolean): void => {
+      noGfx.clear();
+      noGfx.fillStyle(hover ? 0x664444 : 0x442222, 0.95);
+      noGfx.fillRoundedRect(width / 2 + 10, btnY - btnH / 2, btnW, btnH, 8);
+      noGfx.lineStyle(2, hover ? 0x886666 : 0x553333);
+      noGfx.strokeRoundedRect(width / 2 + 10, btnY - btnH / 2, btnW, btnH, 8);
+    };
+    drawNo(false);
+    this.wipOverlay.add(noGfx);
+
+    const noText = this.add.text(width / 2 + btnW / 2 + 10, btnY, 'VOLTAR', {
+      fontSize: '12px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5);
+    this.wipOverlay.add(noText);
+
+    const noHit = this.add.rectangle(width / 2 + btnW / 2 + 10, btnY, btnW, btnH, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true });
+    noHit.on('pointerover', () => { drawNo(true); SoundManager.playHover(); });
+    noHit.on('pointerout', () => drawNo(false));
+    noHit.on('pointerdown', () => {
+      SoundManager.playClick();
+      this.wipOverlay?.destroy(true);
+      this.wipOverlay = null;
+    });
+    this.wipOverlay.add(noHit);
+
+    // ESC para cancelar
+    this.input.keyboard?.once('keydown-ESC', () => {
+      SoundManager.playClick();
+      this.wipOverlay?.destroy(true);
+      this.wipOverlay = null;
+    });
   }
 
   // ── Overlay de seleção de fase ─────────────────────────────────────
@@ -567,6 +674,20 @@ export class SelectScene extends Phaser.Scene {
         align: 'center',
       }).setOrigin(0.5, 0);
       container.add(desc);
+    }
+
+    // ── Badge WIP ───────────────────────────────────────────────────
+    if (starter.key === 'bulbasaur') {
+      const wipBadgeGfx = this.add.graphics();
+      const wipW = 50;
+      const wipH = 18;
+      wipBadgeGfx.fillStyle(0xff8800, 0.9);
+      wipBadgeGfx.fillRoundedRect(cx + cardWidth / 2 - wipW - 8, cy - cardHeight / 2 + 8, wipW, wipH, 4);
+      container.add(wipBadgeGfx);
+      const wipLabel = this.add.text(cx + cardWidth / 2 - wipW / 2 - 8, cy - cardHeight / 2 + 17, 'WIP', {
+        fontSize: '10px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      }).setOrigin(0.5);
+      container.add(wipLabel);
     }
 
     // ── Overlay de lock ──────────────────────────────────────────────

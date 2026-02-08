@@ -31,6 +31,18 @@ const EVOLUTION_MAP: Record<string, [AttackType, AttackType, string, number, [nu
   evolveCrabhammer: ['aquaTail', 'crabhammer', 'AQUA TAIL EVOLUIU PARA CRABHAMMER!', 0xff4400, [255, 70, 0]],
   evolveWaterSpout: ['whirlpool', 'waterSpout', 'WHIRLPOOL EVOLUIU PARA WATER SPOUT!', 0x3388ff, [50, 140, 255]],
   evolveBlizzard: ['iceBeam', 'blizzard', 'ICE BEAM EVOLUIU PARA BLIZZARD!', 0x88ddff, [140, 220, 255]],
+  // ── Bulbasaur — Ivysaur tier ──────────────────────────────────────
+  evolvePowerWhip: ['vineWhip', 'powerWhip', 'VINE WHIP EVOLUIU PARA POWER WHIP!', 0x22cc44, [34, 200, 68]],
+  evolveLeafStorm: ['razorLeaf', 'leafStorm', 'RAZOR LEAF EVOLUIU PARA LEAF STORM!', 0x44dd66, [68, 220, 100]],
+  evolveSeedBomb: ['leechSeed', 'seedBomb', 'LEECH SEED EVOLUIU PARA SEED BOMB!', 0x88aa44, [136, 170, 68]],
+  evolveBodySlam2: ['tackle', 'bodySlam2', 'TACKLE EVOLUIU PARA BODY SLAM!', 0xcccccc, [200, 200, 200]],
+  evolveToxic: ['poisonPowder2', 'toxic', 'POISON POWDER EVOLUIU PARA TOXIC!', 0x9944cc, [153, 68, 204]],
+  // ── Bulbasaur — Venusaur tier ─────────────────────────────────────
+  evolveSpore: ['sleepPowder', 'spore', 'SLEEP POWDER EVOLUIU PARA SPORE!', 0x66bb66, [100, 187, 100]],
+  evolveSolarBlade: ['leafBlade', 'solarBlade', 'LEAF BLADE EVOLUIU PARA SOLAR BLADE!', 0xffcc00, [255, 200, 0]],
+  evolveSludgeWave2: ['sludgeBomb', 'sludgeWave2', 'SLUDGE BOMB EVOLUIU PARA SLUDGE WAVE!', 0x9944cc, [153, 68, 204]],
+  evolveHyperBeam2: ['solarBeam', 'hyperBeam2', 'SOLAR BEAM EVOLUIU PARA HYPER BEAM!', 0xffdd44, [255, 220, 68]],
+  evolveFloraBurst: ['petalDance', 'floraBurst', 'PETAL DANCE EVOLUIU PARA FLORA BURST!', 0xff66aa, [255, 100, 170]],
 };
 
 // Map from upgradeId to AttackType for new attack creation
@@ -48,6 +60,12 @@ const NEW_ATTACK_MAP: Record<string, AttackType> = {
   newWaterPulse: 'waterPulse', newHydroPump: 'hydroPump', newAquaTail: 'aquaTail', newWhirlpool: 'whirlpool',
   newIceBeam: 'iceBeam', newFlashCannon: 'flashCannon', newSurf: 'surf', newLiquidation: 'liquidation',
   newRainDance: 'rainDance', newHydroCannon: 'hydroCannon',
+  // Bulbasaur
+  newVineWhip: 'vineWhip', newRazorLeaf: 'razorLeaf', newLeechSeed: 'leechSeed',
+  newGrowl: 'growl', newPoisonPowder2: 'poisonPowder2',
+  newSleepPowder: 'sleepPowder', newStunSpore: 'stunSpore', newLeafBlade: 'leafBlade', newSludgeBomb: 'sludgeBomb',
+  newSolarBeam: 'solarBeam', newPetalDance: 'petalDance', newGigaDrain: 'gigaDrain', newEnergyBall: 'energyBall',
+  newFrenzyPlant: 'frenzyPlant', newPetalBlizzard: 'petalBlizzard',
 };
 
 // Map from upgradeId to AttackType for upgrading existing attacks
@@ -65,6 +83,12 @@ const UPGRADE_MAP: Record<string, AttackType> = {
   upgradeWaterPulse: 'waterPulse', upgradeHydroPump: 'hydroPump', upgradeAquaTail: 'aquaTail', upgradeWhirlpool: 'whirlpool',
   upgradeIceBeam: 'iceBeam', upgradeFlashCannon: 'flashCannon', upgradeSurf: 'surf', upgradeLiquidation: 'liquidation',
   upgradeRainDance: 'rainDance', upgradeHydroCannon: 'hydroCannon',
+  // Bulbasaur
+  upgradeVineWhip: 'vineWhip', upgradeRazorLeaf: 'razorLeaf', upgradeLeechSeed: 'leechSeed',
+  upgradeGrowl: 'growl', upgradePoisonPowder2: 'poisonPowder2',
+  upgradeSleepPowder: 'sleepPowder', upgradeStunSpore: 'stunSpore', upgradeLeafBlade: 'leafBlade', upgradeSludgeBomb: 'sludgeBomb',
+  upgradeSolarBeam: 'solarBeam', upgradePetalDance: 'petalDance', upgradeGigaDrain: 'gigaDrain', upgradeEnergyBall: 'energyBall',
+  upgradeFrenzyPlant: 'frenzyPlant', upgradePetalBlizzard: 'petalBlizzard',
 };
 
 // Map from upgradeId to HeldItemType for held item upgrades
@@ -74,6 +98,8 @@ const ITEM_MAP: Record<string, HeldItemType> = {
   itemScopeLens: 'scopeLens', itemRazorClaw: 'razorClaw',
   itemShellBell: 'shellBell', itemFocusBand: 'focusBand',
   itemMysticWater: 'mysticWater', itemNeverMeltIce: 'neverMeltIce',
+  // Bulbasaur
+  itemMiracleSeed: 'miracleSeed', itemBlackSludge: 'blackSludge', itemBigRoot: 'bigRoot',
 };
 
 // ── Starter attack pools (para filtrar upgrades por starter) ────────
@@ -92,6 +118,13 @@ const STARTER_ATTACK_POOL: Record<string, ReadonlySet<AttackType>> = {
     'scald', 'bubbleBeam', 'bodySlam', 'gyroBall', 'waterfall',
     'originPulse', 'muddyWater', 'crabhammer', 'waterSpout', 'blizzard',
   ]),
+  bulbasaur: new Set<AttackType>([
+    'vineWhip', 'razorLeaf', 'leechSeed', 'tackle', 'growl', 'poisonPowder2',
+    'sleepPowder', 'stunSpore', 'leafBlade', 'sludgeBomb',
+    'solarBeam', 'petalDance', 'gigaDrain', 'energyBall', 'frenzyPlant', 'petalBlizzard',
+    'powerWhip', 'leafStorm', 'seedBomb', 'bodySlam2', 'toxic',
+    'spore', 'solarBlade', 'sludgeWave2', 'hyperBeam2', 'floraBurst',
+  ]),
 };
 
 // ── Held items com afinidade de starter (elemento-específicos) ──────
@@ -101,6 +134,9 @@ const ITEM_STARTER_AFFINITY: Partial<Record<HeldItemType, string>> = {
   sharpBeak: 'charmander',
   mysticWater: 'squirtle',
   neverMeltIce: 'squirtle',
+  miracleSeed: 'bulbasaur',
+  blackSludge: 'bulbasaur',
+  bigRoot: 'bulbasaur',
 };
 
 export class UpgradeSystem {
@@ -260,6 +296,16 @@ export class UpgradeSystem {
       }
     }
 
+    // Revive (max 2)
+    if (player.stats.revives < 2) {
+      pool.push(UPGRADE_DEFS.itemRevive);
+    }
+
+    // Max Revive evolution (has revive but not max yet)
+    if (player.stats.revives > 0 && !player.stats.reviveIsMax) {
+      pool.push(UPGRADE_DEFS.evolveMaxRevive);
+    }
+
     // Stats (always available)
     pool.push(UPGRADE_DEFS.maxHpUp, UPGRADE_DEFS.speedUp, UPGRADE_DEFS.magnetUp);
 
@@ -299,6 +345,20 @@ export class UpgradeSystem {
     // Held item
     if (upgradeId in ITEM_MAP) {
       player.addHeldItem(ITEM_MAP[upgradeId]);
+      this.emitStats();
+      return;
+    }
+
+    // Revive
+    if (upgradeId === 'itemRevive') {
+      player.stats.revives = Math.min(2, player.stats.revives + 1);
+      this.pickupSystem.showPickupNotification(`REVIVE! (${player.stats.revives}/2)`, 0xffaa00);
+      this.emitStats();
+      return;
+    }
+    if (upgradeId === 'evolveMaxRevive') {
+      player.stats.reviveIsMax = true;
+      this.pickupSystem.showPickupNotification('MAX REVIVE! 100% HP ao reviver!', 0xff44ff);
       this.emitStats();
       return;
     }
@@ -367,6 +427,15 @@ export class UpgradeSystem {
         }
         break;
       }
+      case 'revive':
+        if (player.stats.revives < 2) {
+          player.stats.revives++;
+          this.pickupSystem.showPickupNotification(`REVIVE! (${player.stats.revives}/2)`, 0xffaa00);
+        } else {
+          player.stats.hp = player.stats.maxHp;
+          this.pickupSystem.showPickupNotification('HP CHEIO! (revives max)', 0xffaa00);
+        }
+        break;
       case 'maxRevive':
         player.stats.hp = player.stats.maxHp;
         this.pickupSystem.showPickupNotification('MAX REVIVE! HP CHEIO!', 0xff44ff);

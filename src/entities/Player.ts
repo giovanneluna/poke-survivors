@@ -83,6 +83,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       attackSlots: 5,
       passiveSlots: 5,
       rerolls: 3,
+      revives: 0,
+      reviveIsMax: false,
     }
 
     const keyboard = scene.input
@@ -211,6 +213,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   heal(amount: number): void {
     this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + amount)
+  }
+
+  setInvincible(until: number): void {
+    this.invincibleUntil = until
   }
 
   // ── Evolução do Pokémon ────────────────────────────────────────────

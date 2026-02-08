@@ -36,10 +36,19 @@ export type AttackType =
   | 'scald' | 'bubbleBeam' | 'bodySlam' | 'gyroBall' | 'waterfall'
   | 'originPulse' | 'muddyWater' | 'crabhammer' | 'waterSpout' | 'blizzard'
   // Squirtle prime
-  | 'rainDance' | 'hydroCannon';
+  | 'rainDance' | 'hydroCannon'
+  // Bulbasaur base (tackle already in Squirtle)
+  | 'vineWhip' | 'razorLeaf' | 'leechSeed' | 'growl' | 'poisonPowder2'
+  // Ivysaur
+  | 'sleepPowder' | 'stunSpore' | 'leafBlade' | 'sludgeBomb'
+  // Venusaur
+  | 'solarBeam' | 'petalDance' | 'gigaDrain' | 'energyBall' | 'frenzyPlant' | 'petalBlizzard'
+  // Bulbasaur evoluções
+  | 'powerWhip' | 'leafStorm' | 'seedBomb' | 'bodySlam2' | 'toxic'
+  | 'spore' | 'solarBlade' | 'sludgeWave2' | 'hyperBeam2' | 'floraBurst';
 
 // ── Tipos de Elemento ─────────────────────────────────────────────
-export type ElementType = 'fire' | 'water' | 'ice' | 'normal' | 'dragon' | 'flying';
+export type ElementType = 'fire' | 'water' | 'ice' | 'normal' | 'dragon' | 'flying' | 'grass' | 'poison';
 
 // ── Categorias de Ataque ─────────────────────────────────────────
 export type AttackCategory =
@@ -75,7 +84,9 @@ export type HeldItemType =
   | 'charcoal' | 'wideLens' | 'choiceSpecs' | 'quickClaw' | 'leftovers'
   | 'dragonFang' | 'sharpBeak' | 'silkScarf' | 'shellBell'
   | 'scopeLens' | 'razorClaw' | 'focusBand' | 'metronome' | 'magnet'
-  | 'mysticWater' | 'neverMeltIce';
+  | 'mysticWater' | 'neverMeltIce'
+  | 'miracleSeed' | 'bigRoot' | 'blackSludge' | 'leafStone'
+  | 'revive';
 
 export type PickupType = 'oranBerry' | 'magnetBurst' | 'rareCandy' | 'pokeballBomb' | 'gachaBox' | 'xpShare' | 'duplicator';
 export type DestructibleType = 'tallGrass' | 'berryBush' | 'rockSmash' | 'treasureChest';
@@ -255,7 +266,7 @@ export interface PhaseConfig {
 }
 
 // ── Gacha Rewards ───────────────────────────────────────────────────
-export type GachaRewardType = 'skillUpgrade' | 'heldItem' | 'rareCandy' | 'evolutionStone' | 'maxRevive';
+export type GachaRewardType = 'skillUpgrade' | 'heldItem' | 'rareCandy' | 'evolutionStone' | 'maxRevive' | 'revive';
 
 // ── Held Items (Passivos) ──────────────────────────────────────────
 export interface HeldItemConfig {
@@ -299,8 +310,16 @@ export interface TorrentConfig {
   readonly auraRadius: number;
 }
 
+export interface OvergrowConfig {
+  readonly poisonChance: number;
+  readonly poisonDps: number;
+  readonly poisonDuration: number;
+  readonly bonusDmgOnPoisoned: number;
+  readonly toxicCloudOnKill: boolean;
+}
+
 // ── Status Effects ─────────────────────────────────────────────────
-export type StatusEffectType = 'burn' | 'stun' | 'slow' | 'confusion' | 'wet' | 'freeze';
+export type StatusEffectType = 'burn' | 'stun' | 'slow' | 'confusion' | 'wet' | 'freeze' | 'poison';
 
 export interface StatusEffect {
   type: StatusEffectType;
@@ -345,6 +364,8 @@ export interface PlayerState {
   attackSlots: number;
   passiveSlots: number;
   rerolls: number;
+  revives: number;
+  reviveIsMax: boolean;
 }
 
 // ── Interface base dos ataques ─────────────────────────────────────

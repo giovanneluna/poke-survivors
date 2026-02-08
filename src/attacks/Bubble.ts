@@ -127,7 +127,7 @@ export class Bubble implements Attack {
   }
 
   /**
-   * Estoura a bolha: aplica slow em inimigos proximos e gera efeito visual.
+   * Estoura a bolha: desativa + spawna efeito visual + slow AoE.
    */
   private popBubble(bubble: Phaser.Physics.Arcade.Sprite): void {
     const px = bubble.x
@@ -139,8 +139,16 @@ export class Bubble implements Attack {
     body.checkCollision.none = true
     body.enable = false
 
-    // Efeito visual de estouro: sprite animada (frames 1-4)
-    const impact = this.scene.add.sprite(px, py, "atk-bubble-shot")
+    this.spawnPopEffect(px, py)
+  }
+
+  /**
+   * Efeito visual de estouro + slow AoE no ponto de impacto.
+   * Chamado por popBubble (timeout) e pelo CollisionSystem via onHit.
+   */
+  spawnPopEffect(x: number, y: number): void {
+    // Sprite animada de estouro (frames 1-4)
+    const impact = this.scene.add.sprite(x, y, "atk-bubble-shot")
     impact.setScale(1.2).setDepth(11).setAlpha(0.9)
     impact.play("anim-bubble-shot-hit")
     impact.once("animationcomplete", () => impact.destroy())
@@ -155,8 +163,8 @@ export class Bubble implements Attack {
 
     for (const enemySprite of nearbyEnemies) {
       const dist = Phaser.Math.Distance.Between(
-        px,
-        py,
+        x,
+        y,
         enemySprite.x,
         enemySprite.y,
       )
@@ -174,14 +182,6 @@ export class Bubble implements Attack {
         enemyBody.velocity.scale(this.slowVelocityScale)
       }
     }
-  }
-
-  /**
-   * Chamado pelo CollisionSystem quando uma bolha acerta um inimigo.
-   * Alem do dano padrao, estoura a bolha para aplicar slow AoE.
-   */
-  onBulletHit(bullet: Phaser.Physics.Arcade.Sprite): void {
-    this.popBubble(bullet)
   }
 
   getDamage(): number {

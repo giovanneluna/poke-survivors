@@ -53,6 +53,32 @@ import { MuddyWater } from '../attacks/MuddyWater';
 import { Crabhammer } from '../attacks/Crabhammer';
 import { WaterSpout } from '../attacks/WaterSpout';
 import { Blizzard } from '../attacks/Blizzard';
+// Bulbasaur line
+import { VineWhip } from '../attacks/VineWhip';
+import { RazorLeaf } from '../attacks/RazorLeaf';
+import { LeechSeed } from '../attacks/LeechSeed';
+import { Growl } from '../attacks/Growl';
+import { PoisonPowder } from '../attacks/PoisonPowder';
+import { SleepPowder } from '../attacks/SleepPowder';
+import { StunSpore } from '../attacks/StunSpore';
+import { LeafBlade } from '../attacks/LeafBlade';
+import { SludgeBomb } from '../attacks/SludgeBomb';
+import { SolarBeam } from '../attacks/SolarBeam';
+import { PetalDance } from '../attacks/PetalDance';
+import { GigaDrain } from '../attacks/GigaDrain';
+import { EnergyBall } from '../attacks/EnergyBall';
+import { FrenzyPlant } from '../attacks/FrenzyPlant';
+import { PetalBlizzard } from '../attacks/PetalBlizzard';
+import { PowerWhip } from '../attacks/PowerWhip';
+import { LeafStorm } from '../attacks/LeafStorm';
+import { SeedBomb } from '../attacks/SeedBomb';
+import { BodySlam2 } from '../attacks/BodySlam2';
+import { Toxic } from '../attacks/Toxic';
+import { Spore } from '../attacks/Spore';
+import { SolarBlade } from '../attacks/SolarBlade';
+import { SludgeWave2 } from '../attacks/SludgeWave2';
+import { HyperBeam2 } from '../attacks/HyperBeam2';
+import { FloraBurst } from '../attacks/FloraBurst';
 import type { GameContext } from './GameContext';
 import type { CollisionSystem } from './CollisionSystem';
 import type { PickupSystem } from './PickupSystem';
@@ -68,6 +94,7 @@ interface AttackEntry {
   getGroup?: (attack: Attack) => Phaser.Physics.Arcade.Group;
   getDamage?: (attack: Attack) => () => number;
   getExplodeAt?: (attack: Attack) => (x: number, y: number) => void;
+  getOnHit?: (attack: Attack) => (x: number, y: number) => void;
   orbitalCooldownMs?: number;
   orbitalDestDamage?: number;
 }
@@ -179,6 +206,7 @@ const REGISTRY: Partial<Record<AttackType, AttackEntry>> = {
     hitElement: 'water',
     getGroup: (a) => (a as Bubble).getBullets(),
     getDamage: (a) => () => (a as Bubble).getDamage(),
+    getOnHit: (a) => (x, y) => (a as Bubble).spawnPopEffect(x, y),
   },
   tackle: { create: (ctx) => new Tackle(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
   withdraw: {
@@ -203,6 +231,46 @@ const REGISTRY: Partial<Record<AttackType, AttackEntry>> = {
   crabhammer: { create: (ctx) => new Crabhammer(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
   waterSpout: { create: (ctx) => new WaterSpout(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
   blizzard: { create: (ctx) => new Blizzard(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  // ── Bulbasaur line ─────────────────────────────────────────────────
+  razorLeaf: {
+    create: (ctx) => new RazorLeaf(ctx.scene, ctx.player, ctx.enemyGroup),
+    collision: 'projectile',
+    getGroup: (a) => (a as RazorLeaf).getBullets(),
+    getDamage: (a) => () => (a as RazorLeaf).getDamage(),
+  },
+  leechSeed: {
+    create: (ctx) => new LeechSeed(ctx.scene, ctx.player, ctx.enemyGroup),
+    collision: 'none',
+  },
+  vineWhip: { create: (ctx) => new VineWhip(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  growl: { create: (ctx) => new Growl(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  poisonPowder2: { create: (ctx) => new PoisonPowder(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  sleepPowder: { create: (ctx) => new SleepPowder(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  stunSpore: { create: (ctx) => new StunSpore(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  leafBlade: { create: (ctx) => new LeafBlade(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  sludgeBomb: {
+    create: (ctx) => new SludgeBomb(ctx.scene, ctx.player, ctx.enemyGroup),
+    collision: 'projectile',
+    getGroup: (a) => (a as SludgeBomb).getBullets(),
+    getDamage: (a) => () => (a as SludgeBomb).getDamage(),
+    getOnHit: (a) => (x, y) => (a as SludgeBomb).explode(x, y),
+  },
+  solarBeam: { create: (ctx) => new SolarBeam(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  petalDance: { create: (ctx) => new PetalDance(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  gigaDrain: { create: (ctx) => new GigaDrain(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  energyBall: { create: (ctx) => new EnergyBall(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  frenzyPlant: { create: (ctx) => new FrenzyPlant(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  petalBlizzard: { create: (ctx) => new PetalBlizzard(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  powerWhip: { create: (ctx) => new PowerWhip(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  leafStorm: { create: (ctx) => new LeafStorm(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  seedBomb: { create: (ctx) => new SeedBomb(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  bodySlam2: { create: (ctx) => new BodySlam2(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  toxic: { create: (ctx) => new Toxic(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  spore: { create: (ctx) => new Spore(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  solarBlade: { create: (ctx) => new SolarBlade(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  sludgeWave2: { create: (ctx) => new SludgeWave2(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  hyperBeam2: { create: (ctx) => new HyperBeam2(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  floraBurst: { create: (ctx) => new FloraBurst(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
 };
 
 export class AttackFactory {
@@ -271,9 +339,11 @@ export class AttackFactory {
     const hitElement = entry.hitElement ?? 'fire';
 
     switch (entry.collision) {
-      case 'projectile':
-        this.collisionSystem.setupProjectileCollisions(type, group, getDamage, hitElement);
+      case 'projectile': {
+        const onHit = entry.getOnHit?.(attack);
+        this.collisionSystem.setupProjectileCollisions(type, group, getDamage, hitElement, onHit);
         break;
+      }
       case 'orbital':
         this.collisionSystem.setupOrbitalCollisions(
           type, group, getDamage,

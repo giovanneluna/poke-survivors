@@ -63,4 +63,33 @@ export const ATTACKS: Readonly<Record<string, AttackConfig>> = {
   // Squirtle prime
   rainDance:    { key: 'rainDance',    name: 'Rain Dance',    description: 'Chuva contínua de dano em área',             baseDamage: 40, baseCooldown: 5000, element: 'water',  maxLevel: 8, minForm: 'stage2' },
   hydroCannon:  { key: 'hydroCannon',  name: 'Hydro Cannon',  description: 'Canhões devastadores ultimate',              baseDamage: 60, baseCooldown: 10000, element: 'water', maxLevel: 8, minForm: 'stage2' },
+  // ── Bulbasaur base ─────────────────────────────────────────────────
+  vineWhip:      { key: 'vineWhip',      name: 'Vine Whip',      description: 'Chicotada de vinha na direção do movimento',  baseDamage: 10, baseCooldown: 800,   element: 'grass',  maxLevel: 8, minForm: 'base' },
+  razorLeaf:     { key: 'razorLeaf',     name: 'Razor Leaf',     description: 'Folhas cortantes no inimigo mais próximo',    baseDamage: 8,  baseCooldown: 1000,  element: 'grass',  maxLevel: 8, minForm: 'base' },
+  leechSeed:     { key: 'leechSeed',     name: 'Leech Seed',     description: 'Sementes que grudam e drenam vida',           baseDamage: 4,  baseCooldown: 1500,  element: 'grass',  maxLevel: 8, minForm: 'base' },
+  growl:         { key: 'growl',         name: 'Growl',          description: 'Aura que reduz dano dos inimigos próximos',   baseDamage: 0,  baseCooldown: 0,     element: 'normal', maxLevel: 8, minForm: 'base' },
+  poisonPowder2: { key: 'poisonPowder2', name: 'Poison Powder',  description: 'Nuvem tóxica que envenena inimigos próximos', baseDamage: 3,  baseCooldown: 0,     element: 'poison', maxLevel: 8, minForm: 'base' },
+  // Ivysaur
+  sleepPowder:   { key: 'sleepPowder',   name: 'Sleep Powder',   description: 'Esporos soporíferos em cone frontal',         baseDamage: 0,  baseCooldown: 5000,  element: 'grass',  maxLevel: 8, minForm: 'stage1' },
+  stunSpore:     { key: 'stunSpore',     name: 'Stun Spore',     description: 'Esporos paralisantes em área',                baseDamage: 5,  baseCooldown: 6000,  element: 'grass',  maxLevel: 8, minForm: 'stage1' },
+  leafBlade:     { key: 'leafBlade',     name: 'Leaf Blade',     description: 'Lâmina vegetal com alta chance de crítico',   baseDamage: 25, baseCooldown: 1500,  element: 'grass',  maxLevel: 8, minForm: 'stage1' },
+  sludgeBomb:    { key: 'sludgeBomb',    name: 'Sludge Bomb',    description: 'Projétil tóxico que explode em AoE',          baseDamage: 18, baseCooldown: 2000,  element: 'poison', maxLevel: 8, minForm: 'stage1' },
+  // Venusaur
+  solarBeam:     { key: 'solarBeam',     name: 'Solar Beam',     description: 'Raio solar devastador com carga',             baseDamage: 40, baseCooldown: 4000,  element: 'grass',  maxLevel: 8, minForm: 'stage2' },
+  petalDance:    { key: 'petalDance',    name: 'Petal Dance',    description: 'Dança de pétalas 360° contínua',              baseDamage: 8,  baseCooldown: 3000,  element: 'grass',  maxLevel: 8, minForm: 'stage2' },
+  gigaDrain:     { key: 'gigaDrain',     name: 'Giga Drain',     description: 'Drena vida em área e cura o jogador',         baseDamage: 15, baseCooldown: 3500,  element: 'grass',  maxLevel: 8, minForm: 'stage2' },
+  energyBall:    { key: 'energyBall',    name: 'Energy Ball',    description: 'Esfera de energia que reduz defesa',          baseDamage: 20, baseCooldown: 1800,  element: 'grass',  maxLevel: 8, minForm: 'stage2' },
+  frenzyPlant:   { key: 'frenzyPlant',   name: 'Frenzy Plant',   description: 'Raízes gigantes irrompem do chão',            baseDamage: 50, baseCooldown: 8000,  element: 'grass',  maxLevel: 8, minForm: 'stage2' },
+  petalBlizzard: { key: 'petalBlizzard', name: 'Petal Blizzard', description: 'Tempestade de pétalas em toda a tela',        baseDamage: 12, baseCooldown: 5000,  element: 'grass',  maxLevel: 8, minForm: 'stage2' },
+  // Bulbasaur evoluções
+  powerWhip:     { key: 'powerWhip',     name: 'Power Whip',     description: 'Chicotada poderosa com knockback',            baseDamage: 20, baseCooldown: 700,   element: 'grass',  maxLevel: 8, minForm: 'stage1' },
+  leafStorm:     { key: 'leafStorm',     name: 'Leaf Storm',     description: 'Tempestade de folhas em área devastadora',    baseDamage: 15, baseCooldown: 2000,  element: 'grass',  maxLevel: 8, minForm: 'stage1' },
+  seedBomb:      { key: 'seedBomb',      name: 'Seed Bomb',      description: 'Sementes explosivas que ricocheteiam',        baseDamage: 12, baseCooldown: 1500,  element: 'grass',  maxLevel: 8, minForm: 'stage1' },
+  bodySlam2:     { key: 'bodySlam2',     name: 'Body Slam',      description: 'Investida pesada com paralisia',              baseDamage: 20, baseCooldown: 2000,  element: 'normal', maxLevel: 8, minForm: 'stage1' },
+  toxic:         { key: 'toxic',         name: 'Toxic',          description: 'Veneno intenso, dano escala com o tempo',     baseDamage: 5,  baseCooldown: 0,     element: 'poison', maxLevel: 8, minForm: 'stage1' },
+  spore:         { key: 'spore',         name: 'Spore',          description: 'Esporos perfeitos, 100% stun em área',        baseDamage: 0,  baseCooldown: 4000,  element: 'grass',  maxLevel: 8, minForm: 'stage2' },
+  solarBlade:    { key: 'solarBlade',    name: 'Solar Blade',    description: 'Lâmina solar com carga, dano massivo',        baseDamage: 35, baseCooldown: 1200,  element: 'grass',  maxLevel: 8, minForm: 'stage2' },
+  sludgeWave2:   { key: 'sludgeWave2',   name: 'Sludge Wave',    description: 'Onda tóxica 360° que envenena tudo',          baseDamage: 25, baseCooldown: 2500,  element: 'poison', maxLevel: 8, minForm: 'stage2' },
+  hyperBeam2:    { key: 'hyperBeam2',    name: 'Hyper Beam',     description: 'Raio devastador que perfura tudo',            baseDamage: 60, baseCooldown: 5000,  element: 'grass',  maxLevel: 8, minForm: 'stage2' },
+  floraBurst:    { key: 'floraBurst',    name: 'Flora Burst',    description: 'Explosão floral apocalíptica em área',        baseDamage: 30, baseCooldown: 3000,  element: 'grass',  maxLevel: 8, minForm: 'stage2' },
 } as const;

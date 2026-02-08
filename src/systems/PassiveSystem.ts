@@ -1,7 +1,7 @@
-import type { BlazeConfig, TorrentConfig } from '../types';
-import { BLAZE_TIERS, TORRENT_TIERS } from '../config';
+import type { BlazeConfig, TorrentConfig, OvergrowConfig } from '../types';
+import { BLAZE_TIERS, TORRENT_TIERS, OVERGROW_TIERS } from '../config';
 
-export type PassiveType = 'blaze' | 'torrent' | 'none';
+export type PassiveType = 'blaze' | 'torrent' | 'overgrow' | 'none';
 
 // ── Module singleton ──────────────────────────────────────────────
 let instance: PassiveSystem | null = null;
@@ -29,6 +29,7 @@ export class PassiveSystem {
     this.type =
       starterKey === 'charmander' ? 'blaze'
       : starterKey === 'squirtle' ? 'torrent'
+      : starterKey === 'bulbasaur' ? 'overgrow'
       : 'none';
     instance = this;
   }
@@ -46,10 +47,15 @@ export class PassiveSystem {
     return this.type === 'torrent' ? TORRENT_TIERS[this.tier] : null;
   }
 
-  /** Chance to apply status on each hit (burn or wet). */
+  getOvergrowConfig(): OvergrowConfig | null {
+    return this.type === 'overgrow' ? OVERGROW_TIERS[this.tier] : null;
+  }
+
+  /** Chance to apply status on each hit (burn, wet, or poison). */
   getStatusChance(): number {
     if (this.type === 'blaze') return BLAZE_TIERS[this.tier].burnChance;
     if (this.type === 'torrent') return TORRENT_TIERS[this.tier].wetChance;
+    if (this.type === 'overgrow') return OVERGROW_TIERS[this.tier].poisonChance;
     return 0;
   }
 
@@ -57,12 +63,18 @@ export class PassiveSystem {
   getStatusDuration(): number {
     if (this.type === 'blaze') return BLAZE_TIERS[this.tier].burnDuration;
     if (this.type === 'torrent') return TORRENT_TIERS[this.tier].wetDuration;
+    if (this.type === 'overgrow') return OVERGROW_TIERS[this.tier].poisonDuration;
     return 0;
   }
 
   /** Burn damage per second (Blaze only). */
   getBurnDps(): number {
     return this.type === 'blaze' ? BLAZE_TIERS[this.tier].burnDps : 0;
+  }
+
+  /** Poison damage per second (Overgrow only). */
+  getPoisonDps(): number {
+    return this.type === 'overgrow' ? OVERGROW_TIERS[this.tier].poisonDps : 0;
   }
 
   /** Speed multiplier for wet enemies (e.g. 0.80 = 20% slower). Torrent only. */
@@ -76,6 +88,7 @@ export class PassiveSystem {
   getBonusDamage(): number {
     if (this.type === 'blaze') return BLAZE_TIERS[this.tier].bonusDmgOnBurned;
     if (this.type === 'torrent') return TORRENT_TIERS[this.tier].bonusDmgOnWet;
+    if (this.type === 'overgrow') return OVERGROW_TIERS[this.tier].bonusDmgOnPoisoned;
     return 0;
   }
 
@@ -88,6 +101,7 @@ export class PassiveSystem {
   hasOnKillEffect(): boolean {
     if (this.type === 'blaze') return BLAZE_TIERS[this.tier].explodeOnKill;
     if (this.type === 'torrent') return TORRENT_TIERS[this.tier].splashOnKill;
+    if (this.type === 'overgrow') return OVERGROW_TIERS[this.tier].toxicCloudOnKill;
     return false;
   }
 

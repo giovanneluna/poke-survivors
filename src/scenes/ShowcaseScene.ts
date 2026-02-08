@@ -1,5 +1,5 @@
 import Phaser from "phaser"
-import { ATTACKS, EVOLUTIONS, CHARMANDER_FORMS, SQUIRTLE_FORMS } from "../config"
+import { ATTACKS, EVOLUTIONS, CHARMANDER_FORMS, SQUIRTLE_FORMS, BULBASAUR_FORMS } from "../config"
 import { ATTACK_CATEGORIES } from "../data/attacks/categories"
 import { SoundManager } from "../audio/SoundManager"
 import type {
@@ -62,6 +62,28 @@ const ATTACK_SCALES: Readonly<Record<string, number>> = {
   "atk-liquidation": 0.6,
   "atk-surf": 1.0,
   "atk-ice-range": 1.0,
+  // Grass
+  "atk-vine-whip": 1.5,
+  "atk-razor-leaf": 2.0,
+  "atk-leech-seed": 1.5,
+  "atk-cotton-spore": 1.2,
+  "atk-stun-spore": 1.0,
+  "atk-leaf-blade": 0.8,
+  "atk-solar-beam": 0.6,
+  "atk-petal-dance": 0.8,
+  "atk-leech-life": 1.0,
+  "atk-magical-leaf": 1.5,
+  "atk-ingrain": 0.8,
+  "atk-petal-blizzard": 1.0,
+  "atk-power-whip": 1.0,
+  "atk-seed-flare": 0.8,
+  "atk-solar-blade": 0.8,
+  "atk-grass-melee": 1.0,
+  // Poison
+  "atk-smog": 1.2,
+  "atk-acid-spray": 0.7,
+  "atk-sludge-wave": 2.0,
+  "atk-poison-melee": 1.0,
 }
 
 // ── Sprite file info (path + source) ─────────────────────────────────
@@ -114,6 +136,28 @@ const SPRITE_FILE_INFO: Readonly<Record<string, { file: string; source: string }
   "atk-ice-range":          { file: "ice/ice-range-sheet.png",           source: "pokemonAutoChess" },
   // Ghost
   "atk-shadow-ball":        { file: "ghost/shadow-ball-sheet.png",       source: "pokemonAutoChess" },
+  // Grass
+  "atk-vine-whip":          { file: "grass/vine-whip-sheet.png",        source: "pokemonAutoChess" },
+  "atk-razor-leaf":         { file: "grass/razor-leaf-sheet.png",       source: "pokemonAutoChess" },
+  "atk-leech-seed":         { file: "grass/leech-seed-sheet.png",       source: "pokemonAutoChess" },
+  "atk-cotton-spore":       { file: "grass/cotton-spore-sheet.png",     source: "pokemonAutoChess" },
+  "atk-stun-spore":         { file: "grass/stun-spore-sheet.png",       source: "pokemonAutoChess" },
+  "atk-leaf-blade":         { file: "grass/leaf-blade-sheet.png",       source: "pokemonAutoChess" },
+  "atk-solar-beam":         { file: "grass/solar-beam-sheet.png",       source: "pokemonAutoChess" },
+  "atk-petal-dance":        { file: "grass/petal-dance-sheet.png",      source: "pokemonAutoChess" },
+  "atk-leech-life":         { file: "grass/leech-life-sheet.png",       source: "pokemonAutoChess" },
+  "atk-magical-leaf":       { file: "grass/magical-leaf-sheet.png",     source: "pokemonAutoChess" },
+  "atk-ingrain":            { file: "grass/ingrain-sheet.png",          source: "pokemonAutoChess" },
+  "atk-petal-blizzard":     { file: "grass/petal-blizzard-sheet.png",   source: "pokemonAutoChess" },
+  "atk-power-whip":         { file: "grass/power-whip-sheet.png",       source: "pokemonAutoChess" },
+  "atk-seed-flare":         { file: "grass/seed-flare-sheet.png",       source: "pokemonAutoChess" },
+  "atk-solar-blade":        { file: "grass/solar-blade-sheet.png",      source: "pokemonAutoChess" },
+  "atk-grass-melee":        { file: "grass/grass-melee-sheet.png",      source: "pokemonAutoChess" },
+  // Poison
+  "atk-smog":               { file: "poison/smog-sheet.png",            source: "pokemonAutoChess" },
+  "atk-acid-spray":         { file: "poison/acid-spray-sheet.png",      source: "pokemonAutoChess" },
+  "atk-sludge-wave":        { file: "poison/sludge-wave-sheet.png",     source: "pokemonAutoChess" },
+  "atk-poison-melee":       { file: "poison/poison-melee-sheet.png",    source: "pokemonAutoChess" },
 }
 
 // ── Starter configs ──────────────────────────────────────────────────
@@ -151,6 +195,18 @@ const STARTER_CONFIGS: readonly StarterShowcaseConfig[] = [
       stage2: "blastoise-walk",
     },
   },
+  {
+    key: "bulbasaur",
+    label: "BULBASAUR LINE",
+    color: 0x22cc44,
+    forms: BULBASAUR_FORMS,
+    formNames: ["Bulbasaur", "Ivysaur", "Venusaur"],
+    formSprites: {
+      base: "bulbasaur-walk",
+      stage1: "ivysaur-walk",
+      stage2: "venusaur-walk",
+    },
+  },
 ]
 
 // ── Elementos com cores ──────────────────────────────────────────────
@@ -161,6 +217,8 @@ const ELEMENT_COLORS: Readonly<Record<string, { color: number; label: string }>>
   normal:  { color: 0xcccccc, label: "NORMAL" },
   dragon:  { color: 0x7744ff, label: "DRAGON" },
   flying:  { color: 0x88ccff, label: "FLYING" },
+  grass:   { color: 0x22cc44, label: "GRASS" },
+  poison:  { color: 0x9944cc, label: "POISON" },
 }
 
 // ── Attacks per starter ──────────────────────────────────────────────
@@ -178,6 +236,13 @@ const STARTER_ATTACKS: Readonly<Record<string, ReadonlySet<string>>> = {
     'iceBeam', 'flashCannon', 'surf', 'liquidation', 'rainDance', 'hydroCannon',
     'scald', 'bubbleBeam', 'bodySlam', 'gyroBall', 'waterfall',
     'originPulse', 'muddyWater', 'crabhammer', 'waterSpout', 'blizzard',
+  ]),
+  bulbasaur: new Set([
+    'vineWhip', 'razorLeaf', 'leechSeed', 'growl', 'poisonPowder2',
+    'sleepPowder', 'stunSpore', 'leafBlade', 'sludgeBomb',
+    'solarBeam', 'petalDance', 'gigaDrain', 'energyBall', 'frenzyPlant', 'petalBlizzard',
+    'powerWhip', 'leafStorm', 'seedBomb', 'bodySlam2', 'toxic',
+    'spore', 'solarBlade', 'sludgeWave2', 'hyperBeam2', 'floraBurst',
   ]),
 }
 
@@ -677,6 +742,32 @@ export class ShowcaseScene extends Phaser.Scene {
       blizzard: { atkKey: "atk-ice-range", animKey: "anim-ice-range" },
       rainDance: { atkKey: "atk-water-range", animKey: "anim-water-range" },
       hydroCannon: { atkKey: "atk-origin-pulse", animKey: "anim-origin-pulse" },
+      // ── Bulbasaur line ────────────────────────────────────────────────
+      vineWhip: { atkKey: "atk-vine-whip", animKey: "anim-vine-whip" },
+      razorLeaf: { atkKey: "atk-razor-leaf", animKey: "anim-razor-leaf" },
+      leechSeed: { atkKey: "atk-leech-seed", animKey: "anim-leech-seed" },
+      growl: { atkKey: "atk-cotton-spore", animKey: "anim-cotton-spore" },
+      poisonPowder2: { atkKey: "atk-smog", animKey: "anim-smog" },
+      sleepPowder: { atkKey: "atk-cotton-spore", animKey: "anim-cotton-spore" },
+      stunSpore: { atkKey: "atk-stun-spore", animKey: "anim-stun-spore" },
+      leafBlade: { atkKey: "atk-leaf-blade", animKey: "anim-leaf-blade" },
+      sludgeBomb: { atkKey: "atk-poison-melee", animKey: "anim-poison-melee" },
+      solarBeam: { atkKey: "atk-solar-beam", animKey: "anim-solar-beam" },
+      petalDance: { atkKey: "atk-petal-dance", animKey: "anim-petal-dance" },
+      gigaDrain: { atkKey: "atk-leech-life", animKey: "anim-leech-life" },
+      energyBall: { atkKey: "atk-magical-leaf", animKey: "anim-magical-leaf" },
+      frenzyPlant: { atkKey: "atk-ingrain", animKey: "anim-ingrain" },
+      petalBlizzard: { atkKey: "atk-petal-blizzard", animKey: "anim-petal-blizzard" },
+      powerWhip: { atkKey: "atk-power-whip", animKey: "anim-power-whip" },
+      leafStorm: { atkKey: "atk-razor-leaf", animKey: "anim-razor-leaf" },
+      seedBomb: { atkKey: "atk-seed-flare", animKey: "anim-seed-flare" },
+      bodySlam2: { atkKey: "atk-grass-melee", animKey: "anim-grass-melee" },
+      toxic: { atkKey: "atk-acid-spray", animKey: "anim-acid-spray" },
+      spore: { atkKey: "atk-cotton-spore", animKey: "anim-cotton-spore" },
+      solarBlade: { atkKey: "atk-solar-blade", animKey: "anim-solar-blade" },
+      sludgeWave2: { atkKey: "atk-sludge-wave", animKey: "anim-sludge-wave" },
+      hyperBeam2: { atkKey: "atk-solar-beam", animKey: "anim-solar-beam" },
+      floraBurst: { atkKey: "atk-seed-flare", animKey: "anim-seed-flare" },
     }
 
     const mapping = spriteMap[attackKey]

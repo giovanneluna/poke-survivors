@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ENEMIES, STARTERS, CHARMANDER_FORMS, SQUIRTLE_FORMS } from '../config';
+import { ENEMIES, STARTERS, CHARMANDER_FORMS, SQUIRTLE_FORMS, BULBASAUR_FORMS } from '../config';
 import type { SpriteConfig, Direction } from '../types';
 import { DIRECTION_ROW } from '../types';
 
@@ -32,6 +32,9 @@ export class BootScene extends Phaser.Scene {
     for (const form of SQUIRTLE_FORMS) {
       if (form.form !== 'base') this.loadSpritesheet(form.sprite);
     }
+    for (const form of BULBASAUR_FORMS) {
+      if (form.form !== 'base') this.loadSpritesheet(form.sprite);
+    }
     for (const config of Object.values(ENEMIES)) {
       this.loadSpritesheet(config.sprite);
     }
@@ -44,6 +47,8 @@ export class BootScene extends Phaser.Scene {
     this.load.image('art-charizard', 'assets/artwork/charizard.png');
     this.load.image('art-wartortle', 'assets/artwork/wartortle.png');
     this.load.image('art-blastoise', 'assets/artwork/blastoise.png');
+    this.load.image('art-ivysaur', 'assets/artwork/ivysaur.png');
+    this.load.image('art-venusaur', 'assets/artwork/venusaur.png');
 
     // Sprites de itens reais do Pokemon (para upgrades/UI)
     this.load.image('item-flame-orb', 'assets/items/flame-orb.png');
@@ -66,6 +71,12 @@ export class BootScene extends Phaser.Scene {
     this.load.image('item-mystic-water', 'assets/items/mystic-water.png');
     this.load.image('item-never-melt-ice', 'assets/items/never-melt-ice.png');
     this.load.image('item-water-stone', 'assets/items/water-stone.png');
+    this.load.image('item-leaf-stone', 'assets/items/leaf-stone.png');
+    this.load.image('item-miracle-seed', 'assets/items/miracle-seed.png');
+    this.load.image('item-big-root', 'assets/items/big-root.png');
+    this.load.image('item-black-sludge', 'assets/items/black-sludge.png');
+    this.load.image('item-revive', 'assets/items/revive.png');
+    this.load.image('item-max-revive', 'assets/items/max-revive.png');
 
     // ── Fire attack spritesheets ──────────────────────────────────
     this.load.spritesheet('atk-ember', 'assets/attacks/fire/ember-sheet.png', { frameWidth: 26, frameHeight: 26 });
@@ -175,6 +186,28 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('atk-ice-range', 'assets/attacks/ice/ice-range-sheet.png', { frameWidth: 64, frameHeight: 56 });
     this.load.spritesheet('atk-frost-breath', 'assets/attacks/ice/frost-breath-sheet.png', { frameWidth: 64, frameHeight: 64 });
 
+    // ── Bulbasaur line attacks (Grass type) ────────────────────
+    this.load.spritesheet('atk-vine-whip', 'assets/attacks/grass/vine-whip-sheet.png', { frameWidth: 80, frameHeight: 40 });
+    this.load.spritesheet('atk-razor-leaf', 'assets/attacks/grass/razor-leaf-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-leech-seed', 'assets/attacks/grass/leech-seed-sheet.png', { frameWidth: 8, frameHeight: 8 });
+    this.load.spritesheet('atk-grass-melee', 'assets/attacks/grass/grass-melee-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-cotton-spore', 'assets/attacks/grass/cotton-spore-sheet.png', { frameWidth: 48, frameHeight: 48 });
+    this.load.spritesheet('atk-stun-spore', 'assets/attacks/grass/stun-spore-sheet.png', { frameWidth: 40, frameHeight: 64 });
+    this.load.spritesheet('atk-leaf-blade', 'assets/attacks/grass/leaf-blade-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-solar-beam', 'assets/attacks/grass/solar-beam-sheet.png', { frameWidth: 32, frameHeight: 128 });
+    this.load.spritesheet('atk-petal-dance', 'assets/attacks/grass/petal-dance-sheet.png', { frameWidth: 64, frameHeight: 88 });
+    this.load.spritesheet('atk-leech-life', 'assets/attacks/grass/leech-life-sheet.png', { frameWidth: 80, frameHeight: 72 });
+    this.load.spritesheet('atk-magical-leaf', 'assets/attacks/grass/magical-leaf-sheet.png', { frameWidth: 48, frameHeight: 48 });
+    this.load.spritesheet('atk-ingrain', 'assets/attacks/grass/ingrain-sheet.png', { frameWidth: 80, frameHeight: 64 });
+    this.load.spritesheet('atk-petal-blizzard', 'assets/attacks/grass/petal-blizzard-sheet.png', { frameWidth: 88, frameHeight: 72 });
+    this.load.spritesheet('atk-power-whip', 'assets/attacks/grass/power-whip-sheet.png', { frameWidth: 80, frameHeight: 48 });
+    this.load.spritesheet('atk-seed-flare', 'assets/attacks/grass/seed-flare-sheet.png', { frameWidth: 96, frameHeight: 80 });
+    this.load.spritesheet('atk-solar-blade', 'assets/attacks/grass/solar-blade-sheet.png', { frameWidth: 128, frameHeight: 64 });
+    this.load.spritesheet('atk-wood-hammer', 'assets/attacks/grass/wood-hammer-sheet.png', { frameWidth: 200, frameHeight: 150 });
+    this.load.spritesheet('atk-aromatherapy', 'assets/attacks/grass/aromatherapy-sheet.png', { frameWidth: 88, frameHeight: 72 });
+    this.load.spritesheet('atk-grass-hit', 'assets/attacks/grass/grass-hit-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-grass-cell', 'assets/attacks/grass/grass-cell-sheet.png', { frameWidth: 48, frameHeight: 48 });
+
     // ── Tibia-converted boss attack spritesheets ──────────────
     // Fire
     this.load.spritesheet('atk-eruption', 'assets/attacks/fire/eruption-sheet.png', { frameWidth: 96, frameHeight: 96 });
@@ -244,6 +277,9 @@ export class BootScene extends Phaser.Scene {
       if (form.form !== 'base') this.createWalkAnims(form.sprite);
     }
     for (const form of SQUIRTLE_FORMS) {
+      if (form.form !== 'base') this.createWalkAnims(form.sprite);
+    }
+    for (const form of BULBASAUR_FORMS) {
       if (form.form !== 'base') this.createWalkAnims(form.sprite);
     }
     for (const config of Object.values(ENEMIES)) {
@@ -669,6 +705,48 @@ export class BootScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('atk-origin-pulse', { start: 0, end: 3 }),
       frameRate: 10, repeat: -1,
     });
+
+    // ── Bulbasaur line animations (Grass type) ─────────────────────
+    // Vine Whip (9 frames, play once)
+    this.anims.create({ key: 'anim-vine-whip', frames: this.anims.generateFrameNumbers('atk-vine-whip', { start: 0, end: 8 }), frameRate: 18, repeat: 0 });
+    // Razor Leaf (8 frames, loop)
+    this.anims.create({ key: 'anim-razor-leaf', frames: this.anims.generateFrameNumbers('atk-razor-leaf', { start: 0, end: 7 }), frameRate: 12, repeat: -1 });
+    // Leech Seed (11 frames, loop)
+    this.anims.create({ key: 'anim-leech-seed', frames: this.anims.generateFrameNumbers('atk-leech-seed', { start: 0, end: 10 }), frameRate: 10, repeat: -1 });
+    // Grass Melee / Tackle (5 frames, play once)
+    this.anims.create({ key: 'anim-grass-melee', frames: this.anims.generateFrameNumbers('atk-grass-melee', { start: 0, end: 4 }), frameRate: 15, repeat: 0 });
+    // Cotton Spore / Sleep Powder (33 frames, play once)
+    this.anims.create({ key: 'anim-cotton-spore', frames: this.anims.generateFrameNumbers('atk-cotton-spore', { start: 0, end: 32 }), frameRate: 15, repeat: 0 });
+    // Stun Spore (22 frames, play once)
+    this.anims.create({ key: 'anim-stun-spore', frames: this.anims.generateFrameNumbers('atk-stun-spore', { start: 0, end: 21 }), frameRate: 15, repeat: 0 });
+    // Leaf Blade (26 frames, play once)
+    this.anims.create({ key: 'anim-leaf-blade', frames: this.anims.generateFrameNumbers('atk-leaf-blade', { start: 0, end: 25 }), frameRate: 20, repeat: 0 });
+    // Solar Beam (4 frames, play once)
+    this.anims.create({ key: 'anim-solar-beam', frames: this.anims.generateFrameNumbers('atk-solar-beam', { start: 0, end: 3 }), frameRate: 8, repeat: 0 });
+    // Petal Dance (54 frames, loop)
+    this.anims.create({ key: 'anim-petal-dance', frames: this.anims.generateFrameNumbers('atk-petal-dance', { start: 0, end: 53 }), frameRate: 20, repeat: -1 });
+    // Leech Life / Giga Drain (20 frames, play once)
+    this.anims.create({ key: 'anim-leech-life', frames: this.anims.generateFrameNumbers('atk-leech-life', { start: 0, end: 19 }), frameRate: 15, repeat: 0 });
+    // Magical Leaf / Energy Ball (9 frames, loop)
+    this.anims.create({ key: 'anim-magical-leaf', frames: this.anims.generateFrameNumbers('atk-magical-leaf', { start: 0, end: 8 }), frameRate: 12, repeat: -1 });
+    // Ingrain / Frenzy Plant (46 frames, play once)
+    this.anims.create({ key: 'anim-ingrain', frames: this.anims.generateFrameNumbers('atk-ingrain', { start: 0, end: 45 }), frameRate: 18, repeat: 0 });
+    // Petal Blizzard (19 frames, play once)
+    this.anims.create({ key: 'anim-petal-blizzard', frames: this.anims.generateFrameNumbers('atk-petal-blizzard', { start: 0, end: 18 }), frameRate: 12, repeat: 0 });
+    // Power Whip (6 frames, play once)
+    this.anims.create({ key: 'anim-power-whip', frames: this.anims.generateFrameNumbers('atk-power-whip', { start: 0, end: 5 }), frameRate: 15, repeat: 0 });
+    // Seed Flare / Seed Bomb / Flora Burst (31 frames, play once)
+    this.anims.create({ key: 'anim-seed-flare', frames: this.anims.generateFrameNumbers('atk-seed-flare', { start: 0, end: 30 }), frameRate: 18, repeat: 0 });
+    // Solar Blade (6 frames, play once)
+    this.anims.create({ key: 'anim-solar-blade', frames: this.anims.generateFrameNumbers('atk-solar-blade', { start: 0, end: 5 }), frameRate: 12, repeat: 0 });
+    // Wood Hammer / Body Slam (16 frames, play once)
+    this.anims.create({ key: 'anim-wood-hammer', frames: this.anims.generateFrameNumbers('atk-wood-hammer', { start: 0, end: 15 }), frameRate: 15, repeat: 0 });
+    // Aromatherapy / Spore (19 frames, play once)
+    this.anims.create({ key: 'anim-aromatherapy', frames: this.anims.generateFrameNumbers('atk-aromatherapy', { start: 0, end: 18 }), frameRate: 12, repeat: 0 });
+    // Grass Hit (3 frames, play once)
+    this.anims.create({ key: 'anim-grass-hit', frames: this.anims.generateFrameNumbers('atk-grass-hit', { start: 0, end: 2 }), frameRate: 12, repeat: 0 });
+    // Grass Cell (20 frames, loop)
+    this.anims.create({ key: 'anim-grass-cell', frames: this.anims.generateFrameNumbers('atk-grass-cell', { start: 0, end: 19 }), frameRate: 12, repeat: -1 });
 
     // ══════════════════════════════════════════════════════════════
     // Tibia-converted boss attack animations
@@ -1112,6 +1190,10 @@ export class BootScene extends Phaser.Scene {
     // Ice particle (para trails de gelo)
     g.clear(); g.fillStyle(0x88ddff); g.fillCircle(3, 3, 3);
     g.generateTexture('ice-particle', 6, 6);
+
+    // Poison particle (para trails de veneno/planta)
+    g.clear(); g.fillStyle(0x22cc44); g.fillCircle(3, 3, 3);
+    g.generateTexture('poison-particle', 6, 6);
 
     // Meteor (para DracoMeteor)
     g.clear(); g.fillStyle(0xff4400); g.fillCircle(10, 10, 10);

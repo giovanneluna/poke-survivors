@@ -144,7 +144,9 @@ export class GameScene extends Phaser.Scene {
     } else {
       // Normal initial attack
       const initialAttack =
-        this.starterKey === "squirtle" ? "waterGun" : "ember"
+        this.starterKey === "squirtle" ? "waterGun"
+        : this.starterKey === "bulbasaur" ? "vineWhip"
+        : "ember"
       this.attackFactory.createAttack(initialAttack)
     }
 
@@ -215,7 +217,7 @@ export class GameScene extends Phaser.Scene {
     })
 
     this.events.on("player-died", () => {
-      this.gameOver()
+      if (!this.tryRevive()) this.gameOver()
     })
 
     this.events.on("stats-refresh", () => {
@@ -247,7 +249,7 @@ export class GameScene extends Phaser.Scene {
         if (dist < data.radius) {
           this.player.takeDamage(data.damage, this.time.now)
           this.emitStats()
-          if (this.player.isDead()) this.gameOver()
+          if (this.player.isDead() && !this.tryRevive()) this.gameOver()
         }
       },
     )
@@ -327,11 +329,56 @@ export class GameScene extends Phaser.Scene {
               )
             }
           })
+        } else if (data.type === "overgrow") {
+          const radius = 55
+          this.add
+            .particles(data.x, data.y, "poison-particle", {
+              speed: { min: 30, max: 70 },
+              lifespan: 400,
+              quantity: 8,
+              scale: { start: 1.5, end: 0 },
+              tint: [0x9944cc, 0x22cc44],
+              emitting: false,
+            })
+            .explode()
+
+          const now = this.time.now
+          this.enemyGroup.getChildren().forEach((child) => {
+            const enemy = child as Enemy
+            if (!enemy.active) return
+            const d = Phaser.Math.Distance.Between(
+              data.x,
+              data.y,
+              enemy.x,
+              enemy.y,
+            )
+            if (d < radius) {
+              enemy.applyPoison(
+                ps.getPoisonDps(),
+                ps.getStatusDuration(),
+                now,
+              )
+            }
+          })
         }
 
         passiveChainDepth--
       },
     )
+
+    // ── Heal events (Leech Seed, Giga Drain) ─────────────────────────
+    this.events.on("leech-seed-heal", (amount: number) => {
+      this.player.stats.hp = Math.min(
+        this.player.stats.hp + amount,
+        this.player.stats.maxHp,
+      )
+    })
+    this.events.on("player-heal", (amount: number) => {
+      this.player.stats.hp = Math.min(
+        this.player.stats.hp + amount,
+        this.player.stats.maxHp,
+      )
+    })
 
     // ── Initial state ───────────────────────────────────────────────
     this.gameTime = 0
@@ -382,8 +429,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.player.isDead()) {
-      this.gameOver()
-      return
+      if (!this.tryRevive()) { this.gameOver(); return }
     }
 
     // Enemy movement + attacks
@@ -450,6 +496,57 @@ export class GameScene extends Phaser.Scene {
     })
   }
 
+  private tryRevive(): boolean {
+    if (this.player.stats.revives <= 0) return false
+    this.player.stats.revives--
+    const restoreRatio = this.player.stats.reviveIsMax ? 1 : 0.5
+    this.player.stats.hp = Math.floor(this.player.stats.maxHp * restoreRatio)
+    this.player.setAlpha(1)
+
+    // Brief invincibility (3s)
+    this.player.setInvincible(this.time.now + 3000)
+
+    // Flash visual
+    this.tweens.add({
+      targets: this.player,
+      alpha: { from: 0.3, to: 1 },
+      duration: 200,
+      repeat: 7,
+      yoyo: true,
+    })
+
+    // Shockwave — empurra inimigos
+    const px = this.player.x
+    const py = this.player.y
+    this.enemyGroup.getChildren().forEach((child) => {
+      const enemy = child as Phaser.Physics.Arcade.Sprite
+      if (!enemy.active) return
+      const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y)
+      if (dist < 150) {
+        const angle = Math.atan2(enemy.y - py, enemy.x - px)
+        enemy.setPosition(
+          enemy.x + Math.cos(angle) * 80,
+          enemy.y + Math.sin(angle) * 80,
+        )
+      }
+    })
+
+    // Particles
+    this.add.particles(px, py, 'fire-particle', {
+      speed: { min: 50, max: 120 },
+      lifespan: 500,
+      quantity: 16,
+      scale: { start: 2, end: 0 },
+      tint: [0xffdd44, 0xffaa00, 0xffffff],
+      emitting: false,
+    }).explode()
+
+    // Notification
+    this.events.emit('revive-used', this.player.stats.revives)
+    this.emitStats()
+    return true
+  }
+
   private applyDevConfig(config: DevConfig): void {
     const p = this.player
 
@@ -480,7 +577,9 @@ export class GameScene extends Phaser.Scene {
     // Se nenhum ataque especificado, dá o básico
     if (config.attacks.length === 0) {
       const initialAttack =
-        this.starterKey === "squirtle" ? "waterGun" : "ember"
+        this.starterKey === "squirtle" ? "waterGun"
+        : this.starterKey === "bulbasaur" ? "vineWhip"
+        : "ember"
       this.attackFactory.createAttack(initialAttack)
     }
   }

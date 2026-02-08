@@ -17,7 +17,6 @@ export class SpawnSystem {
   private waitingForBossDeath = false;
   private static readonly BOSS_NEXT_DELAY_MS = 180_000; // 3 min entre bosses
   private static readonly BOSS_ENRAGE_MS = 180_000;     // 3 min para enrage
-  private static readonly BOSS_ENRAGE_SPEED = 1.3;      // +30% speed
 
   constructor(private readonly ctx: GameContext) {}
 
@@ -214,11 +213,40 @@ export class SpawnSystem {
     });
   }
 
-  // ── Boss queue: spawn sequencial ────────────────────────────────
+  // ── Boss queue: spawn sequencial (1 boss por vez) ───────────────
+  private static readonly BOSS_OVERLAP_BUFF = 0.2; // +20% speed/dmg por overlap
+  private bossOverlapStacks = 0;
+
   private spawnNextBoss(): void {
     if (this.bossQueueIndex >= BOSS_SCHEDULE.length) return;
+
+    // Se já tem um boss vivo, bufar em vez de spawnar outro
+    if (this.activeBosses.size > 0) {
+      this.bossOverlapStacks++;
+      const buffMult = 1 + SpawnSystem.BOSS_OVERLAP_BUFF * this.bossOverlapStacks;
+      for (const [boss] of this.activeBosses) {
+        if (!boss.active) continue;
+        boss.applyEnrage(buffMult);
+        boss.applyDamageBuff(buffMult);
+        boss.setTint(0xff8800);
+
+        // Visual: texto de buff
+        const txt = this.ctx.scene.add.text(boss.x, boss.y - 40, `POWER UP! x${this.bossOverlapStacks}`, {
+          fontSize: '14px', color: '#ff8800', fontFamily: 'monospace',
+          stroke: '#000', strokeThickness: 3,
+        }).setOrigin(0.5).setDepth(50);
+        this.ctx.scene.tweens.add({
+          targets: txt, y: txt.y - 30, alpha: 0, duration: 1500,
+          onComplete: () => txt.destroy(),
+        });
+      }
+      // Não avança o index — o boss pendente spawna depois de matar o atual
+      return;
+    }
+
     const spawn = BOSS_SCHEDULE[this.bossQueueIndex];
     this.bossQueueIndex++;
+    this.bossOverlapStacks = 0;
     this.waitingForBossDeath = true;
     this.spawnBossWithConfig(spawn);
   }
@@ -232,7 +260,7 @@ export class SpawnSystem {
       }
     }
 
-    // Se todos os bosses morreram, agendar próximo da fila
+    // Se o boss morreu, agendar próximo da fila após delay
     if (this.waitingForBossDeath && this.activeBosses.size === 0) {
       this.waitingForBossDeath = false;
       if (this.bossQueueIndex < BOSS_SCHEDULE.length) {
@@ -243,24 +271,32 @@ export class SpawnSystem {
       }
     }
 
-    // Enrage: boss vivo há mais de 3 min → +30% speed
+    // Enrage: boss vivo há mais de 3 min → +20% speed e dmg (stackável)
     for (const [boss, spawnTime] of this.activeBosses) {
-      if (this.enragedBosses.has(boss)) continue;
-      if (time - spawnTime > SpawnSystem.BOSS_ENRAGE_MS) {
-        this.enragedBosses.add(boss);
-        boss.applyEnrage(SpawnSystem.BOSS_ENRAGE_SPEED);
-        boss.setTint(0xff4444);
+      const aliveMs = time - spawnTime;
+      const stacks = Math.floor(aliveMs / SpawnSystem.BOSS_ENRAGE_MS);
+      const prevStacks = this.enragedBosses.has(boss)
+        ? (boss.getData('enrageStacks') as number ?? 1)
+        : 0;
+      if (stacks <= prevStacks) continue;
 
-        // Visual: texto de aviso
-        const txt = this.ctx.scene.add.text(boss.x, boss.y - 40, 'ENRAGED!', {
-          fontSize: '14px', color: '#ff4444', fontFamily: 'monospace',
-          stroke: '#000', strokeThickness: 3,
-        }).setOrigin(0.5).setDepth(50);
-        this.ctx.scene.tweens.add({
-          targets: txt, y: txt.y - 30, alpha: 0, duration: 1500,
-          onComplete: () => txt.destroy(),
-        });
-      }
+      this.enragedBosses.add(boss);
+      boss.setData('enrageStacks', stacks);
+      const buffMult = 1 + SpawnSystem.BOSS_OVERLAP_BUFF * stacks;
+      boss.applyEnrage(buffMult);
+      boss.applyDamageBuff(buffMult);
+      boss.setTint(0xff4444);
+
+      // Visual: texto de aviso
+      const label = stacks === 1 ? 'ENRAGED!' : `ENRAGED x${stacks}!`;
+      const txt = this.ctx.scene.add.text(boss.x, boss.y - 40, label, {
+        fontSize: '14px', color: '#ff4444', fontFamily: 'monospace',
+        stroke: '#000', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(50);
+      this.ctx.scene.tweens.add({
+        targets: txt, y: txt.y - 30, alpha: 0, duration: 1500,
+        onComplete: () => txt.destroy(),
+      });
     }
   }
 

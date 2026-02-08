@@ -30,7 +30,7 @@ export class CollisionSystem {
       (_player, enemyObj) => {
         const enemy = enemyObj as Enemy;
         if (enemy.active) {
-          const took = player.takeDamage(enemy.damage, scene.time.now);
+          const took = player.takeDamage(enemy.getContactDamage(), scene.time.now);
           if (took) {
             SoundManager.playPlayerHit();
             if (enemy.contactEffect?.type === 'slow') {
@@ -110,6 +110,7 @@ export class CollisionSystem {
     bullets: Phaser.Physics.Arcade.Group,
     getDamage: () => number,
     hitElement: 'fire' | 'water' = 'fire',
+    onHit?: (x: number, y: number) => void,
   ): void {
     const colliders: Phaser.Physics.Arcade.Collider[] = [];
     const scene = this.ctx.scene;
@@ -125,6 +126,7 @@ export class CollisionSystem {
       body.checkCollision.none = true; body.enable = false;
       SoundManager.playHit();
       this.pickupSystem.playHitEffect(hitX, hitY, hitElement);
+      onHit?.(hitX, hitY);
       setDamageSource(attackType);
       const killed = enemy.takeDamage(getDamage());
       clearDamageSource();

@@ -28,6 +28,7 @@ export class UIScene extends Phaser.Scene {
   private slotsText!: Phaser.GameObjects.Text;
   private killsText!: Phaser.GameObjects.Text;
   private timerText!: Phaser.GameObjects.Text;
+  private reviveText!: Phaser.GameObjects.Text;
   private itemsContainer!: Phaser.GameObjects.Container;
   private attacksContainer!: Phaser.GameObjects.Container;
   private levelUpContainer!: Phaser.GameObjects.Container;
@@ -61,6 +62,9 @@ export class UIScene extends Phaser.Scene {
 
     this.hpBar = this.add.graphics().setDepth(100);
     this.add.text(10, 8, 'HP', { ...this.textStyle, fontSize: '12px' }).setDepth(100);
+    this.reviveText = this.add.text(190, 12, '', {
+      ...this.textStyle, fontSize: '10px', color: '#ffaa00',
+    }).setDepth(100);
     this.xpBar = this.add.graphics().setDepth(100);
 
     this.levelText = this.add.text(10, 30, 'Lv 1', {
@@ -160,6 +164,18 @@ export class UIScene extends Phaser.Scene {
     gameScene.events.on('pokemon-evolved', (data: { fromName: string; toName: string; form: string; newSlots: number }) => {
       this.showEvolutionOverlay(data.fromName, data.toName);
     });
+    gameScene.events.on('revive-used', (remaining: number) => {
+      const cam = this.cameras.main;
+      const msg = this.add.text(cam.width / 2, cam.height / 2 - 60, 'REVIVE!', {
+        fontSize: '28px', color: '#ffaa00', fontFamily: 'monospace', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 5,
+      }).setOrigin(0.5).setDepth(999);
+      const sub = this.add.text(cam.width / 2, cam.height / 2 - 30, `${remaining} restante${remaining !== 1 ? 's' : ''}`, {
+        fontSize: '14px', color: '#ffffff', fontFamily: 'monospace',
+        stroke: '#000000', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(999);
+      this.tweens.add({ targets: [msg, sub], alpha: 0, y: '-=40', duration: 2000, delay: 800, onComplete: () => { msg.destroy(); sub.destroy(); } });
+    });
 
     // ── Boss events ──────────────────────────────────────────────────
     gameScene.events.on('boss-warning', (name: string, archetype?: string) => this.showBossWarning(name, archetype));
@@ -219,12 +235,22 @@ export class UIScene extends Phaser.Scene {
     // Textos
     this.levelText.setText(`Lv ${stats.level}`);
     this.formText.setText(stats.formName ?? stats.form);
-    const nameColor = stats.starterKey === 'squirtle' ? '#44aaff' : '#ff8844';
+    const nameColor = stats.starterKey === 'squirtle' ? '#44aaff'
+      : stats.starterKey === 'bulbasaur' ? '#22cc44'
+      : '#ff8844';
     this.formText.setColor(nameColor);
     const atkCount = stats.attacks?.length ?? 0;
     const itemCount = stats.heldItems?.length ?? 0;
     this.slotsText.setText(`Atk: ${atkCount}/${stats.attackSlots}  Item: ${itemCount}/${stats.passiveSlots}`);
     this.killsText.setText(`Kills: ${stats.kills}`);
+    if (stats.revives > 0) {
+      const label = stats.reviveIsMax ? 'MAX REV' : 'REV';
+      this.reviveText.setText(`${label} x${stats.revives}`);
+      this.reviveText.setColor(stats.reviveIsMax ? '#ff44ff' : '#ffaa00');
+      this.reviveText.setVisible(true);
+    } else {
+      this.reviveText.setVisible(false);
+    }
     const minutes = Math.floor(stats.time / 60);
     const seconds = stats.time % 60;
     this.timerText.setText(`${minutes}:${seconds.toString().padStart(2, '0')}`);
@@ -256,6 +282,11 @@ export class UIScene extends Phaser.Scene {
         focusBand: 'held-focus-band',
         metronome: 'held-metronome',
         magnet: 'held-magnet',
+        mysticWater: 'held-mystic-water',
+        neverMeltIce: 'held-never-melt-ice',
+        miracleSeed: 'held-miracle-seed',
+        blackSludge: 'held-black-sludge',
+        bigRoot: 'held-big-root',
       };
 
       stats.heldItems.forEach((item, i) => {
@@ -370,30 +401,38 @@ export class UIScene extends Phaser.Scene {
       const cx = startX + i * (cardWidth + gap) + cardWidth / 2;
       const cy = height / 2 + 20;
 
-      // Cor de fundo especial para evoluções
-      const isEvolution = option.id.startsWith('evolve');
-      const bgColor = isEvolution ? 0x442200 : 0x222244;
-      const borderWidth = isEvolution ? 3 : 2;
+      // Classificar tipo do upgrade pelo prefixo do ID
+      const tag = option.id.startsWith('evolve') ? { label: 'EVOLUÇÃO', color: '#ff4400', bg: 0x442200, hoverBg: 0x663300, border: 3 }
+        : option.id.startsWith('new')     ? { label: 'HABILIDADE', color: '#44dd66', bg: 0x1a3322, hoverBg: 0x2a4433, border: 2 }
+        : option.id.startsWith('upgrade') ? { label: 'MELHORIA', color: '#44aaff', bg: 0x1a2244, hoverBg: 0x2a3355, border: 2 }
+        : option.id.startsWith('item')    ? { label: 'ITEM', color: '#ffcc00', bg: 0x332b1a, hoverBg: 0x443c2a, border: 2 }
+        :                                   { label: 'PASSIVA', color: '#cc88ff', bg: 0x2a1a33, hoverBg: 0x3b2a44, border: 2 };
 
       const card = this.add.graphics();
-      card.fillStyle(bgColor, 0.95);
+      card.fillStyle(tag.bg, 0.95);
       card.fillRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, 10);
-      card.lineStyle(borderWidth, option.color);
+      card.lineStyle(tag.border, option.color);
       card.strokeRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, 10);
       this.levelUpContainer.add(card);
 
-      // Tag de evolução
-      if (isEvolution) {
-        const evoTag = this.add.text(cx, cy - cardHeight / 2 + 8, 'EVOLUÇÃO', {
-          fontSize: '9px', color: '#ff4400', fontFamily: 'monospace', fontStyle: 'bold',
-        }).setOrigin(0.5);
-        this.levelUpContainer.add(evoTag);
-      }
+      // Tag de categoria
+      const tagBadgeW = tag.label.length * 7 + 10;
+      const tagBadgeH = 16;
+      const tagBadgeX = cx - tagBadgeW / 2;
+      const tagBadgeY = cy - cardHeight / 2 + 4;
+      const badgeGfx = this.add.graphics();
+      badgeGfx.fillStyle(Phaser.Display.Color.HexStringToColor(tag.color).color, 0.2);
+      badgeGfx.fillRoundedRect(tagBadgeX, tagBadgeY, tagBadgeW, tagBadgeH, 3);
+      this.levelUpContainer.add(badgeGfx);
+      const tagText = this.add.text(cx, tagBadgeY + tagBadgeH / 2, tag.label, {
+        fontSize: '8px', color: tag.color, fontFamily: 'monospace', fontStyle: 'bold',
+      }).setOrigin(0.5);
+      this.levelUpContainer.add(tagText);
 
-      const icon = this.add.image(cx, cy - 40, option.icon).setScale(2).setOrigin(0.5);
+      const icon = this.add.image(cx, cy - 35, option.icon).setScale(2).setOrigin(0.5);
       this.levelUpContainer.add(icon);
 
-      const name = this.add.text(cx, cy - 5, option.name, {
+      const name = this.add.text(cx, cy, option.name, {
         fontSize: '14px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
       }).setOrigin(0.5);
       this.levelUpContainer.add(name);
@@ -410,7 +449,7 @@ export class UIScene extends Phaser.Scene {
       hitbox.on('pointerover', () => {
         SoundManager.playHover();
         card.clear();
-        card.fillStyle(isEvolution ? 0x663300 : 0x333366, 0.95);
+        card.fillStyle(tag.hoverBg, 0.95);
         card.fillRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, 10);
         card.lineStyle(3, option.color);
         card.strokeRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, 10);
@@ -418,9 +457,9 @@ export class UIScene extends Phaser.Scene {
 
       hitbox.on('pointerout', () => {
         card.clear();
-        card.fillStyle(bgColor, 0.95);
+        card.fillStyle(tag.bg, 0.95);
         card.fillRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, 10);
-        card.lineStyle(borderWidth, option.color);
+        card.lineStyle(tag.border, option.color);
         card.strokeRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, 10);
       });
 
@@ -691,22 +730,26 @@ export class UIScene extends Phaser.Scene {
     let rewardName: string;
     let rewardColor: string;
 
-    if (roll < 35) {
+    if (roll < 30) {
       rewardType = 'skillUpgrade';
       rewardName = 'SKILL UPGRADE!';
       rewardColor = '#44ff44';
-    } else if (roll < 60) {
+    } else if (roll < 52) {
       rewardType = 'heldItem';
       rewardName = 'HELD ITEM!';
       rewardColor = '#44aaff';
-    } else if (roll < 80) {
+    } else if (roll < 70) {
       rewardType = 'rareCandy';
       rewardName = 'RARE CANDY!';
       rewardColor = '#FFD700';
-    } else if (roll < 95) {
+    } else if (roll < 85) {
       rewardType = 'evolutionStone';
       rewardName = 'EVOLUTION STONE!';
       rewardColor = '#ff8800';
+    } else if (roll < 93) {
+      rewardType = 'revive';
+      rewardName = 'REVIVE!';
+      rewardColor = '#ffaa00';
     } else {
       rewardType = 'maxRevive';
       rewardName = 'MAX REVIVE!';
@@ -995,6 +1038,7 @@ export class UIScene extends Phaser.Scene {
     const elementColors: Record<string, string> = {
       fire: '#ff6600', water: '#4488ff', ice: '#88ddff',
       dragon: '#7744ff', flying: '#aaddff', normal: '#aaaaaa',
+      grass: '#22cc44', poison: '#9944cc',
     };
 
     filtered.slice(0, maxVisible).forEach((atk, i) => {

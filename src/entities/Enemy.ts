@@ -30,12 +30,15 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   lastHealTick = 0;
   private isDead = false;
   private speedMultiplier = 1;
+  private damageMultiplier = 1;
 
   // ── Status effects (passiva do starter) ───────────────────────────
   private burnDps = 0;
   private burnUntil = 0;
   private wetSpeedMult = 1;
   private wetUntil = 0;
+  private poisonDps = 0;
+  private poisonUntil = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: EnemyConfig) {
     super(scene, x, y, config.sprite.key);
@@ -82,9 +85,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   isBurning(time: number): boolean { return time < this.burnUntil; }
 
-  // ── Enrage (boss timer) ──────────────────────────────────────────
+  // ── Enrage (boss timer / overlap buff) ───────────────────────────
   applyEnrage(speedMult: number): void {
     this.speedMultiplier = speedMult;
+  }
+
+  applyDamageBuff(dmgMult: number): void {
+    this.damageMultiplier = dmgMult;
+  }
+
+  getContactDamage(): number {
+    return Math.floor(this.damage * this.damageMultiplier);
   }
 
   // ── Status effects: wet ───────────────────────────────────────────
@@ -94,6 +105,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   isWet(time: number): boolean { return time < this.wetUntil; }
+
+  // ── Status effects: poison ──────────────────────────────────────
+  applyPoison(dps: number, durationMs: number, time: number): void {
+    this.poisonDps = dps;
+    this.poisonUntil = time + durationMs;
+  }
+
+  isPoisoned(time: number): boolean { return time < this.poisonUntil; }
 
   moveToward(target: Phaser.Math.Vector2): void {
     if (!this.active || !this.body || this.isDead) return;
@@ -216,7 +235,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       if (bonusMult > 0) {
         const hasStatus =
           (passive.type === 'blaze' && this.isBurning(now)) ||
-          (passive.type === 'torrent' && this.isWet(now));
+          (passive.type === 'torrent' && this.isWet(now)) ||
+          (passive.type === 'overgrow' && this.isPoisoned(now));
         if (hasStatus) {
           finalAmount = Math.floor(finalAmount * (1 + bonusMult));
         }
@@ -228,6 +248,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
           this.applyBurn(passive.getBurnDps(), passive.getStatusDuration(), now);
         } else if (passive.type === 'torrent') {
           this.applyWet(passive.getWetSpeedMultiplier(), passive.getStatusDuration(), now);
+        } else if (passive.type === 'overgrow') {
+          this.applyPoison(passive.getPoisonDps(), passive.getStatusDuration(), now);
         }
       }
     }
@@ -317,7 +339,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       }
 
       // Death particles (element-aware)
-      const particleKey = passive?.type === 'torrent' ? 'water-particle' : 'fire-particle';
+      const particleKey = passive?.type === 'torrent' ? 'water-particle'
+        : passive?.type === 'overgrow' ? 'poison-particle'
+        : 'fire-particle';
       this.scene.add.particles(this.x, this.y, particleKey, {
         speed: { min: 30, max: 80 },
         lifespan: 300,
@@ -362,6 +386,21 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       if (Math.floor(time / 400) % 3 !== 0) this.setTint(0x3388ff);
     } else if (this.wetUntil > 0 && time >= this.wetUntil) {
       this.wetUntil = 0;
+    }
+
+    // ── Poison DoT (Overgrow passive) ──────────────────────────────
+    if (this.isPoisoned(time)) {
+      this.hp -= this.poisonDps * (delta / 1000);
+      // Visual: green-purple pulse
+      if (Math.floor(time / 300) % 2 === 0) this.setTint(0x9944cc);
+
+      if (this.hp <= 0 && this.active) {
+        this.scene.events.emit('cone-attack-kill', this.x, this.y, this.xpValue);
+        this.die();
+        return;
+      }
+    } else if (this.poisonUntil > 0 && time >= this.poisonUntil) {
+      this.poisonUntil = 0;
     }
 
     // HP bar — show when damaged, hide when full HP (prevents ghost bars from heal aura)

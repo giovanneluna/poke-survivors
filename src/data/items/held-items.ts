@@ -15,4 +15,8 @@ export const HELD_ITEMS: Readonly<Record<string, HeldItemConfig>> = {
   magnet:      { key: 'magnet',      name: 'Magnet',        description: '+20% alcance de coleta de XP',   icon: 'item-magnet',       color: 0xaa44ff, effect: 'magnetRange', maxLevel: 5 },
   mysticWater: { key: 'mysticWater', name: 'Mystic Water',  description: '+10% dano de água por nível',    icon: 'item-mystic-water', color: 0x3388ff, effect: 'waterDmg',   maxLevel: 5 },
   neverMeltIce: { key: 'neverMeltIce', name: 'Never-Melt Ice', description: '+10% dano de gelo por nível', icon: 'item-never-melt-ice', color: 0x88ddff, effect: 'iceDmg',  maxLevel: 5 },
+  miracleSeed: { key: 'miracleSeed', name: 'Miracle Seed', description: '+10% dano grass por nível', icon: 'item-miracle-seed', color: 0x22cc44, effect: 'grassDmg',  maxLevel: 5 },
+  blackSludge: { key: 'blackSludge', name: 'Black Sludge', description: '+10% dano poison por nível', icon: 'item-black-sludge', color: 0x9944cc, effect: 'poisonDmg', maxLevel: 5 },
+  bigRoot:     { key: 'bigRoot',     name: 'Big Root',     description: '+25% lifesteal por nível',    icon: 'item-big-root',     color: 0x886644, effect: 'lifesteal',  maxLevel: 5 },
+  revive:      { key: 'revive',     name: 'Revive',       description: 'Revive ao morrer (50% HP)',   icon: 'item-revive',       color: 0xffaa00, effect: 'revive',     maxLevel: 2 },
 } as const;
