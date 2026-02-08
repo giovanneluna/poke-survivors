@@ -250,6 +250,7 @@ export interface TorrentConfig {
   readonly wetDuration: number;
   readonly bonusDmgOnWet: number;
   readonly splashOnKill: boolean;
+  readonly auraRadius: number;
 }
 
 // ── Status Effects ─────────────────────────────────────────────────

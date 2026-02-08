@@ -326,7 +326,8 @@ export class UpgradeSystem {
   }
 
   // ── Gacha reward application ──────────────────────────────────────
-  applyGachaReward(rewardType: string): void {
+  /** Returns true if the reward triggered a level-up (rareCandy), false otherwise. */
+  applyGachaReward(rewardType: string): boolean {
     const player = this.ctx.player;
 
     switch (rewardType) {
@@ -352,7 +353,7 @@ export class UpgradeSystem {
         this.pickupSystem.showPickupNotification('RARE CANDY! +1 Level!', 0xFFD700);
         player.addXp(player.stats.xpToNext);
         this.triggerLevelUp();
-        return; // triggerLevelUp handles emitStats
+        return true; // triggerLevelUp handles pause + emitStats
       }
       case 'evolutionStone': {
         this.pickupSystem.showPickupNotification('EVOLUTION STONE!', 0xff8800);
@@ -371,6 +372,7 @@ export class UpgradeSystem {
         break;
     }
     this.emitStats();
+    return false;
   }
 
   // ── Reroll handling ───────────────────────────────────────────────

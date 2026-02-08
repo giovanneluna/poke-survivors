@@ -8,7 +8,7 @@ export const SQUIRTLE_FORMS: readonly PokemonFormConfig[] = [
 ] as const;
 
 export const TORRENT_TIERS: Readonly<Record<1 | 2 | 3, TorrentConfig>> = {
-  1: { wetChance: 0.05, slowMultiplier: 0.20, wetDuration: 3000, bonusDmgOnWet: 0,    splashOnKill: false },
-  2: { wetChance: 0.10, slowMultiplier: 0.30, wetDuration: 3000, bonusDmgOnWet: 0.15, splashOnKill: false },
-  3: { wetChance: 0.15, slowMultiplier: 0.40, wetDuration: 4000, bonusDmgOnWet: 0.25, splashOnKill: true },
+  1: { wetChance: 0.05, slowMultiplier: 0.20, wetDuration: 3000, bonusDmgOnWet: 0,    splashOnKill: false, auraRadius: 60 },
+  2: { wetChance: 0.10, slowMultiplier: 0.30, wetDuration: 3000, bonusDmgOnWet: 0.15, splashOnKill: false, auraRadius: 80 },
+  3: { wetChance: 0.15, slowMultiplier: 0.40, wetDuration: 4000, bonusDmgOnWet: 0.25, splashOnKill: true,  auraRadius: 100 },
 } as const;

@@ -59,9 +59,12 @@ import type { PickupSystem } from './PickupSystem';
 
 type CollisionPattern = 'none' | 'projectile' | 'orbital' | 'inferno';
 
+type HitElement = 'fire' | 'water';
+
 interface AttackEntry {
   create(ctx: GameContext): Attack;
   collision: CollisionPattern;
+  hitElement?: HitElement;
   getGroup?: (attack: Attack) => Phaser.Physics.Arcade.Group;
   getDamage?: (attack: Attack) => () => number;
   getExplodeAt?: (attack: Attack) => (x: number, y: number) => void;
@@ -126,24 +129,28 @@ const REGISTRY: Partial<Record<AttackType, AttackEntry>> = {
   waterGun: {
     create: (ctx) => new WaterGun(ctx.scene, ctx.player, ctx.enemyGroup),
     collision: 'projectile',
+    hitElement: 'water',
     getGroup: (a) => (a as WaterGun).getBullets(),
     getDamage: (a) => () => (a as WaterGun).getDamage(),
   },
   waterPulse: {
     create: (ctx) => new WaterPulse(ctx.scene, ctx.player, ctx.enemyGroup),
     collision: 'projectile',
+    hitElement: 'water',
     getGroup: (a) => (a as WaterPulse).getBullets(),
     getDamage: (a) => () => (a as WaterPulse).getDamage(),
   },
   iceBeam: {
     create: (ctx) => new IceBeam(ctx.scene, ctx.player, ctx.enemyGroup),
     collision: 'projectile',
+    hitElement: 'water',
     getGroup: (a) => (a as IceBeam).getBullets(),
     getDamage: (a) => () => (a as IceBeam).getDamage(),
   },
   flashCannon: {
     create: (ctx) => new FlashCannon(ctx.scene, ctx.player, ctx.enemyGroup),
     collision: 'projectile',
+    hitElement: 'water',
     getGroup: (a) => (a as FlashCannon).getBullets(),
     getDamage: (a) => () => (a as FlashCannon).getDamage(),
   },
@@ -157,6 +164,7 @@ const REGISTRY: Partial<Record<AttackType, AttackEntry>> = {
   rapidSpin: {
     create: (ctx) => new RapidSpin(ctx.scene, ctx.player),
     collision: 'orbital',
+    hitElement: 'water',
     getGroup: (a) => (a as RapidSpin).getOrbs(),
     getDamage: (a) => () => (a as RapidSpin).getDamage(),
     orbitalCooldownMs: 400,
@@ -165,6 +173,7 @@ const REGISTRY: Partial<Record<AttackType, AttackEntry>> = {
   gyroBall: {
     create: (ctx) => new GyroBall(ctx.scene, ctx.player, ctx.enemyGroup),
     collision: 'orbital',
+    hitElement: 'water',
     getGroup: (a) => (a as GyroBall).getOrbs(),
     getDamage: (a) => () => (a as GyroBall).getDamage(),
     orbitalCooldownMs: 300,
@@ -253,15 +262,17 @@ export class AttackFactory {
 
     const group = entry.getGroup(attack);
     const getDamage = entry.getDamage(attack);
+    const hitElement = entry.hitElement ?? 'fire';
 
     switch (entry.collision) {
       case 'projectile':
-        this.collisionSystem.setupProjectileCollisions(type, group, getDamage);
+        this.collisionSystem.setupProjectileCollisions(type, group, getDamage, hitElement);
         break;
       case 'orbital':
         this.collisionSystem.setupOrbitalCollisions(
           type, group, getDamage,
           entry.orbitalCooldownMs, entry.orbitalDestDamage,
+          hitElement,
         );
         break;
       case 'inferno': {

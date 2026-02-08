@@ -25,12 +25,24 @@ export class PickupSystem {
     }
   }
 
-  // ── Fire Hit Effect ───────────────────────────────────────────────
+  // ── Hit Effects ──────────────────────────────────────────────────
   playFireHit(x: number, y: number): void {
     const hit = this.ctx.scene.add.sprite(x, y, 'atk-fire-hit');
     hit.setScale(1.5).setDepth(10);
     hit.play('anim-fire-hit');
     hit.once('animationcomplete', () => hit.destroy());
+  }
+
+  playWaterHit(x: number, y: number): void {
+    const hit = this.ctx.scene.add.sprite(x, y, 'atk-water-hit');
+    hit.setScale(2).setDepth(10);
+    hit.play('anim-water-hit');
+    hit.once('animationcomplete', () => hit.destroy());
+  }
+
+  playHitEffect(x: number, y: number, element: 'fire' | 'water'): void {
+    if (element === 'water') this.playWaterHit(x, y);
+    else this.playFireHit(x, y);
   }
 
   // ── Destructible drops ────────────────────────────────────────────

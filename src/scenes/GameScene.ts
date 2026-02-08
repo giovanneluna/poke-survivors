@@ -147,8 +147,8 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.events.on('gacha-reward', (rewardType: string) => {
-      this.upgradeSystem.applyGachaReward(rewardType);
-      if (!this.isPaused) {
+      const triggeredLevelUp = this.upgradeSystem.applyGachaReward(rewardType);
+      if (!triggeredLevelUp) {
         this.upgradeSystem.resumeGame();
       }
     });
@@ -310,6 +310,22 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
+    // Torrent aura: destroy enemy projectiles within radius
+    const ps = getPassive();
+    const auraRadius = ps?.getAuraRadius() ?? 0;
+    if (auraRadius > 0) {
+      this.enemyProjectiles.getChildren().forEach(child => {
+        const proj = child as Phaser.Physics.Arcade.Sprite;
+        if (!proj.active) return;
+        const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, proj.x, proj.y);
+        if (d < auraRadius) {
+          this.enemyProjectiles.killAndHide(proj);
+          (proj.body as Phaser.Physics.Arcade.Body).enable = false;
+          this.pickupSystem.playHitEffect(proj.x, proj.y, 'water');
+        }
+      });
+    }
+
     if (Math.floor(time / 500) !== Math.floor((time - delta) / 500)) this.emitStats();
   }
 
@@ -390,8 +406,11 @@ export class GameScene extends Phaser.Scene {
   getSpawnSystem(): SpawnSystem { return this.spawnSystem; }
 
   private emitStats(): void {
+    const currentForm = this.starterConfig.forms.find(f => f.form === this.player.stats.form);
     this.events.emit('stats-update', {
       ...this.player.stats,
+      starterKey: this.starterKey,
+      formName: currentForm?.name ?? this.starterConfig.name,
       time: Math.floor(this.gameTime / 1000),
       heldItems: this.player.getHeldItems(),
       attacks: this.player.getAllAttacks().map(a => ({ type: a.type, level: a.level })),

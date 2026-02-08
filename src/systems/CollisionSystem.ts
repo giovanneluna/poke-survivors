@@ -103,11 +103,12 @@ export class CollisionSystem {
     );
   }
 
-  // ── Projectile attack collisions (Ember, Inferno) ─────────────────
+  // ── Projectile attack collisions (Ember, Water Gun, etc.) ─────────
   setupProjectileCollisions(
     attackType: string,
     bullets: Phaser.Physics.Arcade.Group,
     getDamage: () => number,
+    hitElement: 'fire' | 'water' = 'fire',
   ): void {
     const colliders: Phaser.Physics.Arcade.Collider[] = [];
     const scene = this.ctx.scene;
@@ -122,7 +123,7 @@ export class CollisionSystem {
       const body = bullet.body as Phaser.Physics.Arcade.Body;
       body.checkCollision.none = true; body.enable = false;
       SoundManager.playHit();
-      this.pickupSystem.playFireHit(hitX, hitY);
+      this.pickupSystem.playHitEffect(hitX, hitY, hitElement);
       const killed = enemy.takeDamage(getDamage());
       if (killed) { SoundManager.playEnemyDeath(); this.onEnemyKilled(enemy); }
     }));
@@ -142,13 +143,14 @@ export class CollisionSystem {
     this.attackColliders.set(attackType, colliders);
   }
 
-  // ── Orbital attack collisions (FireSpin, FireBlast) ───────────────
+  // ── Orbital attack collisions (FireSpin, RapidSpin, etc.) ─────────
   setupOrbitalCollisions(
     attackType: string,
     orbs: Phaser.Physics.Arcade.Group,
     getDamage: () => number,
     hitCooldownMs: number = 400,
     destDamage: number = 1,
+    hitElement: 'fire' | 'water' = 'fire',
   ): void {
     const colliders: Phaser.Physics.Arcade.Collider[] = [];
     const scene = this.ctx.scene;
@@ -162,7 +164,7 @@ export class CollisionSystem {
       const lastHit = hitCooldowns.get(enemyId) ?? 0;
       if (scene.time.now - lastHit < hitCooldownMs) return;
       hitCooldowns.set(enemyId, scene.time.now);
-      this.pickupSystem.playFireHit(enemy.x, enemy.y);
+      this.pickupSystem.playHitEffect(enemy.x, enemy.y, hitElement);
       const killed = enemy.takeDamage(getDamage());
       if (killed) { this.onEnemyKilled(enemy); hitCooldowns.delete(enemyId); }
     }));
@@ -181,7 +183,7 @@ export class CollisionSystem {
       if (!proj.active) return;
       this.ctx.enemyProjectiles.killAndHide(proj);
       (proj.body as Phaser.Physics.Arcade.Body).enable = false;
-      this.pickupSystem.playFireHit(proj.x, proj.y);
+      this.pickupSystem.playHitEffect(proj.x, proj.y, hitElement);
     }));
 
     this.attackColliders.set(attackType, colliders);

@@ -6,7 +6,7 @@ export const ARBOK: BossConfig = {
   name: 'Arbok',
   sprite: SPRITES.arbok,
   hp: 800,
-  speed: 45,
+  speed: 54,
   damage: 25,
   xpValue: 80,
   scale: 1.5,

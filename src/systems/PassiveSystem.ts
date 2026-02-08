@@ -79,6 +79,11 @@ export class PassiveSystem {
     return 0;
   }
 
+  /** Torrent aura radius for projectile destruction (0 if not torrent). */
+  getAuraRadius(): number {
+    return this.type === 'torrent' ? TORRENT_TIERS[this.tier].auraRadius : 0;
+  }
+
   /** Whether the tier 3 on-kill effect is active. */
   hasOnKillEffect(): boolean {
     if (this.type === 'blaze') return BLAZE_TIERS[this.tier].explodeOnKill;

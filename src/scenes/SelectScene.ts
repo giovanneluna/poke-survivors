@@ -133,20 +133,24 @@ export class SelectScene extends Phaser.Scene {
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5));
 
-    // ── Card: Fase 1 — Fire Red ──────────────────────────────────────
-    const card1X = width / 2 - 130;
+    // Dev mode: só aparece em localhost
+    const host = window.location.hostname;
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+
     const cardY = height / 2 + 10;
+    const card1X = isLocal ? width / 2 - 130 : width / 2;
     this.createPhaseCard(card1X, cardY, 'FASE 1', 'FIRE RED', 0xff4400, 0xff6622,
       'Jogo completo com\ninimigos, bosses\ne evoluções.', () => {
         this.startGame(false);
       });
 
-    // ── Card: Fase Dev — Debugger ────────────────────────────────────
-    const card2X = width / 2 + 130;
-    this.createPhaseCard(card2X, cardY, 'FASE DEV', 'DEBUGGER', 0x44aaff, 0x66ccff,
-      'Cenários de teste\npré-configurados\npara debugging.', () => {
-        this.showPasswordPrompt();
-      });
+    if (isLocal) {
+      const card2X = width / 2 + 130;
+      this.createPhaseCard(card2X, cardY, 'FASE DEV', 'DEBUGGER', 0x44aaff, 0x66ccff,
+        'Cenários de teste\npré-configurados\npara debugging.', () => {
+          this.showPasswordPrompt();
+        });
+    }
 
     // Botão cancelar
     const cancelBtn = this.add.text(width / 2, height / 2 + 145, 'Cancelar', {

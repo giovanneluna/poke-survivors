@@ -16,6 +16,6 @@ export const HAUNTER: EnemyConfig = {
     speed: 180,
     cooldownMs: 4000,
     range: 350,
-    homing: true,
+    homing: false,
   },
 };

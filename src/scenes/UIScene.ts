@@ -7,6 +7,8 @@ import { GameScene } from './GameScene';
 
 interface StatsData extends PlayerState {
   time: number;
+  starterKey: string;
+  formName: string;
   heldItems: HeldItemType[];
   attacks: Array<{ type: AttackType; level: number }>;
 }
@@ -159,8 +161,9 @@ export class UIScene extends Phaser.Scene {
 
     // Textos
     this.levelText.setText(`Lv ${stats.level}`);
-    const formNames: Record<string, string> = { base: 'Charmander', stage1: 'Charmeleon', stage2: 'Charizard' };
-    this.formText.setText(formNames[stats.form] ?? 'Charmander');
+    this.formText.setText(stats.formName ?? stats.form);
+    const nameColor = stats.starterKey === 'squirtle' ? '#44aaff' : '#ff8844';
+    this.formText.setColor(nameColor);
     const atkCount = stats.attacks?.length ?? 0;
     const itemCount = stats.heldItems?.length ?? 0;
     this.slotsText.setText(`Atk: ${atkCount}/${stats.attackSlots}  Item: ${itemCount}/${stats.passiveSlots}`);
