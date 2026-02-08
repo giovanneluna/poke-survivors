@@ -11,11 +11,24 @@ export const RATICATE: BossConfig = {
   xpValue: 160,
   scale: 1.9,
   isBoss: true,
-  bossAttack: {
+  resistance: 0,
+  hpRegenPerSec: 0,
+  archetype: 'skirmisher',
+  bossAttacks: [{
     name: "Hyper Fang",
     pattern: "charge",
     damage: 70,
     cooldownMs: 3500,
     range: 450,
-  },
+  }, {
+    name: 'Quick Attack',
+    pattern: 'charge',
+    damage: 30,
+    cooldownMs: 2000,
+    range: 250,
+    spriteKey: 'atk-slash',
+    animKey: 'anim-slash',
+    spriteScale: 1.5,
+    tintColor: 0xffffff,
+  }],
 }

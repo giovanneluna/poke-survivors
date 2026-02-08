@@ -64,7 +64,7 @@ export type EnemyType =
   | 'butterfree' | 'parasect' | 'venomoth' | 'hypno' | 'marowak'
   | 'graveler' | 'machoke'
   // Phase 4 — Elites avançados
-  | 'alakazam' | 'electrode' | 'crobat'
+  | 'alakazam' | 'alakazam-boss' | 'electrode' | 'crobat'
   // Bosses
   | 'beedrill' | 'vileplume' | 'primeape' | 'gengar'
   | 'fearow' | 'pidgeot' | 'machamp' | 'golem';
@@ -185,9 +185,13 @@ export interface EnemyRangedConfig {
 }
 
 // ── Boss Config ─────────────────────────────────────────────────────
+export type BossAttackPattern =
+  | 'charge' | 'fan' | 'aoe-tremor' | 'aoe-land' | 'teleport-fan'
+  | 'directional' | 'beam' | 'buff' | 'zone' | 'traveling';
+
 export interface BossAttackConfig {
   readonly name: string;
-  readonly pattern: 'charge' | 'fan' | 'aoe-tremor' | 'aoe-land' | 'teleport-fan';
+  readonly pattern: BossAttackPattern;
   readonly damage: number;
   readonly cooldownMs: number;
   readonly range?: number;
@@ -204,11 +208,36 @@ export interface BossAttackConfig {
   readonly tintColor?: number;
   /** Tint color do círculo AoE */
   readonly aoeColor?: number;
+  // ── Directional pattern ──
+  /** Sprite keys para 4 direções [up, down, left, right] */
+  readonly directionalSprites?: readonly [string, string, string, string];
+  readonly directionalAnims?: readonly [string, string, string, string];
+  // ── Beam pattern ──
+  readonly beamDuration?: number;
+  readonly beamWidth?: number;
+  // ── Buff pattern ──
+  readonly buffType?: 'heal' | 'resist' | 'damage' | 'speed';
+  readonly buffValue?: number;
+  readonly buffDuration?: number;
+  // ── Zone pattern ──
+  readonly zoneDuration?: number;
+  readonly zoneTickRate?: number;
+  readonly zoneEffect?: 'damage' | 'slow' | 'pull';
+  readonly zoneEffectValue?: number;
+  // ── Traveling pattern ──
+  readonly projectileSpeed?: number;
+  readonly explodeOnEnd?: boolean;
+  readonly explodeRadius?: number;
 }
+
+export type BossArchetype = 'tank' | 'striker' | 'caster' | 'skirmisher';
 
 export interface BossConfig extends EnemyConfig {
   readonly isBoss: true;
-  readonly bossAttack: BossAttackConfig;
+  readonly bossAttacks: readonly BossAttackConfig[];
+  readonly resistance: number;
+  readonly hpRegenPerSec: number;
+  readonly archetype: BossArchetype;
 }
 
 // ── Phase Config ────────────────────────────────────────────────────

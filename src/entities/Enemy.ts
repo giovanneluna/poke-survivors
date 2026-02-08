@@ -160,6 +160,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.hp < this.maxHp) this.drawHpBar();
   }
 
+  /** Override in Boss to return resistance value (0-0.5) */
+  getResistance(): number { return 0; }
+
   tryTeleport(playerX: number, playerY: number, time: number): boolean {
     if (!this.teleportConfig || !this.active) return false;
     if (time - this.lastTeleportTime < this.teleportConfig.cooldownMs) return false;
@@ -201,8 +204,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     let finalAmount = amount;
     const now = this.scene.time.now;
 
+    // ── Resistance: reduce raw damage (status effects bypass) ─────
+    const resist = this.getResistance();
+    if (resist > 0) {
+      finalAmount = Math.max(1, Math.floor(finalAmount * (1 - resist)));
+    }
+
     if (passive && passive.type !== 'none') {
-      // Bonus damage on status-affected enemies
+      // Bonus damage on status-affected enemies (bypasses resistance)
       const bonusMult = passive.getBonusDamage();
       if (bonusMult > 0) {
         const hasStatus =

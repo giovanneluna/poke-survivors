@@ -769,7 +769,7 @@ export class ShowcaseScene extends Phaser.Scene {
         .setOrigin(0, 0.5)
 
       // Ataque especial info
-      const atkInfo = `${boss.bossAttack.name} (${boss.bossAttack.pattern}) — DMG:${boss.bossAttack.damage}`
+      const atkInfo = boss.bossAttacks.map(a => `${a.name}(${a.pattern})`).join(', ');
       this.add
         .text(LABEL_X + 70, y + 26, atkInfo, {
           fontSize: "8px",
@@ -780,7 +780,7 @@ export class ShowcaseScene extends Phaser.Scene {
 
       // Boss attack sprite demo
       // Usa spriteKey/animKey do boss config se disponível, senão fallback do mapeamento por pattern
-      const bossAtk = boss.bossAttack;
+      const bossAtk = boss.bossAttacks[0];
       const atkMapping = bossAtk.spriteKey && bossAtk.animKey
         ? { atkKey: bossAtk.spriteKey, animKey: bossAtk.animKey, scale: bossAtk.spriteScale ?? 2 }
         : bossAttackSprites[bossAtk.pattern]

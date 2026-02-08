@@ -84,5 +84,7 @@ export const PHASE4: PhaseConfig = {
     { type: 'gengar',   timeSeconds: 2344, hpMultiplier: 2, dmgMultiplier: 1.5 },
     { type: 'snorlax',  timeSeconds: 2346, hpMultiplier: 2, dmgMultiplier: 1.5 },
     { type: 'golem',    timeSeconds: 2348, hpMultiplier: 2, dmgMultiplier: 1.5 },
+    // ── BOSS FINAL: Alakazam — Caster Supremo ──
+    { type: 'alakazam-boss', timeSeconds: 2400 },
   ],
 };

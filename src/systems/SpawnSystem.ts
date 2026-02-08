@@ -283,10 +283,10 @@ export class SpawnSystem {
     const scaledConfig: BossConfig = {
       ...baseConfig,
       hp: Math.floor(baseConfig.hp * hpMult),
-      bossAttack: {
-        ...baseConfig.bossAttack,
-        damage: Math.floor(baseConfig.bossAttack.damage * dmgMult),
-      },
+      bossAttacks: baseConfig.bossAttacks.map(atk => ({
+        ...atk,
+        damage: Math.floor(atk.damage * dmgMult),
+      })),
     };
 
     const label = hpMult > 1 ? `${baseConfig.name} (Enhanced)` : baseConfig.name;
@@ -690,6 +690,317 @@ export class SpawnSystem {
               });
             }
           });
+        });
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // 5 NEW ATTACK PATTERNS
+      // ═══════════════════════════════════════════════════════════════
+
+      case 'directional': {
+        // Sprite direcional: escolhe 1 de 4 sprites baseado na direção ao player
+        const angle = Phaser.Math.Angle.Between(boss.x, boss.y, playerX, playerY);
+        const deg = Phaser.Math.RadToDeg(angle);
+        // Map angle to 4 directions: 0=up, 1=down, 2=left, 3=right
+        let dirIdx: number;
+        if (deg >= -135 && deg < -45) dirIdx = 0;       // up
+        else if (deg >= 45 && deg < 135) dirIdx = 1;    // down
+        else if (Math.abs(deg) >= 135) dirIdx = 2;      // left
+        else dirIdx = 3;                                  // right
+
+        const sprites = attack.directionalSprites;
+        const anims = attack.directionalAnims;
+        const spriteKey = sprites ? sprites[dirIdx] : (attack.spriteKey ?? 'atk-slash');
+        const animKey = anims ? anims[dirIdx] : (attack.animKey ?? 'anim-slash');
+        const scale = attack.spriteScale ?? 1.5;
+        const radius = attack.aoeRadius ?? 100;
+
+        boss.setTint(attack.tintColor ?? 0x88ccff);
+
+        // Posiciona sprite na frente do boss em direção ao player
+        const offsetDist = 40;
+        const sx = boss.x + Math.cos(angle) * offsetDist;
+        const sy = boss.y + Math.sin(angle) * offsetDist;
+        const dirSprite = scene.add.sprite(sx, sy, spriteKey).setScale(scale).setDepth(12);
+        if (scene.anims.exists(animKey)) dirSprite.play(animKey);
+
+        // Segue o boss durante a animação
+        const followDir = scene.time.addEvent({
+          delay: 16, loop: true,
+          callback: () => {
+            if (boss.active && dirSprite.active) {
+              dirSprite.setPosition(boss.x + Math.cos(angle) * offsetDist, boss.y + Math.sin(angle) * offsetDist);
+            }
+          },
+        });
+
+        // Dano em cone na frente do boss
+        const dist = Phaser.Math.Distance.Between(boss.x, boss.y, playerX, playerY);
+        if (dist < radius) {
+          player.takeDamage(attack.damage, scene.time.now);
+          scene.events.emit('stats-refresh');
+          if (player.isDead()) scene.events.emit('player-died');
+        }
+
+        const dirDuration = 600;
+        dirSprite.once('animationcomplete', () => {
+          followDir.destroy();
+          if (dirSprite.active) dirSprite.destroy();
+          if (boss.active) boss.clearTint();
+        });
+        scene.time.delayedCall(dirDuration, () => {
+          followDir.destroy();
+          if (dirSprite.active) dirSprite.destroy();
+          if (boss.active) boss.clearTint();
+        });
+        break;
+      }
+
+      case 'beam': {
+        // Raio na direção do player — dano em linha, boss para durante duração
+        const angle = Phaser.Math.Angle.Between(boss.x, boss.y, playerX, playerY);
+        const beamLen = attack.range ?? 200;
+        const beamW = attack.beamWidth ?? 24;
+        const duration = attack.beamDuration ?? 1500;
+
+        boss.setTint(attack.tintColor ?? 0xffff44);
+        boss.setVelocity(0, 0); // Boss fica parado durante o beam
+
+        // Visual: sprite ou linha procedural
+        const spriteKey = attack.spriteKey;
+        const animKey = attack.animKey;
+        const cx = boss.x + Math.cos(angle) * beamLen * 0.5;
+        const cy = boss.y + Math.sin(angle) * beamLen * 0.5;
+
+        let beamObj: Phaser.GameObjects.Sprite | Phaser.GameObjects.Graphics;
+        if (spriteKey && scene.textures.exists(spriteKey)) {
+          const spr = scene.add.sprite(cx, cy, spriteKey).setScale(attack.spriteScale ?? 1).setDepth(12).setAlpha(0.9);
+          spr.setRotation(angle - Math.PI / 2);
+          if (animKey && scene.anims.exists(animKey)) spr.play(animKey);
+          beamObj = spr;
+        } else {
+          // Beam procedural (linha branca brilhante)
+          const gfx = scene.add.graphics().setDepth(12);
+          const endX = boss.x + Math.cos(angle) * beamLen;
+          const endY = boss.y + Math.sin(angle) * beamLen;
+          gfx.lineStyle(beamW, attack.aoeColor ?? 0xffffff, 0.7);
+          gfx.beginPath();
+          gfx.moveTo(boss.x, boss.y);
+          gfx.lineTo(endX, endY);
+          gfx.strokePath();
+          beamObj = gfx as unknown as Phaser.GameObjects.Graphics;
+        }
+
+        // Flash de aviso
+        scene.tweens.add({ targets: beamObj, alpha: { from: 0.3, to: 0.95 }, duration: 150 });
+
+        // Dano tick durante o beam
+        const beamDmgTimer = scene.time.addEvent({
+          delay: 300, loop: true,
+          callback: () => {
+            if (!boss.active) return;
+            const startX = boss.x;
+            const startY = boss.y;
+            const endX = boss.x + Math.cos(angle) * beamLen;
+            const endY = boss.y + Math.sin(angle) * beamLen;
+            const dx = endX - startX;
+            const dy = endY - startY;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len <= 0) return;
+
+            const perpDist = Math.abs((dy * (playerX - startX) - dx * (playerY - startY)) / len);
+            const projT = ((playerX - startX) * dx + (playerY - startY) * dy) / (len * len);
+
+            if (perpDist <= beamW && projT >= -0.05 && projT <= 1.05) {
+              player.takeDamage(Math.floor(attack.damage * 0.3), scene.time.now);
+              scene.events.emit('stats-refresh');
+              if (player.isDead()) scene.events.emit('player-died');
+            }
+          },
+        });
+
+        scene.time.delayedCall(duration, () => {
+          beamDmgTimer.destroy();
+          if (beamObj.active) {
+            scene.tweens.add({
+              targets: beamObj, alpha: 0, duration: 200,
+              onComplete: () => beamObj.destroy(),
+            });
+          }
+          if (boss.active) boss.clearTint();
+        });
+        break;
+      }
+
+      case 'buff': {
+        // Aura visual + stats temporários no boss
+        const buffType = attack.buffType ?? 'damage';
+        const buffDuration = attack.buffDuration ?? 5000;
+        const buffValue = attack.buffValue ?? 0.3;
+
+        boss.setTint(attack.tintColor ?? 0xffdd44);
+
+        // Visual: partículas de aura
+        const auraColor = attack.aoeColor ?? 0xffdd44;
+        const aura = scene.add.circle(boss.x, boss.y, 30, auraColor, 0.3).setDepth(3);
+        scene.tweens.add({
+          targets: aura, scale: { from: 1, to: 2 }, alpha: { from: 0.4, to: 0.1 },
+          duration: 800, yoyo: true, repeat: Math.floor(buffDuration / 1600),
+          onUpdate: () => { if (boss.active) aura.setPosition(boss.x, boss.y); },
+          onComplete: () => aura.destroy(),
+        });
+
+        if (buffType === 'heal') {
+          // Cura: heal instantâneo
+          const healAmount = Math.floor((boss as Boss).hpRegenPerSec > 0
+            ? (attack.buffValue ?? 0.2) * boss.getMaxHp()
+            : (attack.buffValue ?? 0.2) * boss.getMaxHp());
+          boss.heal(healAmount);
+
+          // Visual: texto de cura
+          const healTxt = scene.add.text(boss.x, boss.y - 30, `+${healAmount}`, {
+            fontSize: '14px', color: '#44ff44', fontFamily: 'monospace',
+            stroke: '#000', strokeThickness: 3,
+          }).setOrigin(0.5).setDepth(50);
+          scene.tweens.add({
+            targets: healTxt, y: healTxt.y - 40, alpha: 0, duration: 1200,
+            onComplete: () => healTxt.destroy(),
+          });
+
+          // Boss parado durante cast
+          boss.setVelocity(0, 0);
+          scene.time.delayedCall(2000, () => { if (boss.active) boss.clearTint(); });
+        } else {
+          // Stats buff via enrage-like mechanism
+          if (buffType === 'speed') {
+            boss.applyEnrage(1 + buffValue);
+          }
+          // Damage/resist buffs usam tint como indicador visual
+          scene.time.delayedCall(buffDuration, () => {
+            if (boss.active) {
+              boss.clearTint();
+              if (buffType === 'speed') boss.applyEnrage(1 / (1 + buffValue));
+            }
+          });
+        }
+        break;
+      }
+
+      case 'zone': {
+        // Círculo persistente no chão com tick damage ou debuff
+        const radius = attack.aoeRadius ?? 100;
+        const duration = attack.zoneDuration ?? 3000;
+        const tickRate = attack.zoneTickRate ?? 500;
+        const effect = attack.zoneEffect ?? 'damage';
+        const effectValue = attack.zoneEffectValue ?? 0;
+
+        // Posição: no player atual (para forçar ele a se mover)
+        const zoneX = playerX;
+        const zoneY = playerY;
+
+        // Visual: círculo pulsante
+        const zoneColor = attack.aoeColor ?? 0x9944ff;
+        const zone = scene.add.circle(zoneX, zoneY, radius, zoneColor, 0.2).setDepth(3);
+        scene.tweens.add({
+          targets: zone, alpha: { from: 0.15, to: 0.35 },
+          duration: 400, yoyo: true, repeat: -1,
+        });
+
+        // Borda do círculo
+        const border = scene.add.circle(zoneX, zoneY, radius).setDepth(3);
+        border.setStrokeStyle(2, zoneColor, 0.5);
+
+        // Tick damage/effect
+        const zoneTick = scene.time.addEvent({
+          delay: tickRate, loop: true,
+          callback: () => {
+            const dist = Phaser.Math.Distance.Between(zoneX, zoneY, player.x, player.y);
+            if (dist > radius) return;
+
+            if (effect === 'damage' && attack.damage > 0) {
+              player.takeDamage(attack.damage, scene.time.now);
+              scene.events.emit('stats-refresh');
+              if (player.isDead()) scene.events.emit('player-died');
+            } else if (effect === 'slow') {
+              player.applySlow(tickRate + 200, scene.time.now);
+            } else if (effect === 'pull') {
+              // Puxa player em direção ao centro
+              const pullAngle = Phaser.Math.Angle.Between(player.x, player.y, zoneX, zoneY);
+              const pullForce = effectValue || 80;
+              player.setVelocity(
+                player.body!.velocity.x + Math.cos(pullAngle) * pullForce,
+                player.body!.velocity.y + Math.sin(pullAngle) * pullForce
+              );
+            }
+          },
+        });
+
+        // Cleanup
+        scene.time.delayedCall(duration, () => {
+          zoneTick.destroy();
+          scene.tweens.add({
+            targets: [zone, border], alpha: 0, duration: 300,
+            onComplete: () => { zone.destroy(); border.destroy(); },
+          });
+        });
+        break;
+      }
+
+      case 'traveling': {
+        // Projétil que viaja em linha reta (não homing), opcionalmente explode
+        const speed = attack.projectileSpeed ?? 150;
+        const spriteKey = attack.spriteKey ?? 'atk-dragon-pulse';
+        const animKey = attack.animKey ?? 'anim-dragon-pulse';
+        const scale = attack.spriteScale ?? 1.5;
+
+        const angle = Phaser.Math.Angle.Between(boss.x, boss.y, playerX, playerY);
+        const proj = this.ctx.enemyProjectiles.get(boss.x, boss.y, spriteKey) as Phaser.Physics.Arcade.Sprite | null;
+        if (!proj) break;
+
+        proj.setActive(true).setVisible(true).setScale(scale).setDepth(7);
+        proj.setTexture(spriteKey);
+        proj.setData('damage', attack.damage);
+        proj.setData('homing', false);
+        proj.setData('speed', speed);
+        proj.setData('effect', null);
+        proj.setData('effectDuration', 0);
+        if (attack.tintColor) proj.setTint(attack.tintColor);
+        proj.setRotation(angle);
+
+        if (scene.anims.exists(animKey)) proj.play(animKey);
+
+        const body = proj.body as Phaser.Physics.Arcade.Body;
+        body.enable = true;
+        body.reset(boss.x, boss.y);
+        body.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
+
+        const lifespan = (attack.range ?? 400) / speed * 1000;
+        scene.time.delayedCall(lifespan, () => {
+          if (!proj.active) return;
+
+          if (attack.explodeOnEnd) {
+            // Explosão AoE no final
+            const expRadius = attack.explodeRadius ?? 80;
+            const expCircle = scene.add.circle(proj.x, proj.y, 0, attack.aoeColor ?? 0xff6600, 0.4).setDepth(3);
+            scene.tweens.add({
+              targets: expCircle,
+              radius: { from: 0, to: expRadius },
+              alpha: { from: 0.5, to: 0 },
+              duration: 400,
+              onComplete: () => expCircle.destroy(),
+            });
+
+            const dist = Phaser.Math.Distance.Between(proj.x, proj.y, player.x, player.y);
+            if (dist < expRadius) {
+              player.takeDamage(Math.floor(attack.damage * 0.5), scene.time.now);
+              scene.events.emit('stats-refresh');
+              if (player.isDead()) scene.events.emit('player-died');
+            }
+          }
+
+          this.ctx.enemyProjectiles.killAndHide(proj);
+          body.enable = false;
         });
         break;
       }

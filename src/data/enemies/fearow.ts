@@ -11,7 +11,10 @@ export const FEAROW: BossConfig = {
   xpValue: 180,
   scale: 1.5,
   isBoss: true,
-  bossAttack: {
+  resistance: 0.05,
+  hpRegenPerSec: 0,
+  archetype: 'skirmisher',
+  bossAttacks: [{
     name: "Air Slash",
     pattern: "fan",
     damage: 25,
@@ -21,5 +24,25 @@ export const FEAROW: BossConfig = {
     animKey: "anim-air-slash",
     spriteScale: 1.8,
     tintColor: 0x88ddff,
-  },
+  }, {
+    name: 'Drill Peck',
+    pattern: 'charge',
+    damage: 50,
+    cooldownMs: 4000,
+    range: 300,
+    spriteKey: 'atk-aerial-ace',
+    animKey: 'anim-aerial-ace',
+    spriteScale: 2,
+    tintColor: 0x88bbff,
+  }, {
+    name: 'Air Cutter',
+    pattern: 'directional',
+    damage: 30,
+    cooldownMs: 5000,
+    aoeRadius: 120,
+    directionalSprites: ['atk-air-cutter-up', 'atk-air-cutter-down', 'atk-air-cutter-left', 'atk-air-cutter-right'] as const,
+    directionalAnims: ['anim-air-cutter-up', 'anim-air-cutter-down', 'anim-air-cutter-left', 'anim-air-cutter-right'] as const,
+    spriteScale: 1.5,
+    tintColor: 0x88ddff,
+  }],
 }

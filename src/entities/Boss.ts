@@ -1,39 +1,66 @@
 import Phaser from 'phaser';
-import type { BossConfig, BossAttackConfig } from '../types';
+import type { BossConfig, BossAttackConfig, BossArchetype } from '../types';
 import { Enemy } from './Enemy';
 
 export class Boss extends Enemy {
-  readonly bossAttack: BossAttackConfig;
-  private lastBossAttackTime = 0;
+  readonly bossAttacks: readonly BossAttackConfig[];
+  readonly resistance: number;
+  readonly hpRegenPerSec: number;
+  readonly archetype: BossArchetype;
+
+  /** Cooldown tracking per attack (index → last fire timestamp) */
+  private readonly attackCooldowns: number[];
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: BossConfig) {
     super(scene, x, y, config);
-    this.bossAttack = config.bossAttack;
+    this.bossAttacks = config.bossAttacks;
+    this.resistance = config.resistance;
+    this.hpRegenPerSec = config.hpRegenPerSec;
+    this.archetype = config.archetype;
     this.name = config.name;
+    this.attackCooldowns = new Array(config.bossAttacks.length).fill(0);
   }
 
   override shouldDespawn(): boolean {
     return false;
   }
 
+  // ── HP Regeneration ──────────────────────────────────────────────
+  override preUpdate(time: number, delta: number): void {
+    super.preUpdate(time, delta);
+    if (this.hpRegenPerSec > 0) {
+      this.heal(this.hpRegenPerSec * (delta / 1000));
+    }
+  }
+
+  // ── Resistance applied via Enemy.takeDamage override ────────────
+  override getResistance(): number {
+    return this.resistance;
+  }
+
+  // ── Multi-attack selection ──────────────────────────────────────
+  /**
+   * Retorna o ataque off-cooldown com maior prioridade (índice mais baixo).
+   * Verifica range se aplicável.
+   */
   tryBossAttack(playerX: number, playerY: number, time: number): BossAttackConfig | null {
     if (!this.active) return null;
-    if (time - this.lastBossAttackTime < this.bossAttack.cooldownMs) return null;
-
     const dist = Phaser.Math.Distance.Between(this.x, this.y, playerX, playerY);
 
-    // Ataques com range requerem distância mínima
-    if (this.bossAttack.pattern === 'charge' && this.bossAttack.range && dist > this.bossAttack.range) {
-      return null;
-    }
+    for (let i = 0; i < this.bossAttacks.length; i++) {
+      const atk = this.bossAttacks[i];
+      if (time - this.attackCooldowns[i] < atk.cooldownMs) continue;
 
-    // AoE ataques: verificar se o player está perto o suficiente
-    if ((this.bossAttack.pattern === 'aoe-tremor' || this.bossAttack.pattern === 'aoe-land') &&
-        this.bossAttack.aoeRadius && dist > this.bossAttack.aoeRadius * 2) {
-      return null;
-    }
+      // Range checks per pattern
+      if (atk.pattern === 'charge' && atk.range && dist > atk.range) continue;
+      if ((atk.pattern === 'aoe-tremor' || atk.pattern === 'aoe-land') &&
+          atk.aoeRadius && dist > atk.aoeRadius * 2) continue;
+      if (atk.pattern === 'beam' && atk.range && dist > atk.range) continue;
+      if (atk.pattern === 'zone' && atk.aoeRadius && dist > atk.aoeRadius * 3) continue;
 
-    this.lastBossAttackTime = time;
-    return this.bossAttack;
+      this.attackCooldowns[i] = time;
+      return atk;
+    }
+    return null;
   }
 }

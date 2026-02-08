@@ -54,6 +54,9 @@ import { MACHOKE } from './machoke';
 import { ALAKAZAM } from './alakazam';
 import { ELECTRODE } from './electrode';
 
+// ── Boss Final ──────────────────────────────────────────────────────
+import { ALAKAZAM_BOSS } from './alakazam-boss';
+
 // ── Bosses (Phase 1) ───────────────────────────────────────────────
 import { BEEDRILL } from './beedrill';
 import { VILEPLUME } from './vileplume';
@@ -123,6 +126,7 @@ export const ENEMIES: Readonly<Record<string, EnemyConfig | BossConfig>> = {
   pidgeot: PIDGEOT,
   machamp: MACHAMP,
   golem: GOLEM,
+  'alakazam-boss': ALAKAZAM_BOSS,
 } as const;
 
 export const WAVES: readonly WaveConfig[] = [

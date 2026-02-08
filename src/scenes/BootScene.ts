@@ -67,78 +67,137 @@ export class BootScene extends Phaser.Scene {
     this.load.image('item-never-melt-ice', 'assets/items/never-melt-ice.png');
     this.load.image('item-water-stone', 'assets/items/water-stone.png');
 
-    // Spritesheets de ataques (pokemonAutoChess)
-    this.load.spritesheet('atk-ember', 'assets/attacks/ember-sheet.png', { frameWidth: 26, frameHeight: 26 });
-    this.load.spritesheet('atk-fire-range', 'assets/attacks/fire-range-sheet.png', { frameWidth: 40, frameHeight: 40 });
-    this.load.spritesheet('atk-fire-hit', 'assets/attacks/fire-hit-sheet.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('atk-flamethrower', 'assets/attacks/flamethrower-sheet.png', { frameWidth: 80, frameHeight: 96 });
+    // ── Fire attack spritesheets ──────────────────────────────────
+    this.load.spritesheet('atk-ember', 'assets/attacks/fire/ember-sheet.png', { frameWidth: 26, frameHeight: 26 });
+    this.load.spritesheet('atk-fire-range', 'assets/attacks/fire/fire-range-sheet.png', { frameWidth: 40, frameHeight: 40 });
+    this.load.spritesheet('atk-fire-hit', 'assets/attacks/fire/fire-hit-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-flamethrower', 'assets/attacks/fire/flamethrower-sheet.png', { frameWidth: 80, frameHeight: 96 });
     // Flamethrower Tibia (4 cardinal dirs, 6 frames each, 96x96)
-    // Mapeamento correto: 107=UP, 108=DOWN, 109=LEFT, 110=RIGHT
-    this.load.spritesheet('atk-flame-up', 'assets/attacks/flamethrower-tibia-se-sheet.png', { frameWidth: 96, frameHeight: 96 });
-    this.load.spritesheet('atk-flame-down', 'assets/attacks/flamethrower-tibia-sw-sheet.png', { frameWidth: 96, frameHeight: 96 });
-    this.load.spritesheet('atk-flame-left', 'assets/attacks/flamethrower-tibia-e-sheet.png', { frameWidth: 96, frameHeight: 96 });
-    this.load.spritesheet('atk-flame-right', 'assets/attacks/flamethrower-tibia-ne-sheet.png', { frameWidth: 96, frameHeight: 96 });
-    this.load.spritesheet('atk-fire-blast', 'assets/attacks/fire-blast-sheet.png', { frameWidth: 72, frameHeight: 73 });
-    this.load.spritesheet('atk-blast-burn', 'assets/attacks/blast-burn-sheet.png', { frameWidth: 80, frameHeight: 80 });
+    this.load.spritesheet('atk-flame-up', 'assets/attacks/fire/flamethrower-tibia-se-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-flame-down', 'assets/attacks/fire/flamethrower-tibia-sw-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-flame-left', 'assets/attacks/fire/flamethrower-tibia-e-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-flame-right', 'assets/attacks/fire/flamethrower-tibia-ne-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-fire-blast', 'assets/attacks/fire/fire-blast-sheet.png', { frameWidth: 72, frameHeight: 73 });
+    this.load.spritesheet('atk-blast-burn', 'assets/attacks/fire/blast-burn-sheet.png', { frameWidth: 80, frameHeight: 80 });
+    this.load.spritesheet('atk-fire-fang', 'assets/attacks/fire/fire-fang-sheet.png', { frameWidth: 80, frameHeight: 64 });
+    this.load.spritesheet('atk-flame-charge', 'assets/attacks/fire/flame-charge-sheet.png', { frameWidth: 20, frameHeight: 96 });
+    this.load.spritesheet('atk-flare-blitz', 'assets/attacks/fire/flare-blitz-sheet.png', { frameWidth: 96, frameHeight: 83 });
+    this.load.spritesheet('atk-heat-wave', 'assets/attacks/fire/heat-wave-sheet.png', { frameWidth: 96, frameHeight: 82 });
 
-    // Novos spritesheets de ataques
-    this.load.spritesheet('atk-scratch', 'assets/attacks/scratch-sheet.png', { frameWidth: 64, frameHeight: 56 });
-    this.load.spritesheet('atk-slash', 'assets/attacks/slash-sheet.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('atk-fury-swipes', 'assets/attacks/fury-swipes-sheet.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('atk-night-slash', 'assets/attacks/night-slash-sheet.png', { frameWidth: 56, frameHeight: 64 });
-    this.load.spritesheet('atk-fire-fang', 'assets/attacks/fire-fang-sheet.png', { frameWidth: 80, frameHeight: 64 });
-    this.load.spritesheet('atk-blaze-kick', 'assets/attacks/blaze-kick-sheet.png', { frameWidth: 64, frameHeight: 72 });
-    this.load.spritesheet('atk-dragon-breath', 'assets/attacks/dragon-breath-sheet.png', { frameWidth: 32, frameHeight: 74 });
-    this.load.spritesheet('atk-dragon-claw', 'assets/attacks/dragon-claw-sheet.png', { frameWidth: 96, frameHeight: 78 });
-    this.load.spritesheet('atk-dragon-pulse', 'assets/attacks/dragon-pulse-sheet.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('atk-dragon-rush', 'assets/attacks/dragon-rush-sheet.png', { frameWidth: 65, frameHeight: 64 });
-    this.load.spritesheet('atk-draco-meteor', 'assets/attacks/draco-meteor-sheet.png', { frameWidth: 96, frameHeight: 58 });
-    this.load.spritesheet('atk-smokescreen', 'assets/attacks/smokescreen-sheet.png', { frameWidth: 45, frameHeight: 45 });
-    this.load.spritesheet('atk-flame-charge', 'assets/attacks/flame-charge-sheet.png', { frameWidth: 20, frameHeight: 96 });
-    this.load.spritesheet('atk-flare-blitz', 'assets/attacks/flare-blitz-sheet.png', { frameWidth: 96, frameHeight: 83 });
-    this.load.spritesheet('atk-air-slash', 'assets/attacks/air-slash-sheet.png', { frameWidth: 48, frameHeight: 48 });
-    this.load.spritesheet('atk-aerial-ace', 'assets/attacks/aerial-ace-sheet.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('atk-hurricane', 'assets/attacks/hurricane-sheet.png', { frameWidth: 56, frameHeight: 80 });
-    this.load.spritesheet('atk-heat-wave', 'assets/attacks/heat-wave-sheet.png', { frameWidth: 96, frameHeight: 82 });
-    this.load.spritesheet('atk-outrage', 'assets/attacks/outrage-sheet.png', { frameWidth: 48, frameHeight: 72 });
-    this.load.spritesheet('atk-shadow-ball', 'assets/attacks/shadow-ball-sheet.png', { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet('atk-rock-slide', 'assets/attacks/rock-slide-sheet.png', { frameWidth: 48, frameHeight: 96 });
-    this.load.spritesheet('atk-rock-throw', 'assets/attacks/rock-throw-sheet.png', { frameWidth: 16, frameHeight: 16 });
-    this.load.spritesheet('atk-hyper-voice', 'assets/attacks/hyper-voice-sheet.png', { frameWidth: 96, frameHeight: 28 });
-
-    // Enemy projectile spritesheets (real sprites from pokemonAutoChess)
-    this.load.spritesheet('atk-psybeam', 'assets/attacks/psybeam-sheet.png', { frameWidth: 32, frameHeight: 240 });
-    this.load.spritesheet('atk-psychic', 'assets/attacks/psychic-sheet.png', { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet('atk-bonemerang', 'assets/attacks/bonemerang-sheet.png', { frameWidth: 16, frameHeight: 16 });
-    this.load.spritesheet('atk-explosion', 'assets/attacks/explosion-sheet.png', { frameWidth: 168, frameHeight: 128 });
-
-    // Boss attack spritesheets
-    this.load.spritesheet('atk-bite', 'assets/attacks/bite-sheet.png', { frameWidth: 32, frameHeight: 48 });
-    this.load.spritesheet('atk-venoshock', 'assets/attacks/venoshock-sheet.png', { frameWidth: 32, frameHeight: 80 });
-    this.load.spritesheet('atk-gunk-shot', 'assets/attacks/poison-dark/gunk-shot-sheet.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('atk-thrash', 'assets/attacks/thrash-sheet.png', { frameWidth: 48, frameHeight: 32 });
-    this.load.spritesheet('atk-stomp', 'assets/attacks/stomp-sheet.png', { frameWidth: 16, frameHeight: 16 });
-    // Flying boss attacks
-    this.load.spritesheet('atk-hurricane-boss', 'assets/attacks/flying/hurricane-sheet.png', { frameWidth: 56, frameHeight: 80 });
-    this.load.spritesheet('atk-air-slash', 'assets/attacks/flying/air-slash-sheet.png', { frameWidth: 48, frameHeight: 48 });
-    // Rock boss attacks
+    // ── Normal/melee attack spritesheets ─────────────────────────
+    this.load.spritesheet('atk-scratch', 'assets/attacks/normal/scratch-sheet.png', { frameWidth: 64, frameHeight: 56 });
+    this.load.spritesheet('atk-slash', 'assets/attacks/normal/slash-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-fury-swipes', 'assets/attacks/normal/fury-swipes-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-night-slash', 'assets/attacks/normal/night-slash-sheet.png', { frameWidth: 56, frameHeight: 64 });
+    this.load.spritesheet('atk-blaze-kick', 'assets/attacks/normal/blaze-kick-sheet.png', { frameWidth: 64, frameHeight: 72 });
+    this.load.spritesheet('atk-smokescreen', 'assets/attacks/normal/smokescreen-sheet.png', { frameWidth: 45, frameHeight: 45 });
+    this.load.spritesheet('atk-hyper-voice', 'assets/attacks/normal/hyper-voice-sheet.png', { frameWidth: 96, frameHeight: 28 });
+    this.load.spritesheet('atk-bite', 'assets/attacks/normal/bite-sheet.png', { frameWidth: 32, frameHeight: 48 });
+    this.load.spritesheet('atk-stomp', 'assets/attacks/normal/stomp-sheet.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('atk-thrash', 'assets/attacks/normal/thrash-sheet.png', { frameWidth: 48, frameHeight: 32 });
+    this.load.spritesheet('atk-explosion', 'assets/attacks/normal/explosion-sheet.png', { frameWidth: 168, frameHeight: 128 });
     this.load.spritesheet('atk-golem-explosion', 'assets/attacks/normal/explosion-sheet.png', { frameWidth: 168, frameHeight: 128 });
-    this.load.spritesheet('atk-rock-slide', 'assets/attacks/rock/rock-slide-sheet.png', { frameWidth: 80, frameHeight: 256 });
 
-    // Water attack spritesheets (Squirtle line)
-    this.load.spritesheet('atk-water-pulse', 'assets/attacks/water-pulse-sheet.png', { frameWidth: 64, frameHeight: 56 });
-    this.load.spritesheet('atk-aqua-jet', 'assets/attacks/aqua-jet-sheet.png', { frameWidth: 96, frameHeight: 160 });
-    this.load.spritesheet('atk-hydro-pump', 'assets/attacks/hydro-pump-sheet.png', { frameWidth: 96, frameHeight: 160 });
-    this.load.spritesheet('atk-surf', 'assets/attacks/surf-sheet.png', { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet('atk-liquidation', 'assets/attacks/liquidation-sheet.png', { frameWidth: 64, frameHeight: 120 });
-    this.load.spritesheet('atk-rapid-spin', 'assets/attacks/rapid-spin-sheet.png', { frameWidth: 72, frameHeight: 72 });
-    this.load.spritesheet('atk-water-range', 'assets/attacks/water-range-sheet.png', { frameWidth: 8, frameHeight: 8 });
-    this.load.spritesheet('atk-water-hit', 'assets/attacks/water-hit-sheet.png', { frameWidth: 16, frameHeight: 16 });
-    this.load.spritesheet('atk-ice-range', 'assets/attacks/ice-range-sheet.png', { frameWidth: 64, frameHeight: 56 });
-    this.load.spritesheet('atk-wave-splash', 'assets/attacks/wave-splash-sheet.png', { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet('atk-sparkling-aria', 'assets/attacks/sparkling-aria-sheet.png', { frameWidth: 64, frameHeight: 64 });
-    this.load.spritesheet('atk-water-melee', 'assets/attacks/water-melee-sheet.png', { frameWidth: 56, frameHeight: 56 });
-    this.load.spritesheet('atk-origin-pulse', 'assets/attacks/origin-pulse-sheet.png', { frameWidth: 128, frameHeight: 32 });
+    // ── Dragon attack spritesheets ──────────────────────────────
+    this.load.spritesheet('atk-dragon-breath', 'assets/attacks/dragon/dragon-breath-sheet.png', { frameWidth: 32, frameHeight: 74 });
+    this.load.spritesheet('atk-dragon-claw', 'assets/attacks/dragon/dragon-claw-sheet.png', { frameWidth: 96, frameHeight: 78 });
+    this.load.spritesheet('atk-dragon-pulse', 'assets/attacks/dragon/dragon-pulse-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-dragon-rush', 'assets/attacks/dragon/dragon-rush-sheet.png', { frameWidth: 65, frameHeight: 64 });
+    this.load.spritesheet('atk-draco-meteor', 'assets/attacks/dragon/draco-meteor-sheet.png', { frameWidth: 96, frameHeight: 58 });
+    this.load.spritesheet('atk-outrage', 'assets/attacks/dragon/outrage-sheet.png', { frameWidth: 48, frameHeight: 72 });
+
+    // ── Flying attack spritesheets ──────────────────────────────
+    this.load.spritesheet('atk-air-slash', 'assets/attacks/flying/air-slash-sheet.png', { frameWidth: 48, frameHeight: 48 });
+    this.load.spritesheet('atk-aerial-ace', 'assets/attacks/flying/aerial-ace-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-hurricane', 'assets/attacks/flying/hurricane-sheet.png', { frameWidth: 56, frameHeight: 80 });
+    this.load.spritesheet('atk-hurricane-boss', 'assets/attacks/flying/hurricane-sheet.png', { frameWidth: 56, frameHeight: 80 });
+
+    // ── Ghost attack spritesheets ───────────────────────────────
+    this.load.spritesheet('atk-shadow-ball', 'assets/attacks/ghost/shadow-ball-sheet.png', { frameWidth: 64, frameHeight: 64 });
+
+    // ── Rock attack spritesheets ────────────────────────────────
+    this.load.spritesheet('atk-rock-slide', 'assets/attacks/rock/rock-slide-sheet.png', { frameWidth: 80, frameHeight: 256 });
+    this.load.spritesheet('atk-rock-throw', 'assets/attacks/rock/rock-throw-sheet.png', { frameWidth: 16, frameHeight: 16 });
+
+    // ── Psychic attack spritesheets ─────────────────────────────
+    this.load.spritesheet('atk-psybeam', 'assets/attacks/psychic/psybeam-sheet.png', { frameWidth: 32, frameHeight: 240 });
+    this.load.spritesheet('atk-psychic', 'assets/attacks/psychic/psychic-sheet.png', { frameWidth: 64, frameHeight: 64 });
+
+    // ── Ground attack spritesheets ──────────────────────────────
+    this.load.spritesheet('atk-bonemerang', 'assets/attacks/ground/bonemerang-sheet.png', { frameWidth: 16, frameHeight: 16 });
+
+    // ── Poison attack spritesheets ──────────────────────────────
+    this.load.spritesheet('atk-gunk-shot', 'assets/attacks/poison/gunk-shot-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-venoshock', 'assets/attacks/normal/venoshock-sheet.png', { frameWidth: 32, frameHeight: 80 });
+
+    // ── Water attack spritesheets (Squirtle line) ───────────────
+    this.load.spritesheet('atk-water-pulse', 'assets/attacks/water/water-pulse-sheet.png', { frameWidth: 64, frameHeight: 56 });
+    this.load.spritesheet('atk-aqua-jet', 'assets/attacks/water/aqua-jet-sheet.png', { frameWidth: 96, frameHeight: 160 });
+    this.load.spritesheet('atk-hydro-pump', 'assets/attacks/water/hydro-pump-sheet.png', { frameWidth: 96, frameHeight: 160 });
+    this.load.spritesheet('atk-surf', 'assets/attacks/water/surf-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-liquidation', 'assets/attacks/water/liquidation-sheet.png', { frameWidth: 64, frameHeight: 120 });
+    this.load.spritesheet('atk-rapid-spin', 'assets/attacks/water/rapid-spin-sheet.png', { frameWidth: 72, frameHeight: 72 });
+    this.load.spritesheet('atk-water-range', 'assets/attacks/water/water-range-sheet.png', { frameWidth: 8, frameHeight: 8 });
+    this.load.spritesheet('atk-water-hit', 'assets/attacks/water/water-hit-sheet.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('atk-wave-splash', 'assets/attacks/water/wave-splash-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-sparkling-aria', 'assets/attacks/water/sparkling-aria-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-water-melee', 'assets/attacks/water/water-melee-sheet.png', { frameWidth: 56, frameHeight: 56 });
+    this.load.spritesheet('atk-origin-pulse', 'assets/attacks/water/origin-pulse-sheet.png', { frameWidth: 128, frameHeight: 32 });
+
+    // ── Ice attack spritesheets ─────────────────────────────────
+    this.load.spritesheet('atk-ice-range', 'assets/attacks/ice/ice-range-sheet.png', { frameWidth: 64, frameHeight: 56 });
+
+    // ── Tibia-converted boss attack spritesheets ──────────────
+    // Fire
+    this.load.spritesheet('atk-eruption', 'assets/attacks/fire/eruption-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    // Water
+    this.load.spritesheet('atk-surf-tibia', 'assets/attacks/water/surf-tibia-sheet.png', { frameWidth: 96, frameHeight: 64 });
+    this.load.spritesheet('atk-surf-wave-up', 'assets/attacks/water/surf-wave-up-sheet.png', { frameWidth: 96, frameHeight: 64 });
+    this.load.spritesheet('atk-surf-wave-down', 'assets/attacks/water/surf-wave-down-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-surf-wave-left', 'assets/attacks/water/surf-wave-left-sheet.png', { frameWidth: 96, frameHeight: 64 });
+    this.load.spritesheet('atk-surf-wave-right', 'assets/attacks/water/surf-wave-right-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-whirlpool-tibia', 'assets/attacks/water/whirlpool-tibia-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-whirlpool-rings', 'assets/attacks/water/whirlpool-rings-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-bubble-shot', 'assets/attacks/water/bubble-shot-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    // Flying
+    this.load.spritesheet('atk-twister', 'assets/attacks/flying/twister-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-gust', 'assets/attacks/flying/gust-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-air-cutter-up', 'assets/attacks/flying/air-cutter-up-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-air-cutter-down', 'assets/attacks/flying/air-cutter-down-sheet.png', { frameWidth: 64, frameHeight: 96 });
+    this.load.spritesheet('atk-air-cutter-left', 'assets/attacks/flying/air-cutter-left-sheet.png', { frameWidth: 64, frameHeight: 96 });
+    this.load.spritesheet('atk-air-cutter-right', 'assets/attacks/flying/air-cutter-right-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-brave-bird-tibia', 'assets/attacks/flying/brave-bird-tibia-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-air-slash-x', 'assets/attacks/flying/air-slash-x-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    // Ghost
+    this.load.spritesheet('atk-shadow-ball-up', 'assets/attacks/ghost/shadow-ball-up-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-shadow-ball-down', 'assets/attacks/ghost/shadow-ball-down-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-shadow-ball-left', 'assets/attacks/ghost/shadow-ball-left-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-shadow-ball-right', 'assets/attacks/ghost/shadow-ball-right-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    // Psychic
+    this.load.spritesheet('atk-psywave-a', 'assets/attacks/psychic/psywave-a-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-psywave-b', 'assets/attacks/psychic/psywave-b-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    // Rock
+    this.load.spritesheet('atk-stone-edge-tibia', 'assets/attacks/rock/stone-edge-tibia-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-rock-slide-tibia', 'assets/attacks/rock/rock-slide-tibia-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    // Ground
+    this.load.spritesheet('atk-bonemerang-tibia', 'assets/attacks/ground/bonemerang-tibia-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    // Fighting
+    this.load.spritesheet('atk-dynamic-punch-up', 'assets/attacks/fighting/dynamic-punch-up-sheet.png', { frameWidth: 96, frameHeight: 64 });
+    this.load.spritesheet('atk-dynamic-punch-down', 'assets/attacks/fighting/dynamic-punch-down-sheet.png', { frameWidth: 96, frameHeight: 64 });
+    this.load.spritesheet('atk-dynamic-punch-left', 'assets/attacks/fighting/dynamic-punch-left-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-dynamic-punch-right', 'assets/attacks/fighting/dynamic-punch-right-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-cross-chop-up', 'assets/attacks/fighting/cross-chop-up-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-cross-chop-down', 'assets/attacks/fighting/cross-chop-down-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-cross-chop-left', 'assets/attacks/fighting/cross-chop-left-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-cross-chop-right', 'assets/attacks/fighting/cross-chop-right-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-focus-blast', 'assets/attacks/fighting/focus-blast-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    // Bug
+    this.load.spritesheet('atk-x-scissor-a', 'assets/attacks/bug/x-scissor-a-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-x-scissor-b', 'assets/attacks/bug/x-scissor-b-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    // Poison (boss attacks)
+    this.load.spritesheet('atk-poison-range', 'assets/attacks/poison/poison-range-sheet.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('atk-screech', 'assets/attacks/poison/screech-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-dark-range', 'assets/attacks/dark/dark-range-sheet.png', { frameWidth: 32, frameHeight: 32 });
   }
 
   private loadSpritesheet(sprite: SpriteConfig): void {
@@ -510,6 +569,70 @@ export class BootScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('atk-origin-pulse', { start: 0, end: 3 }),
       frameRate: 10, repeat: -1,
     });
+
+    // ══════════════════════════════════════════════════════════════
+    // Tibia-converted boss attack animations
+    // ══════════════════════════════════════════════════════════════
+
+    // Fire: Eruption (10 frames)
+    this.anims.create({ key: 'anim-eruption', frames: this.anims.generateFrameNumbers('atk-eruption', { start: 0, end: 9 }), frameRate: 12, repeat: 0 });
+
+    // Water: Surf variants
+    this.anims.create({ key: 'anim-surf-tibia', frames: this.anims.generateFrameNumbers('atk-surf-tibia', { start: 0, end: 7 }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: 'anim-surf-wave-up', frames: this.anims.generateFrameNumbers('atk-surf-wave-up', { start: 0, end: 3 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-surf-wave-down', frames: this.anims.generateFrameNumbers('atk-surf-wave-down', { start: 0, end: 5 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-surf-wave-left', frames: this.anims.generateFrameNumbers('atk-surf-wave-left', { start: 0, end: 3 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-surf-wave-right', frames: this.anims.generateFrameNumbers('atk-surf-wave-right', { start: 0, end: 5 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-whirlpool-tibia', frames: this.anims.generateFrameNumbers('atk-whirlpool-tibia', { start: 0, end: 3 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: 'anim-whirlpool-rings', frames: this.anims.generateFrameNumbers('atk-whirlpool-rings', { start: 0, end: 3 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: 'anim-bubble-shot', frames: this.anims.generateFrameNumbers('atk-bubble-shot', { start: 0, end: 4 }), frameRate: 10, repeat: 0 });
+
+    // Flying: Twister, Gust, Air Cutter (4 dirs), Brave Bird Tibia, Air Slash X
+    this.anims.create({ key: 'anim-twister', frames: this.anims.generateFrameNumbers('atk-twister', { start: 0, end: 9 }), frameRate: 14, repeat: -1 });
+    this.anims.create({ key: 'anim-gust', frames: this.anims.generateFrameNumbers('atk-gust', { start: 0, end: 8 }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: 'anim-air-cutter-up', frames: this.anims.generateFrameNumbers('atk-air-cutter-up', { start: 0, end: 1 }), frameRate: 8, repeat: 0 });
+    this.anims.create({ key: 'anim-air-cutter-down', frames: this.anims.generateFrameNumbers('atk-air-cutter-down', { start: 0, end: 2 }), frameRate: 8, repeat: 0 });
+    this.anims.create({ key: 'anim-air-cutter-left', frames: this.anims.generateFrameNumbers('atk-air-cutter-left', { start: 0, end: 2 }), frameRate: 8, repeat: 0 });
+    this.anims.create({ key: 'anim-air-cutter-right', frames: this.anims.generateFrameNumbers('atk-air-cutter-right', { start: 0, end: 1 }), frameRate: 8, repeat: 0 });
+    this.anims.create({ key: 'anim-brave-bird-tibia', frames: this.anims.generateFrameNumbers('atk-brave-bird-tibia', { start: 0, end: 2 }), frameRate: 8, repeat: 0 });
+    this.anims.create({ key: 'anim-air-slash-x', frames: this.anims.generateFrameNumbers('atk-air-slash-x', { start: 0, end: 2 }), frameRate: 8, repeat: 0 });
+
+    // Ghost: Shadow Ball directional (4 dirs)
+    this.anims.create({ key: 'anim-shadow-ball-up', frames: this.anims.generateFrameNumbers('atk-shadow-ball-up', { start: 0, end: 3 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-shadow-ball-down', frames: this.anims.generateFrameNumbers('atk-shadow-ball-down', { start: 0, end: 7 }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: 'anim-shadow-ball-left', frames: this.anims.generateFrameNumbers('atk-shadow-ball-left', { start: 0, end: 1 }), frameRate: 8, repeat: 0 });
+    this.anims.create({ key: 'anim-shadow-ball-right', frames: this.anims.generateFrameNumbers('atk-shadow-ball-right', { start: 0, end: 5 }), frameRate: 10, repeat: 0 });
+
+    // Psychic: Psywave (2 variants, 4 frames each)
+    this.anims.create({ key: 'anim-psywave-a', frames: this.anims.generateFrameNumbers('atk-psywave-a', { start: 0, end: 3 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: 'anim-psywave-b', frames: this.anims.generateFrameNumbers('atk-psywave-b', { start: 0, end: 3 }), frameRate: 10, repeat: -1 });
+
+    // Rock: Stone Edge (6f), Rock Slide Tibia (8f)
+    this.anims.create({ key: 'anim-stone-edge-tibia', frames: this.anims.generateFrameNumbers('atk-stone-edge-tibia', { start: 0, end: 5 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-rock-slide-tibia', frames: this.anims.generateFrameNumbers('atk-rock-slide-tibia', { start: 0, end: 7 }), frameRate: 12, repeat: 0 });
+
+    // Ground: Bonemerang Tibia (8f)
+    this.anims.create({ key: 'anim-bonemerang-tibia', frames: this.anims.generateFrameNumbers('atk-bonemerang-tibia', { start: 0, end: 7 }), frameRate: 12, repeat: -1 });
+
+    // Fighting: Dynamic Punch (4 dirs), Cross Chop (4 dirs), Focus Blast
+    this.anims.create({ key: 'anim-dynamic-punch-up', frames: this.anims.generateFrameNumbers('atk-dynamic-punch-up', { start: 0, end: 7 }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: 'anim-dynamic-punch-down', frames: this.anims.generateFrameNumbers('atk-dynamic-punch-down', { start: 0, end: 7 }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: 'anim-dynamic-punch-left', frames: this.anims.generateFrameNumbers('atk-dynamic-punch-left', { start: 0, end: 11 }), frameRate: 14, repeat: 0 });
+    this.anims.create({ key: 'anim-dynamic-punch-right', frames: this.anims.generateFrameNumbers('atk-dynamic-punch-right', { start: 0, end: 11 }), frameRate: 14, repeat: 0 });
+    this.anims.create({ key: 'anim-cross-chop-up', frames: this.anims.generateFrameNumbers('atk-cross-chop-up', { start: 0, end: 3 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-cross-chop-down', frames: this.anims.generateFrameNumbers('atk-cross-chop-down', { start: 0, end: 3 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-cross-chop-left', frames: this.anims.generateFrameNumbers('atk-cross-chop-left', { start: 0, end: 3 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-cross-chop-right', frames: this.anims.generateFrameNumbers('atk-cross-chop-right', { start: 0, end: 3 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-focus-blast', frames: this.anims.generateFrameNumbers('atk-focus-blast', { start: 0, end: 7 }), frameRate: 12, repeat: 0 });
+
+    // Bug: X-Scissor (2 variants, 3 frames each)
+    this.anims.create({ key: 'anim-x-scissor-a', frames: this.anims.generateFrameNumbers('atk-x-scissor-a', { start: 0, end: 2 }), frameRate: 8, repeat: 0 });
+    this.anims.create({ key: 'anim-x-scissor-b', frames: this.anims.generateFrameNumbers('atk-x-scissor-b', { start: 0, end: 2 }), frameRate: 8, repeat: 0 });
+
+    // Poison/Dark boss utility
+    this.anims.create({ key: 'anim-poison-range', frames: this.anims.generateFrameNumbers('atk-poison-range', { start: 0, end: 3 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: 'anim-screech', frames: this.anims.generateFrameNumbers('atk-screech', { start: 0, end: 6 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-dark-range', frames: this.anims.generateFrameNumbers('atk-dark-range', { start: 0, end: 5 }), frameRate: 10, repeat: -1 });
   }
 
   private createWalkAnims(sprite: SpriteConfig): void {
