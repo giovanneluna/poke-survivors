@@ -290,7 +290,7 @@ export class SpawnSystem {
     };
 
     const label = hpMult > 1 ? `${baseConfig.name} (Enhanced)` : baseConfig.name;
-    scene.events.emit('boss-warning', label);
+    scene.events.emit('boss-warning', label, baseConfig.archetype);
     SoundManager.playBossWarning();
 
     scene.time.delayedCall(3000, () => {
@@ -317,12 +317,13 @@ export class SpawnSystem {
     const config = ENEMIES[type];
     if (!config) return;
 
-    scene.events.emit('boss-warning', config.name);
+    const bossConfig = config as BossConfig;
+    scene.events.emit('boss-warning', config.name, bossConfig.archetype);
     SoundManager.playBossWarning();
 
     scene.time.delayedCall(3000, () => {
       const pos = this.getSpawnPosition();
-      const boss = new Boss(scene, pos.x, pos.y, config as BossConfig);
+      const boss = new Boss(scene, pos.x, pos.y, bossConfig);
       this.ctx.enemyGroup.add(boss);
       SoundManager.playBossSpawn();
 

@@ -235,6 +235,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.hp -= finalAmount;
     recordDamage(finalAmount);
 
+    // Floating damage number for bosses
+    if (resist > 0) {
+      this.scene.events.emit('boss-damage-number', {
+        x: this.x, y: this.y - 20, amount: finalAmount, resisted: true,
+      });
+    }
+
     // Hit flash
     this.setTint(0xffffff);
     this.scene.time.delayedCall(80, () => {

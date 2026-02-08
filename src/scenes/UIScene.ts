@@ -132,7 +132,7 @@ export class UIScene extends Phaser.Scene {
     });
 
     // ── Boss events ──────────────────────────────────────────────────
-    gameScene.events.on('boss-warning', (name: string) => this.showBossWarning(name));
+    gameScene.events.on('boss-warning', (name: string, archetype?: string) => this.showBossWarning(name, archetype));
     gameScene.events.on('boss-spawned', (data: { name: string; hp: number; maxHp: number; boss: Boss }) => {
       this.activeBoss = data.boss;
       this.showBossHpBar(data.name, data.hp, data.maxHp);
@@ -140,6 +140,11 @@ export class UIScene extends Phaser.Scene {
     gameScene.events.on('boss-killed', () => {
       this.activeBoss = null;
       this.bossHpContainer.setVisible(false);
+    });
+
+    // ── Boss damage numbers (resisted = gray) ───────────────────────
+    gameScene.events.on('boss-damage-number', (data: { x: number; y: number; amount: number; resisted: boolean }) => {
+      this.showBossDamageNumber(data);
     });
 
     // ── Gacha ────────────────────────────────────────────────────────
@@ -482,15 +487,22 @@ export class UIScene extends Phaser.Scene {
   }
 
   // ── Boss Warning ────────────────────────────────────────────────────
-  private showBossWarning(name: string): void {
+  private static readonly ARCHETYPE_INFO: Readonly<Record<string, { icon: string; color: string }>> = {
+    tank:       { icon: 'TANK',       color: '#44aaff' },
+    striker:    { icon: 'STRIKER',    color: '#ff4444' },
+    caster:     { icon: 'CASTER',     color: '#cc66ff' },
+    skirmisher: { icon: 'SKIRMISHER', color: '#ffaa44' },
+  };
+
+  private showBossWarning(name: string, archetype?: string): void {
     const { width, height } = this.cameras.main;
 
     // Flash vermelho
     const flash = this.add.rectangle(width / 2, height / 2, width, height, 0xff0000, 0.3).setDepth(140);
     this.tweens.add({ targets: flash, alpha: 0, duration: 300, onComplete: () => flash.destroy() });
 
-    // Texto
-    const text = this.add.text(width / 2, height / 2, `WILD ${name.toUpperCase()} APPEARED!`, {
+    // Texto principal
+    const text = this.add.text(width / 2, height / 2 - 12, `WILD ${name.toUpperCase()} APPEARED!`, {
       fontSize: '28px', color: '#ff4444', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 5,
     }).setOrigin(0.5).setAlpha(0).setDepth(160);
@@ -500,8 +512,58 @@ export class UIScene extends Phaser.Scene {
       duration: 500, ease: 'Back.Out',
     });
 
+    // Archetype tag
+    const destroyTargets: Phaser.GameObjects.GameObject[] = [text];
+    if (archetype) {
+      const info = UIScene.ARCHETYPE_INFO[archetype];
+      if (info) {
+        const tag = this.add.text(width / 2, height / 2 + 18, info.icon, {
+          fontSize: '14px', color: info.color, fontFamily: 'monospace', fontStyle: 'bold',
+          stroke: '#000000', strokeThickness: 3,
+        }).setOrigin(0.5).setAlpha(0).setDepth(160);
+
+        this.tweens.add({
+          targets: tag, alpha: 1, duration: 300, delay: 400, ease: 'Power2',
+        });
+        destroyTargets.push(tag);
+      }
+    }
+
     this.time.delayedCall(2500, () => {
-      this.tweens.add({ targets: text, alpha: 0, duration: 300, onComplete: () => text.destroy() });
+      this.tweens.add({
+        targets: destroyTargets, alpha: 0, duration: 300,
+        onComplete: () => destroyTargets.forEach(t => t.destroy()),
+      });
+    });
+  }
+
+  // ── Boss Damage Numbers ─────────────────────────────────────────
+  private showBossDamageNumber(data: { x: number; y: number; amount: number; resisted: boolean }): void {
+    // Convert world coords to screen coords via GameScene camera
+    const gameScene = this.scene.get('GameScene') as GameScene;
+    const cam = gameScene.cameras?.main;
+    if (!cam) return;
+
+    const screenX = data.x - cam.scrollX;
+    const screenY = data.y - cam.scrollY;
+
+    // Jitter horizontal para evitar sobreposição
+    const jitter = Phaser.Math.Between(-15, 15);
+    const color = data.resisted ? '#888888' : '#ffffff';
+    const dmgStr = Math.floor(data.amount).toString();
+
+    const text = this.add.text(screenX + jitter, screenY, dmgStr, {
+      fontSize: '12px', color, fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(170);
+
+    this.tweens.add({
+      targets: text,
+      y: screenY - 25,
+      alpha: { from: 1, to: 0 },
+      duration: 600,
+      ease: 'Power2',
+      onComplete: () => text.destroy(),
     });
   }
 
@@ -534,7 +596,10 @@ export class UIScene extends Phaser.Scene {
     this.bossHpContainer.setVisible(true);
   }
 
-  override update(): void {
+  private regenGlowAlpha = 0;
+  private regenGlowDir = 1;
+
+  override update(_time: number, delta: number): void {
     // Atualizar boss HP bar
     if (this.activeBoss && this.activeBoss.active && this.bossHpContainer.visible) {
       const { width } = this.cameras.main;
@@ -547,6 +612,15 @@ export class UIScene extends Phaser.Scene {
         const color = hpRatio > 0.5 ? 0x44dd44 : hpRatio > 0.25 ? 0xdddd44 : 0xdd4444;
         barFill.fillStyle(color);
         barFill.fillRoundedRect(width / 2 - 200, 70, 400 * hpRatio, 14, 4);
+
+        // Regen glow: green shimmer overlay when boss is regenerating HP
+        if (this.activeBoss.hpRegenPerSec > 0 && hpRatio < 1) {
+          this.regenGlowAlpha += this.regenGlowDir * (delta / 500);
+          if (this.regenGlowAlpha >= 0.35) { this.regenGlowAlpha = 0.35; this.regenGlowDir = -1; }
+          if (this.regenGlowAlpha <= 0.05) { this.regenGlowAlpha = 0.05; this.regenGlowDir = 1; }
+          barFill.fillStyle(0x88ff88, this.regenGlowAlpha);
+          barFill.fillRoundedRect(width / 2 - 200, 70, 400 * hpRatio, 14, 4);
+        }
       }
     } else if (this.activeBoss && !this.activeBoss.active) {
       this.activeBoss = null;
