@@ -22,17 +22,5 @@ export class Pickup extends Phaser.Physics.Arcade.Sprite {
       repeat: -1,
       ease: 'Sine.InOut',
     });
-
-    // Auto-destruir após 15s
-    scene.time.delayedCall(15000, () => {
-      if (this.active) {
-        scene.tweens.add({
-          targets: this,
-          alpha: 0,
-          duration: 500,
-          onComplete: () => this.destroy(),
-        });
-      }
-    });
   }
 }

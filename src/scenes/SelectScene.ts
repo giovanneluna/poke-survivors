@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { STARTERS } from '../config';
 import type { StarterConfig } from '../config';
+import type { DevConfig, PokemonForm } from '../types';
 import { SoundManager } from '../audio/SoundManager';
 
 export class SelectScene extends Phaser.Scene {
@@ -9,7 +10,9 @@ export class SelectScene extends Phaser.Scene {
   private cardGraphics: Phaser.GameObjects.Graphics[] = [];
   private phaseOverlay: Phaser.GameObjects.Container | null = null;
   private passwordOverlay: Phaser.GameObjects.Container | null = null;
+  private devConfigOverlay: Phaser.GameObjects.Container | null = null;
   private passwordKeyHandler: ((event: KeyboardEvent) => void) | null = null;
+  private devKeyHandler: ((event: KeyboardEvent) => void) | null = null;
 
   constructor() {
     super({ key: 'SelectScene' });
@@ -299,7 +302,7 @@ export class SelectScene extends Phaser.Scene {
         if (password === 'lulu') {
           cleanup();
           this.hidePhaseSelection();
-          this.startGame(true);
+          this.showDevConfigOverlay();
         } else {
           errorText.setText('Senha incorreta!');
           password = '';
@@ -326,9 +329,17 @@ export class SelectScene extends Phaser.Scene {
       window.removeEventListener('keydown', this.passwordKeyHandler);
       this.passwordKeyHandler = null;
     }
+    if (this.devKeyHandler) {
+      window.removeEventListener('keydown', this.devKeyHandler);
+      this.devKeyHandler = null;
+    }
     if (this.passwordOverlay) {
       this.passwordOverlay.destroy(true);
       this.passwordOverlay = null;
+    }
+    if (this.devConfigOverlay) {
+      this.devConfigOverlay.destroy(true);
+      this.devConfigOverlay = null;
     }
     if (this.phaseOverlay) {
       this.phaseOverlay.destroy(true);
@@ -336,11 +347,229 @@ export class SelectScene extends Phaser.Scene {
     }
   }
 
-  private startGame(debugMode: boolean): void {
-    const starterKey = STARTERS[this.selectedIndex].key;
+  private startGame(debugMode: boolean, devConfig?: DevConfig): void {
+    const starterKey = devConfig?.starterKey ?? STARTERS[this.selectedIndex].key;
     this.cameras.main.fade(500, 0, 0, 0, false, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
       if (progress >= 1) {
-        this.scene.start('GameScene', { debugMode, starterKey });
+        this.scene.start('GameScene', { debugMode, starterKey, devConfig });
+      }
+    });
+  }
+
+  // ── Dev Config Overlay ───────────────────────────────────────────
+  private showDevConfigOverlay(): void {
+    if (this.devConfigOverlay) return;
+
+    const { width, height } = this.cameras.main;
+    this.devConfigOverlay = this.add.container(0, 0).setDepth(400);
+
+    // Background
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.92);
+    bg.setInteractive();
+    this.devConfigOverlay.add(bg);
+
+    // Title
+    this.devConfigOverlay.add(this.add.text(width / 2, 30, 'DEV MODE', {
+      fontSize: '22px', color: '#44ff44', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 4,
+    }).setOrigin(0.5));
+
+    // State
+    let selectedStarter = this.selectedIndex;
+    let selectedForm: PokemonForm = 'base';
+    let selectedLevel = 1;
+    let godMode = true;
+
+    const panelX = width / 2;
+    let yPos = 70;
+
+    // ── Starter selection ───────────────────────────────────────
+    this.devConfigOverlay.add(this.add.text(panelX, yPos, 'POKÉMON', {
+      fontSize: '12px', color: '#888888', fontFamily: 'monospace',
+    }).setOrigin(0.5));
+    yPos += 20;
+
+    const starterBtns: Phaser.GameObjects.Text[] = [];
+    const starterNames = STARTERS.map(s => s.name);
+    const starterStartX = panelX - ((starterNames.length - 1) * 80) / 2;
+
+    starterNames.forEach((name, i) => {
+      const btn = this.add.text(starterStartX + i * 80, yPos, name, {
+        fontSize: '13px',
+        color: i === selectedStarter ? '#44ff44' : '#666666',
+        fontFamily: 'monospace', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 2,
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      btn.on('pointerdown', () => {
+        selectedStarter = i;
+        starterBtns.forEach((b, j) => b.setColor(j === i ? '#44ff44' : '#666666'));
+        SoundManager.playClick();
+      });
+      starterBtns.push(btn);
+      this.devConfigOverlay!.add(btn);
+    });
+    yPos += 35;
+
+    // ── Form selection ──────────────────────────────────────────
+    this.devConfigOverlay.add(this.add.text(panelX, yPos, 'FORMA', {
+      fontSize: '12px', color: '#888888', fontFamily: 'monospace',
+    }).setOrigin(0.5));
+    yPos += 20;
+
+    const forms: PokemonForm[] = ['base', 'stage1', 'stage2'];
+    const formLabels = ['Base', 'Stage 1', 'Stage 2'];
+    const formBtns: Phaser.GameObjects.Text[] = [];
+    const formStartX = panelX - 100;
+
+    forms.forEach((form, i) => {
+      const btn = this.add.text(formStartX + i * 100, yPos, formLabels[i], {
+        fontSize: '13px',
+        color: i === 0 ? '#44ff44' : '#666666',
+        fontFamily: 'monospace', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 2,
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      btn.on('pointerdown', () => {
+        selectedForm = form;
+        formBtns.forEach((b, j) => b.setColor(j === i ? '#44ff44' : '#666666'));
+        // Auto-ajuste do nível
+        if (form === 'stage1' && selectedLevel < 16) selectedLevel = 16;
+        if (form === 'stage2' && selectedLevel < 36) selectedLevel = 36;
+        levelDisplay.setText(`${selectedLevel}`);
+        SoundManager.playClick();
+      });
+      formBtns.push(btn);
+      this.devConfigOverlay!.add(btn);
+    });
+    yPos += 35;
+
+    // ── Level ───────────────────────────────────────────────────
+    this.devConfigOverlay.add(this.add.text(panelX, yPos, 'LEVEL', {
+      fontSize: '12px', color: '#888888', fontFamily: 'monospace',
+    }).setOrigin(0.5));
+    yPos += 20;
+
+    const minusBtn = this.add.text(panelX - 60, yPos, '[-]', {
+      fontSize: '16px', color: '#ff6666', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    const levelDisplay = this.add.text(panelX, yPos, `${selectedLevel}`, {
+      fontSize: '18px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5);
+
+    const plusBtn = this.add.text(panelX + 60, yPos, '[+]', {
+      fontSize: '16px', color: '#66ff66', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    minusBtn.on('pointerdown', () => {
+      selectedLevel = Math.max(1, selectedLevel - 5);
+      levelDisplay.setText(`${selectedLevel}`);
+      SoundManager.playClick();
+    });
+    plusBtn.on('pointerdown', () => {
+      selectedLevel = Math.min(50, selectedLevel + 5);
+      levelDisplay.setText(`${selectedLevel}`);
+      SoundManager.playClick();
+    });
+
+    this.devConfigOverlay.add(minusBtn);
+    this.devConfigOverlay.add(levelDisplay);
+    this.devConfigOverlay.add(plusBtn);
+    yPos += 35;
+
+    // ── God Mode ────────────────────────────────────────────────
+    const godBtn = this.add.text(panelX, yPos, `GOD MODE: ${godMode ? 'ON' : 'OFF'}`, {
+      fontSize: '13px',
+      color: godMode ? '#44ff44' : '#ff4444',
+      fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    godBtn.on('pointerdown', () => {
+      godMode = !godMode;
+      godBtn.setText(`GOD MODE: ${godMode ? 'ON' : 'OFF'}`);
+      godBtn.setColor(godMode ? '#44ff44' : '#ff4444');
+      SoundManager.playClick();
+    });
+    this.devConfigOverlay.add(godBtn);
+    yPos += 40;
+
+    // ── Start button ────────────────────────────────────────────
+    const startGfx = this.add.graphics();
+    const startBtnW = 180;
+    const startBtnH = 40;
+    const drawStart = (hover: boolean): void => {
+      startGfx.clear();
+      startGfx.fillStyle(hover ? 0x44bb44 : 0x228822, 0.95);
+      startGfx.fillRoundedRect(panelX - startBtnW / 2, yPos - startBtnH / 2, startBtnW, startBtnH, 8);
+      startGfx.lineStyle(2, hover ? 0x66dd66 : 0x33aa33);
+      startGfx.strokeRoundedRect(panelX - startBtnW / 2, yPos - startBtnH / 2, startBtnW, startBtnH, 8);
+    };
+    drawStart(false);
+    this.devConfigOverlay.add(startGfx);
+
+    const startText = this.add.text(panelX, yPos, 'START DEV MODE', {
+      fontSize: '14px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5);
+    this.devConfigOverlay.add(startText);
+
+    const startHit = this.add.rectangle(panelX, yPos, startBtnW, startBtnH, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true });
+    startHit.on('pointerover', () => { drawStart(true); SoundManager.playHover(); });
+    startHit.on('pointerout', () => drawStart(false));
+    startHit.on('pointerdown', () => {
+      SoundManager.playStart();
+      const devConfig: DevConfig = {
+        starterKey: STARTERS[selectedStarter].key,
+        form: selectedForm,
+        level: selectedLevel,
+        godMode,
+        attacks: [],
+      };
+      this.hidePhaseSelection();
+      this.startGame(true, devConfig);
+    });
+    this.devConfigOverlay.add(startHit);
+    yPos += 50;
+
+    // ── Back to debugger ────────────────────────────────────────
+    const debugBtn = this.add.text(panelX, yPos, 'Debugger (cenários)', {
+      fontSize: '11px', color: '#44aaff', fontFamily: 'monospace',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    debugBtn.on('pointerover', () => debugBtn.setColor('#88ccff'));
+    debugBtn.on('pointerout', () => debugBtn.setColor('#44aaff'));
+    debugBtn.on('pointerdown', () => {
+      SoundManager.playClick();
+      this.hidePhaseSelection();
+      this.startGame(true);
+    });
+    this.devConfigOverlay.add(debugBtn);
+
+    // ── Cancel ──────────────────────────────────────────────────
+    const cancelBtn = this.add.text(panelX, yPos + 25, 'Cancelar', {
+      fontSize: '11px', color: '#666666', fontFamily: 'monospace',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    cancelBtn.on('pointerover', () => cancelBtn.setColor('#ffffff'));
+    cancelBtn.on('pointerout', () => cancelBtn.setColor('#666666'));
+    cancelBtn.on('pointerdown', () => {
+      SoundManager.playClick();
+      this.hidePhaseSelection();
+    });
+    this.devConfigOverlay.add(cancelBtn);
+
+    // ESC to cancel
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        SoundManager.playClick();
+        this.hidePhaseSelection();
+      }
+    };
+    this.devKeyHandler = onKeyDown;
+    window.addEventListener('keydown', onKeyDown);
+    this.events.once('shutdown', () => {
+      if (this.devKeyHandler) {
+        window.removeEventListener('keydown', this.devKeyHandler);
+        this.devKeyHandler = null;
       }
     });
   }

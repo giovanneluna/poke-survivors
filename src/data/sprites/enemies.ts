@@ -27,4 +27,30 @@ export const ENEMY_SPRITES: Readonly<Record<string, SpriteConfig>> = {
   arbok:     { key: 'arbok-walk',     path: 'assets/pokemon/arbok-walk.png',     frameWidth: 40, frameHeight: 56, frameCount: 6,  directions: 8 },
   nidoking:  { key: 'nidoking-walk',  path: 'assets/pokemon/nidoking-walk.png',  frameWidth: 40, frameHeight: 48, frameCount: 4,  directions: 8 },
   snorlax:   { key: 'snorlax-walk',   path: 'assets/pokemon/snorlax-walk.png',   frameWidth: 32, frameHeight: 48, frameCount: 4,  directions: 8 },
+
+  // ── Phase 2 comuns ──────────────────────────────────────────────
+  metapod:   { key: 'metapod-walk',   path: 'assets/pokemon/metapod-walk.png',   frameWidth: 32, frameHeight: 48, frameCount: 10, directions: 8 },
+  kakuna:    { key: 'kakuna-walk',    path: 'assets/pokemon/kakuna-walk.png',    frameWidth: 24, frameHeight: 40, frameCount: 5,  directions: 8 },
+  gloom:     { key: 'gloom-walk',     path: 'assets/pokemon/gloom-walk.png',     frameWidth: 32, frameHeight: 32, frameCount: 4,  directions: 8 },
+  paras:     { key: 'paras-walk',     path: 'assets/pokemon/paras-walk.png',     frameWidth: 32, frameHeight: 24, frameCount: 4,  directions: 8 },
+  venonat:   { key: 'venonat-walk',   path: 'assets/pokemon/venonat-walk.png',   frameWidth: 32, frameHeight: 48, frameCount: 5,  directions: 8 },
+  drowzee:   { key: 'drowzee-walk',   path: 'assets/pokemon/drowzee-walk.png',   frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+  cubone:    { key: 'cubone-walk',    path: 'assets/pokemon/cubone-walk.png',    frameWidth: 32, frameHeight: 32, frameCount: 4,  directions: 8 },
+
+  // ── Phase 3 elite ───────────────────────────────────────────────
+  butterfree: { key: 'butterfree-walk', path: 'assets/pokemon/butterfree-walk.png', frameWidth: 32, frameHeight: 56, frameCount: 12, directions: 8 },
+  parasect:  { key: 'parasect-walk',  path: 'assets/pokemon/parasect-walk.png',  frameWidth: 32, frameHeight: 32, frameCount: 4,  directions: 8 },
+  venomoth:  { key: 'venomoth-walk',  path: 'assets/pokemon/venomoth-walk.png',  frameWidth: 40, frameHeight: 48, frameCount: 12, directions: 8 },
+  hypno:     { key: 'hypno-walk',     path: 'assets/pokemon/hypno-walk.png',     frameWidth: 40, frameHeight: 40, frameCount: 4,  directions: 8 },
+  marowak:   { key: 'marowak-walk',   path: 'assets/pokemon/marowak-walk.png',   frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+
+  // ── Phase 4 elite ───────────────────────────────────────────────
+  alakazam:  { key: 'alakazam-walk',  path: 'assets/pokemon/alakazam-walk.png',  frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+  electrode: { key: 'electrode-walk', path: 'assets/pokemon/electrode-walk.png', frameWidth: 32, frameHeight: 40, frameCount: 7,  directions: 8 },
+
+  // ── Bosses (Phase 2-3) ─────────────────────────────────────────
+  beedrill:  { key: 'beedrill-walk',  path: 'assets/pokemon/beedrill-walk.png',  frameWidth: 32, frameHeight: 48, frameCount: 4,  directions: 8 },
+  vileplume: { key: 'vileplume-walk', path: 'assets/pokemon/vileplume-walk.png', frameWidth: 32, frameHeight: 32, frameCount: 4,  directions: 8 },
+  primeape:  { key: 'primeape-walk',  path: 'assets/pokemon/primeape-walk.png',  frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+  gengar:    { key: 'gengar-walk',    path: 'assets/pokemon/gengar-walk.png',    frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
 } as const;

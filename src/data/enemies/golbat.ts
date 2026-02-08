@@ -10,4 +10,13 @@ export const GOLBAT: EnemyConfig = {
   damage: 14,
   xpValue: 12,
   scale: 0.8,
+  rangedAttack: {
+    projectileKey: 'atk-hyper-voice',
+    damage: 8,
+    speed: 100,
+    cooldownMs: 3500,
+    range: 280,
+    homing: false,
+    projectileScale: 0.6,
+  },
 };

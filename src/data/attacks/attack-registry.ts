@@ -29,7 +29,38 @@ export const ATTACKS: Readonly<Record<string, AttackConfig>> = {
   aerialAce:    { key: 'aerialAce',    name: 'Aerial Ace',    description: 'Lâminas homing que nunca erram',             baseDamage: 25, baseCooldown: 1200, element: 'flying', maxLevel: 8, minForm: 'stage2' },
   flareRush:    { key: 'flareRush',    name: 'Flare Rush',    description: 'Dash longo com rastro de fogo',              baseDamage: 22, baseCooldown: 2000, element: 'fire',   maxLevel: 8, minForm: 'stage1' },
   dragonRush:   { key: 'dragonRush',   name: 'Dragon Rush',   description: 'Carga dracônica com stun AoE',              baseDamage: 35, baseCooldown: 2500, element: 'dragon', maxLevel: 8, minForm: 'stage2' },
-  // Prime
+  // Charmander prime
   heatWave:     { key: 'heatWave',     name: 'Heat Wave',     description: 'Onda de calor 360° devastadora',             baseDamage: 40, baseCooldown: 5000, element: 'fire',   maxLevel: 8, minForm: 'stage2' },
   dracoMeteor:  { key: 'dracoMeteor',  name: 'Draco Meteor',  description: 'Chuva de meteoros apocalíptica',             baseDamage: 60, baseCooldown: 10000, element: 'dragon', maxLevel: 8, minForm: 'stage2' },
+  // ── Squirtle base ───────────────────────────────────────────────────
+  waterGun:     { key: 'waterGun',     name: 'Water Gun',     description: 'Jato de água no inimigo mais próximo',       baseDamage: 10, baseCooldown: 1200, element: 'water',  maxLevel: 8, minForm: 'base' },
+  bubble:       { key: 'bubble',       name: 'Bubble',        description: 'Bolhas lentas multi-shot com slow',          baseDamage: 7,  baseCooldown: 800,  element: 'water',  maxLevel: 8, minForm: 'base' },
+  tackle:       { key: 'tackle',       name: 'Tackle',        description: 'Investida rápida na direção do movimento',   baseDamage: 8,  baseCooldown: 600,  element: 'normal', maxLevel: 8, minForm: 'base' },
+  rapidSpin:    { key: 'rapidSpin',    name: 'Rapid Spin',    description: 'Gira na carapaça, zona de dano circular',    baseDamage: 7,  baseCooldown: 400,  element: 'normal', maxLevel: 8, minForm: 'base' },
+  withdraw:     { key: 'withdraw',     name: 'Withdraw',      description: 'Carapaça reduz dano recebido em 15%',        baseDamage: 0,  baseCooldown: 0,    element: 'water',  maxLevel: 8, minForm: 'base' },
+  aquaJet:      { key: 'aquaJet',      name: 'Aqua Jet',      description: 'Dash aquático, +speed temporário',           baseDamage: 14, baseCooldown: 3000, element: 'water',  maxLevel: 8, minForm: 'base' },
+  // Wartortle
+  waterPulse:   { key: 'waterPulse',   name: 'Water Pulse',   description: 'Pulso de água com chance de confusão',       baseDamage: 15, baseCooldown: 1800, element: 'water',  maxLevel: 8, minForm: 'stage1' },
+  hydroPump:    { key: 'hydroPump',    name: 'Hydro Pump',    description: 'Jato direcional devastador',                 baseDamage: 22, baseCooldown: 2800, element: 'water',  maxLevel: 8, minForm: 'stage1' },
+  aquaTail:     { key: 'aquaTail',     name: 'Aqua Tail',     description: 'Cauda aquática com crit chance',             baseDamage: 18, baseCooldown: 800,  element: 'water',  maxLevel: 8, minForm: 'stage1' },
+  whirlpool:    { key: 'whirlpool',    name: 'Whirlpool',     description: 'Vórtice de água que prende inimigos',        baseDamage: 12, baseCooldown: 4000, element: 'water',  maxLevel: 8, minForm: 'stage1' },
+  // Blastoise
+  iceBeam:      { key: 'iceBeam',      name: 'Ice Beam',      description: 'Raio de gelo que congela',                   baseDamage: 20, baseCooldown: 1400, element: 'ice',    maxLevel: 8, minForm: 'stage2' },
+  flashCannon:  { key: 'flashCannon',  name: 'Flash Cannon',  description: 'Tiro dos canhões, piercing',                 baseDamage: 25, baseCooldown: 1600, element: 'normal', maxLevel: 8, minForm: 'stage2' },
+  surf:         { key: 'surf',         name: 'Surf',          description: 'Onda 360° que empurra inimigos',             baseDamage: 12, baseCooldown: 6000, element: 'water',  maxLevel: 8, minForm: 'stage2' },
+  liquidation:  { key: 'liquidation',  name: 'Liquidation',   description: 'Golpe aquático 360°, reduz defesa',          baseDamage: 35, baseCooldown: 8000, element: 'water',  maxLevel: 8, minForm: 'stage2' },
+  // Squirtle evoluções
+  scald:        { key: 'scald',        name: 'Scald',         description: 'Vapor AoE ao impactar, chance de burn',      baseDamage: 18, baseCooldown: 900,  element: 'water',  maxLevel: 8, minForm: 'stage1' },
+  bubbleBeam:   { key: 'bubbleBeam',   name: 'Bubble Beam',   description: 'Rajada rápida com slow garantido',           baseDamage: 12, baseCooldown: 600,  element: 'water',  maxLevel: 8, minForm: 'stage1' },
+  bodySlam:     { key: 'bodySlam',     name: 'Body Slam',     description: 'Multi-slam 360°, paralisia',                 baseDamage: 12, baseCooldown: 500,  element: 'normal', maxLevel: 8, minForm: 'stage1' },
+  gyroBall:     { key: 'gyroBall',     name: 'Gyro Ball',     description: 'Orbes metálicas, mais dano em inimigo lento', baseDamage: 12, baseCooldown: 300,  element: 'normal', maxLevel: 8, minForm: 'stage1' },
+  waterfall:    { key: 'waterfall',    name: 'Waterfall',     description: 'Dash longo, cascata + flinch',               baseDamage: 22, baseCooldown: 2000, element: 'water',  maxLevel: 8, minForm: 'stage1' },
+  originPulse:  { key: 'originPulse',  name: 'Origin Pulse',  description: 'Beam nuclear que perfura tudo',              baseDamage: 50, baseCooldown: 3500, element: 'water',  maxLevel: 8, minForm: 'stage2' },
+  muddyWater:   { key: 'muddyWater',   name: 'Muddy Water',   description: 'Projéteis pesados, reduz precisão',          baseDamage: 30, baseCooldown: 1500, element: 'water',  maxLevel: 8, minForm: 'stage2' },
+  crabhammer:   { key: 'crabhammer',   name: 'Crabhammer',    description: 'Garras aquáticas, 50% crit',                 baseDamage: 25, baseCooldown: 700,  element: 'water',  maxLevel: 8, minForm: 'stage2' },
+  waterSpout:   { key: 'waterSpout',   name: 'Water Spout',   description: 'Jatos devastadores dos canhões',             baseDamage: 25, baseCooldown: 1200, element: 'water',  maxLevel: 8, minForm: 'stage2' },
+  blizzard:     { key: 'blizzard',     name: 'Blizzard',      description: 'Tempestade de gelo homing',                  baseDamage: 25, baseCooldown: 1200, element: 'ice',    maxLevel: 8, minForm: 'stage2' },
+  // Squirtle prime
+  rainDance:    { key: 'rainDance',    name: 'Rain Dance',    description: 'Chuva contínua de dano em área',             baseDamage: 40, baseCooldown: 5000, element: 'water',  maxLevel: 8, minForm: 'stage2' },
+  hydroCannon:  { key: 'hydroCannon',  name: 'Hydro Cannon',  description: 'Canhões devastadores ultimate',              baseDamage: 60, baseCooldown: 10000, element: 'water', maxLevel: 8, minForm: 'stage2' },
 } as const;

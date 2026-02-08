@@ -13,7 +13,7 @@ export const HAUNTER: EnemyConfig = {
   rangedAttack: {
     projectileKey: 'atk-shadow-ball',
     damage: 10,
-    speed: 60,
+    speed: 180,
     cooldownMs: 4000,
     range: 350,
     homing: true,

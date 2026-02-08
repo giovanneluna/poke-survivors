@@ -10,7 +10,7 @@ export interface PokemonFormConfig {
   readonly level: number;
   readonly maxAttackSlots: number;
   readonly maxPassiveSlots: number;
-  readonly blazeTier: 1 | 2 | 3;
+  readonly passiveTier: 1 | 2 | 3;
 }
 
 // ── Tipos de Ataque (todos, incluindo evoluções) ─────────────────
@@ -21,14 +21,25 @@ export type AttackType =
   | 'slash' | 'flamethrower' | 'dragonClaw'
   // Charizard
   | 'airSlash' | 'flareBlitz' | 'hurricane' | 'outrage'
-  // Evoluções de arma
+  // Charmander evoluções
   | 'inferno' | 'fireBlast' | 'blastBurn' | 'furySwipes' | 'blazeKick'
   | 'dragonPulse' | 'nightSlash' | 'aerialAce' | 'flareRush' | 'dragonRush'
-  // Prime
-  | 'heatWave' | 'dracoMeteor';
+  // Charmander prime
+  | 'heatWave' | 'dracoMeteor'
+  // Squirtle base
+  | 'waterGun' | 'bubble' | 'tackle' | 'rapidSpin' | 'withdraw' | 'aquaJet'
+  // Wartortle
+  | 'waterPulse' | 'hydroPump' | 'aquaTail' | 'whirlpool'
+  // Blastoise
+  | 'iceBeam' | 'flashCannon' | 'surf' | 'liquidation'
+  // Squirtle evoluções
+  | 'scald' | 'bubbleBeam' | 'bodySlam' | 'gyroBall' | 'waterfall'
+  | 'originPulse' | 'muddyWater' | 'crabhammer' | 'waterSpout' | 'blizzard'
+  // Squirtle prime
+  | 'rainDance' | 'hydroCannon';
 
 // ── Tipos de Elemento ─────────────────────────────────────────────
-export type ElementType = 'fire' | 'normal' | 'dragon' | 'flying';
+export type ElementType = 'fire' | 'water' | 'ice' | 'normal' | 'dragon' | 'flying';
 
 // ── Categorias de Ataque ─────────────────────────────────────────
 export type AttackCategory =
@@ -41,21 +52,27 @@ export type AttackCategory =
 
 // ── Tipos de Inimigo e Direção ────────────────────────────────────
 export type EnemyType =
-  // Existentes
+  // Phase 1 — Existentes
   | 'rattata' | 'pidgey' | 'zubat' | 'geodude' | 'gastly' | 'caterpie' | 'weedle'
-  // Novos comuns (Phase 1)
   | 'spearow' | 'ekans' | 'oddish' | 'mankey'
-  // Novos elite (Phase 1)
   | 'haunter' | 'machop' | 'golbat'
-  // Bosses (Phase 1)
-  | 'raticate' | 'arbok' | 'nidoking' | 'snorlax';
+  | 'raticate' | 'arbok' | 'nidoking' | 'snorlax'
+  // Phase 2 — Comuns
+  | 'metapod' | 'kakuna' | 'gloom' | 'paras' | 'venonat' | 'drowzee' | 'cubone'
+  // Phase 3 — Elites
+  | 'butterfree' | 'parasect' | 'venomoth' | 'hypno' | 'marowak'
+  // Phase 4 — Elites avançados
+  | 'alakazam' | 'electrode'
+  // Novos Bosses
+  | 'beedrill' | 'vileplume' | 'primeape' | 'gengar';
 export type Direction = 'down' | 'downRight' | 'right' | 'upRight' | 'up' | 'upLeft' | 'left' | 'downLeft';
 
 // ── Held Items (expandido) ────────────────────────────────────────
 export type HeldItemType =
   | 'charcoal' | 'wideLens' | 'choiceSpecs' | 'quickClaw' | 'leftovers'
   | 'dragonFang' | 'sharpBeak' | 'silkScarf' | 'shellBell'
-  | 'scopeLens' | 'razorClaw' | 'focusBand' | 'metronome' | 'magnet';
+  | 'scopeLens' | 'razorClaw' | 'focusBand' | 'metronome' | 'magnet'
+  | 'mysticWater' | 'neverMeltIce';
 
 export type PickupType = 'oranBerry' | 'magnetBurst' | 'rareCandy' | 'pokeballBomb' | 'gachaBox';
 export type DestructibleType = 'tallGrass' | 'berryBush' | 'rockSmash' | 'treasureChest';
@@ -96,6 +113,40 @@ export interface EnemyContactEffect {
   readonly dps?: number;        // para poison (damage per second)
 }
 
+/** Config de cura para inimigos healers (Gloom) */
+export interface EnemyHealAuraConfig {
+  readonly hpPerSecond: number;
+  readonly radius: number;
+}
+
+/** Config de explosão na morte (Electrode) */
+export interface EnemyDeathExplosionConfig {
+  readonly damage: number;
+  readonly radius: number;
+}
+
+/** Config de teleporte (Alakazam) */
+export interface EnemyTeleportConfig {
+  readonly cooldownMs: number;
+  readonly range: number;
+}
+
+/** Config de boomerang (Cubone/Marowak) */
+export interface EnemyBoomerangConfig {
+  readonly projectileKey: string;
+  readonly damage: number;
+  readonly speed: number;
+  readonly cooldownMs: number;
+  readonly range: number;
+  readonly projectileScale?: number;
+}
+
+/** Config de slow aura (Parasect) */
+export interface EnemySlowAuraConfig {
+  readonly radius: number;
+  readonly multiplier: number;
+}
+
 export interface EnemyConfig {
   readonly key: EnemyType;
   readonly name: string;
@@ -107,6 +158,11 @@ export interface EnemyConfig {
   readonly scale: number;
   readonly rangedAttack?: EnemyRangedConfig;
   readonly contactEffect?: EnemyContactEffect;
+  readonly healAura?: EnemyHealAuraConfig;
+  readonly deathExplosion?: EnemyDeathExplosionConfig;
+  readonly teleport?: EnemyTeleportConfig;
+  readonly boomerang?: EnemyBoomerangConfig;
+  readonly slowAura?: EnemySlowAuraConfig;
 }
 
 export interface EnemyRangedConfig {
@@ -117,19 +173,20 @@ export interface EnemyRangedConfig {
   readonly range: number;
   readonly homing: boolean;
   readonly projectileScale?: number;
-  readonly effect?: 'slow';
+  readonly effect?: 'slow' | 'confusion' | 'stun';
   readonly effectDurationMs?: number;
 }
 
 // ── Boss Config ─────────────────────────────────────────────────────
 export interface BossAttackConfig {
   readonly name: string;
-  readonly pattern: 'charge' | 'fan' | 'aoe-tremor' | 'aoe-land';
+  readonly pattern: 'charge' | 'fan' | 'aoe-tremor' | 'aoe-land' | 'teleport-fan';
   readonly damage: number;
   readonly cooldownMs: number;
   readonly range?: number;
   readonly projectileCount?: number;
   readonly aoeRadius?: number;
+  readonly teleportRange?: number;
 }
 
 export interface BossConfig extends EnemyConfig {
@@ -141,6 +198,9 @@ export interface BossConfig extends EnemyConfig {
 export interface BossSpawnConfig {
   readonly type: EnemyType;
   readonly timeSeconds: number;
+  readonly count?: number;
+  readonly hpMultiplier?: number;
+  readonly dmgMultiplier?: number;
 }
 
 export interface PhaseConfig {
@@ -184,8 +244,16 @@ export interface BlazeConfig {
   readonly explodeOnKill: boolean;
 }
 
+export interface TorrentConfig {
+  readonly wetChance: number;
+  readonly slowMultiplier: number;
+  readonly wetDuration: number;
+  readonly bonusDmgOnWet: number;
+  readonly splashOnKill: boolean;
+}
+
 // ── Status Effects ─────────────────────────────────────────────────
-export type StatusEffectType = 'burn' | 'stun' | 'slow' | 'confusion';
+export type StatusEffectType = 'burn' | 'stun' | 'slow' | 'confusion' | 'wet' | 'freeze';
 
 export interface StatusEffect {
   type: StatusEffectType;
@@ -269,6 +337,15 @@ export const DIRECTION_ROW: Readonly<Record<Direction, number>> = {
   left: 6,
   downLeft: 7,
 } as const;
+
+// ── Dev Mode ──────────────────────────────────────────────────────
+export interface DevConfig {
+  readonly starterKey: string;
+  readonly form: PokemonForm;
+  readonly level: number;
+  readonly godMode: boolean;
+  readonly attacks: readonly AttackType[];
+}
 
 // ── Helpers ────────────────────────────────────────────────────────
 export const FORM_ORDER: readonly PokemonForm[] = ['base', 'stage1', 'stage2'] as const;

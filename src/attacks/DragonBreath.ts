@@ -40,8 +40,8 @@ export class DragonBreath implements Attack {
     const dirAngleDeg = Phaser.Math.RadToDeg(dirAngleRad);
 
     // Visual: sopro dracônico animado
-    const offsetX = Math.cos(dirAngleRad) * 35;
-    const offsetY = Math.sin(dirAngleRad) * 35;
+    const offsetX = Math.cos(dirAngleRad) * 55;
+    const offsetY = Math.sin(dirAngleRad) * 55;
     const breath = this.scene.add.sprite(
       this.player.x + offsetX, this.player.y + offsetY, 'atk-dragon-breath'
     );
@@ -50,14 +50,14 @@ export class DragonBreath implements Attack {
     breath.play('anim-dragon-breath');
     this.scene.tweens.add({
       targets: breath,
-      x: this.player.x + Math.cos(dirAngleRad) * 80,
-      y: this.player.y + Math.sin(dirAngleRad) * 80,
+      x: this.player.x + Math.cos(dirAngleRad) * 110,
+      y: this.player.y + Math.sin(dirAngleRad) * 110,
       duration: 350,
     });
     breath.once('animationcomplete', () => breath.destroy());
 
     // Partículas dracônicas
-    this.scene.add.particles(this.player.x, this.player.y, 'dragon-particle', {
+    this.scene.add.particles(this.player.x + offsetX, this.player.y + offsetY, 'dragon-particle', {
       speed: { min: 120, max: 220 },
       angle: { min: dirAngleDeg - this.coneAngleDeg / 2, max: dirAngleDeg + this.coneAngleDeg / 2 },
       lifespan: 300, quantity: 10,

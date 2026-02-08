@@ -4,7 +4,7 @@
 
 export { GAME, PLAYER, SPAWN, XP_GEM } from "./data/game-settings"
 export { SPRITES, STARTER_SPRITES, ENEMY_SPRITES } from "./data/sprites/index"
-export { CHARMANDER_FORMS, BLAZE_TIERS, STARTERS } from "./data/pokemon"
+export { CHARMANDER_FORMS, BLAZE_TIERS, SQUIRTLE_FORMS, TORRENT_TIERS, STARTERS } from "./data/pokemon"
 export type { StarterConfig } from "./data/pokemon"
 export { ENEMIES, WAVES, BOSS_SCHEDULE } from "./data/enemies"
 export { ATTACKS } from "./data/attacks/attack-registry"

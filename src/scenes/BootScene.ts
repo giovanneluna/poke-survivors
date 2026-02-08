@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ENEMIES, STARTERS, CHARMANDER_FORMS } from '../config';
+import { ENEMIES, STARTERS, CHARMANDER_FORMS, SQUIRTLE_FORMS } from '../config';
 import type { SpriteConfig, Direction } from '../types';
 import { DIRECTION_ROW } from '../types';
 
@@ -25,8 +25,11 @@ export class BootScene extends Phaser.Scene {
     for (const starter of STARTERS) {
       this.loadSpritesheet(starter.sprite);
     }
-    // Carrega formas evolutivas (Charmeleon, Charizard)
+    // Carrega formas evolutivas (Charmeleon, Charizard, Wartortle, Blastoise)
     for (const form of CHARMANDER_FORMS) {
+      if (form.form !== 'base') this.loadSpritesheet(form.sprite);
+    }
+    for (const form of SQUIRTLE_FORMS) {
       if (form.form !== 'base') this.loadSpritesheet(form.sprite);
     }
     for (const config of Object.values(ENEMIES)) {
@@ -39,6 +42,8 @@ export class BootScene extends Phaser.Scene {
     this.load.image('art-bulbasaur', 'assets/artwork/bulbasaur.png');
     this.load.image('art-charmeleon', 'assets/artwork/charmeleon.png');
     this.load.image('art-charizard', 'assets/artwork/charizard.png');
+    this.load.image('art-wartortle', 'assets/artwork/wartortle.png');
+    this.load.image('art-blastoise', 'assets/artwork/blastoise.png');
 
     // Sprites de itens reais do Pokemon (para upgrades/UI)
     this.load.image('item-flame-orb', 'assets/items/flame-orb.png');
@@ -58,6 +63,9 @@ export class BootScene extends Phaser.Scene {
     this.load.image('item-focus-band', 'assets/items/focus-band.png');
     this.load.image('item-silk-scarf', 'assets/items/silk-scarf.png');
     this.load.image('item-metronome', 'assets/items/metronome.png');
+    this.load.image('item-mystic-water', 'assets/items/mystic-water.png');
+    this.load.image('item-never-melt-ice', 'assets/items/never-melt-ice.png');
+    this.load.image('item-water-stone', 'assets/items/water-stone.png');
 
     // Spritesheets de ataques (pokemonAutoChess)
     this.load.spritesheet('atk-ember', 'assets/attacks/ember-sheet.png', { frameWidth: 26, frameHeight: 26 });
@@ -97,6 +105,17 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('atk-venoshock', 'assets/attacks/venoshock-sheet.png', { frameWidth: 32, frameHeight: 80 });
     this.load.spritesheet('atk-thrash', 'assets/attacks/thrash-sheet.png', { frameWidth: 48, frameHeight: 32 });
     this.load.spritesheet('atk-stomp', 'assets/attacks/stomp-sheet.png', { frameWidth: 16, frameHeight: 16 });
+
+    // Water attack spritesheets (Squirtle line)
+    this.load.spritesheet('atk-water-pulse', 'assets/attacks/water-pulse-sheet.png', { frameWidth: 64, frameHeight: 56 });
+    this.load.spritesheet('atk-aqua-jet', 'assets/attacks/aqua-jet-sheet.png', { frameWidth: 96, frameHeight: 160 });
+    this.load.spritesheet('atk-hydro-pump', 'assets/attacks/hydro-pump-sheet.png', { frameWidth: 96, frameHeight: 160 });
+    this.load.spritesheet('atk-surf', 'assets/attacks/surf-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('atk-liquidation', 'assets/attacks/liquidation-sheet.png', { frameWidth: 64, frameHeight: 120 });
+    this.load.spritesheet('atk-rapid-spin', 'assets/attacks/rapid-spin-sheet.png', { frameWidth: 72, frameHeight: 72 });
+    this.load.spritesheet('atk-water-range', 'assets/attacks/water-range-sheet.png', { frameWidth: 8, frameHeight: 8 });
+    this.load.spritesheet('atk-water-hit', 'assets/attacks/water-hit-sheet.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('atk-ice-range', 'assets/attacks/ice-range-sheet.png', { frameWidth: 64, frameHeight: 56 });
   }
 
   private loadSpritesheet(sprite: SpriteConfig): void {
@@ -112,6 +131,9 @@ export class BootScene extends Phaser.Scene {
     }
     // Cria anims das formas evolutivas
     for (const form of CHARMANDER_FORMS) {
+      if (form.form !== 'base') this.createWalkAnims(form.sprite);
+    }
+    for (const form of SQUIRTLE_FORMS) {
       if (form.form !== 'base') this.createWalkAnims(form.sprite);
     }
     for (const config of Object.values(ENEMIES)) {
@@ -324,6 +346,62 @@ export class BootScene extends Phaser.Scene {
       key: 'anim-stomp',
       frames: this.anims.generateFrameNumbers('atk-stomp', { start: 0, end: 9 }),
       frameRate: 18, repeat: 0,
+    });
+
+    // ── Water attack animations (Squirtle line) ──────────────────────
+    // Water Pulse (22 frames, looping projectile)
+    this.anims.create({
+      key: 'anim-water-pulse',
+      frames: this.anims.generateFrameNumbers('atk-water-pulse', { start: 0, end: 21 }),
+      frameRate: 18, repeat: -1,
+    });
+    // Aqua Jet (20 frames, play once)
+    this.anims.create({
+      key: 'anim-aqua-jet',
+      frames: this.anims.generateFrameNumbers('atk-aqua-jet', { start: 0, end: 19 }),
+      frameRate: 24, repeat: 0,
+    });
+    // Hydro Pump (20 frames, play once)
+    this.anims.create({
+      key: 'anim-hydro-pump',
+      frames: this.anims.generateFrameNumbers('atk-hydro-pump', { start: 0, end: 19 }),
+      frameRate: 24, repeat: 0,
+    });
+    // Surf (4 frames, looping)
+    this.anims.create({
+      key: 'anim-surf',
+      frames: this.anims.generateFrameNumbers('atk-surf', { start: 0, end: 3 }),
+      frameRate: 10, repeat: -1,
+    });
+    // Liquidation (18 frames, play once)
+    this.anims.create({
+      key: 'anim-liquidation',
+      frames: this.anims.generateFrameNumbers('atk-liquidation', { start: 0, end: 17 }),
+      frameRate: 22, repeat: 0,
+    });
+    // Rapid Spin (11 frames, looping orbital)
+    this.anims.create({
+      key: 'anim-rapid-spin',
+      frames: this.anims.generateFrameNumbers('atk-rapid-spin', { start: 0, end: 10 }),
+      frameRate: 16, repeat: -1,
+    });
+    // Water range projectile (19 frames, looping)
+    this.anims.create({
+      key: 'anim-water-range',
+      frames: this.anims.generateFrameNumbers('atk-water-range', { start: 0, end: 18 }),
+      frameRate: 20, repeat: -1,
+    });
+    // Water hit impact (4 frames, play once)
+    this.anims.create({
+      key: 'anim-water-hit',
+      frames: this.anims.generateFrameNumbers('atk-water-hit', { start: 0, end: 3 }),
+      frameRate: 12, repeat: 0,
+    });
+    // Ice range projectile (14 frames, looping)
+    this.anims.create({
+      key: 'anim-ice-range',
+      frames: this.anims.generateFrameNumbers('atk-ice-range', { start: 0, end: 13 }),
+      frameRate: 16, repeat: -1,
     });
   }
 
@@ -576,6 +654,18 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xcccccc); g.fillRect(4, 1, 4, 3);
     g.generateTexture('held-magnet', 12, 10);
 
+    // Mystic Water (held)
+    g.clear(); g.fillStyle(0x3388ff); g.fillCircle(6, 6, 5);
+    g.fillStyle(0x44aaff, 0.6); g.fillCircle(5, 4, 3);
+    g.fillStyle(0x66ccff, 0.3); g.fillCircle(4, 3, 1.5);
+    g.generateTexture('held-mystic-water', 12, 12);
+
+    // Never-Melt Ice (held)
+    g.clear(); g.fillStyle(0x88ddff); g.fillTriangle(6, 0, 11, 10, 1, 10);
+    g.fillStyle(0xaaeeff, 0.6); g.fillTriangle(6, 2, 9, 9, 3, 9);
+    g.fillStyle(0xffffff, 0.4); g.fillTriangle(6, 3, 8, 8, 4, 8);
+    g.generateTexture('held-never-melt-ice', 12, 12);
+
     // ── Texturas de ataques (procedurais) ──────────────────────────
     // Slash arc (arco branco para Scratch/Slash/FurySwipes/NightSlash)
     g.clear(); g.fillStyle(0xffffff, 0.9);
@@ -630,6 +720,14 @@ export class BootScene extends Phaser.Scene {
     g.clear(); g.fillStyle(0x88ccff, 0.7); g.fillCircle(3, 3, 3);
     g.generateTexture('wind-particle', 6, 6);
 
+    // Water particle (para trails aquáticos)
+    g.clear(); g.fillStyle(0x3388ff); g.fillCircle(3, 3, 3);
+    g.generateTexture('water-particle', 6, 6);
+
+    // Ice particle (para trails de gelo)
+    g.clear(); g.fillStyle(0x88ddff); g.fillCircle(3, 3, 3);
+    g.generateTexture('ice-particle', 6, 6);
+
     // Meteor (para DracoMeteor)
     g.clear(); g.fillStyle(0xff4400); g.fillCircle(10, 10, 10);
     g.fillStyle(0xff8800, 0.7); g.fillCircle(8, 8, 6);
@@ -651,6 +749,40 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0x4488bb, 0.5);
     g.fillEllipse(10, 16, 8, 4);
     g.generateTexture('tornado', 20, 20);
+
+    // ── Phase 2-4 enemy projectiles/effects ───────────────────────
+    // Confusion wave (Venonat, Venomoth, Butterfree, Drowzee)
+    g.clear(); g.fillStyle(0xff66aa, 0.7); g.fillCircle(6, 6, 6);
+    g.fillStyle(0xcc44aa, 0.5); g.fillCircle(6, 6, 4);
+    g.fillStyle(0xff88cc, 0.3); g.fillCircle(5, 4, 2);
+    g.generateTexture('confusion-wave', 12, 12);
+
+    // Psychic projectile (Hypno, Alakazam)
+    g.clear(); g.fillStyle(0xff44aa); g.fillCircle(6, 6, 6);
+    g.fillStyle(0xff88cc, 0.7); g.fillCircle(5, 5, 4);
+    g.fillStyle(0xffaadd, 0.4); g.fillCircle(4, 4, 2);
+    g.generateTexture('psychic-projectile', 12, 12);
+
+    // Bone projectile (Cubone, Marowak)
+    g.clear(); g.fillStyle(0xeeddbb); g.fillRect(0, 3, 16, 4);
+    g.fillStyle(0xffeedd); g.fillCircle(2, 5, 3); g.fillCircle(14, 5, 3);
+    g.fillStyle(0xccbb99, 0.6); g.fillRect(6, 4, 4, 2);
+    g.generateTexture('bone-projectile', 16, 10);
+
+    // Spore particle (Butterfree)
+    g.clear(); g.fillStyle(0x66dd66, 0.7); g.fillCircle(3, 3, 3);
+    g.generateTexture('spore-particle', 6, 6);
+
+    // Heal aura visual (Gloom)
+    g.clear(); g.fillStyle(0x44ff44, 0.3); g.fillCircle(8, 8, 8);
+    g.fillStyle(0x66ff66, 0.2); g.fillCircle(8, 8, 6);
+    g.generateTexture('heal-aura', 16, 16);
+
+    // Explosion ring (Electrode)
+    g.clear(); g.lineStyle(3, 0xff4400, 0.8); g.strokeCircle(12, 12, 10);
+    g.lineStyle(2, 0xffaa00, 0.5); g.strokeCircle(12, 12, 8);
+    g.lineStyle(1, 0xffcc00, 0.3); g.strokeCircle(12, 12, 5);
+    g.generateTexture('explosion-ring', 24, 24);
 
     // ── Gacha Box (pokeball dourada) ──────────────────────────────
     g.clear();

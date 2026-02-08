@@ -1,0 +1,188 @@
+import Phaser from 'phaser';
+import type { Attack } from '../types';
+import { ATTACKS } from '../config';
+import type { Player } from '../entities/Player';
+import type { Enemy } from '../entities/Enemy';
+
+/**
+ * Waterfall: evolucao do Aqua Jet.
+ * Dash longo com trilha de agua persistente que aplica slow.
+ * Equivalente ao Flare Rush do Charmander, com tematica aquatica.
+ * Trail permanece e reduz velocidade dos inimigos que passam por ela.
+ */
+export class Waterfall implements Attack {
+  readonly type = 'waterfall' as const;
+  level = 1;
+
+  private readonly scene: Phaser.Scene;
+  private readonly player: Player;
+  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
+  private timer: Phaser.Time.TimerEvent;
+  private damage: number;
+  private cooldown: number;
+  private dashDistance = 130;
+  private trailDuration = 2000;
+  private speedBoost = 0.25;
+
+  /** Fator de reducao de velocidade nos inimigos na trilha */
+  private readonly trailSlowScale = 0.5;
+
+  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+    this.scene = scene;
+    this.player = player;
+    this.enemyGroup = enemyGroup;
+    this.damage = ATTACKS.waterfall.baseDamage;
+    this.cooldown = ATTACKS.waterfall.baseCooldown;
+
+    this.timer = scene.time.addEvent({
+      delay: this.cooldown, loop: true, callback: () => this.dash(),
+    });
+  }
+
+  private dash(): void {
+    const dir = this.player.getLastDirection();
+    const angle = Math.atan2(dir.y, dir.x);
+
+    const startX = this.player.x;
+    const startY = this.player.y;
+    const endX = startX + Math.cos(angle) * this.dashDistance;
+    const endY = startY + Math.sin(angle) * this.dashDistance;
+
+    // Criar trilha de agua persistente
+    const trailPoints: { x: number; y: number }[] = [];
+    const steps = 10;
+    for (let i = 0; i < steps; i++) {
+      const t = i / steps;
+      trailPoints.push({
+        x: startX + (endX - startX) * t,
+        y: startY + (endY - startY) * t,
+      });
+    }
+
+    // Sprite animado do waterfall ao longo do dash
+    const rushSprite = this.scene.add.sprite(startX, startY, 'atk-aqua-jet');
+    rushSprite.setScale(0.6).setDepth(10).setAlpha(0.9);
+    rushSprite.setRotation(angle - Math.PI / 2);
+    rushSprite.play('anim-aqua-jet');
+    this.scene.tweens.add({
+      targets: rushSprite, x: endX, y: endY, duration: steps * 25,
+    });
+    rushSprite.once('animationcomplete', () => rushSprite.destroy());
+
+    // Visual: particulas de agua + zonas de agua persistentes no trail
+    for (let i = 0; i < trailPoints.length; i++) {
+      const p = trailPoints[i];
+      this.scene.time.delayedCall(i * 25, () => {
+        // Particulas de splash
+        this.scene.add.particles(p.x, p.y, 'water-particle', {
+          speed: { min: 20, max: 50 }, lifespan: 350, quantity: 5,
+          scale: { start: 1.8, end: 0 }, tint: [0x3388ff, 0x44aaff, 0x66ccff],
+          emitting: false,
+        }).explode();
+
+        // Zona de agua visual (circulo azul translucido)
+        const waterZone = this.scene.add.circle(p.x, p.y, 14, 0x3388ff, 0.3);
+        waterZone.setDepth(6);
+        this.scene.tweens.add({
+          targets: waterZone, alpha: 0, duration: this.trailDuration,
+          onComplete: () => waterZone.destroy(),
+        });
+      });
+    }
+
+    // Dano ao longo da trilha (imediato)
+    const enemies = this.enemyGroup.getChildren().filter(
+      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
+    );
+
+    for (const enemySprite of enemies) {
+      const dx = endX - startX;
+      const dy = endY - startY;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len === 0) continue;
+
+      const perpDist = Math.abs(
+        (dy * (enemySprite.x - startX) - dx * (enemySprite.y - startY)) / len
+      );
+      if (perpDist > 30) continue;
+
+      const projT = ((enemySprite.x - startX) * dx + (enemySprite.y - startY) * dy) / (len * len);
+      if (projT < -0.1 || projT > 1.1) continue;
+
+      const enemy = enemySprite as unknown as Enemy;
+      if (typeof enemy.takeDamage === 'function') {
+        const killed = enemy.takeDamage(this.damage);
+        if (killed) {
+          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+        }
+      }
+    }
+
+    // Trail damage + slow tick (inimigos que passam pela trilha depois)
+    let trailElapsed = 0;
+    const trailTick = this.scene.time.addEvent({
+      delay: 400, loop: true,
+      callback: () => {
+        trailElapsed += 400;
+        if (trailElapsed >= this.trailDuration) { trailTick.destroy(); return; }
+
+        const liveEnemies = this.enemyGroup.getChildren().filter(
+          (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
+        );
+        for (const enemySprite of liveEnemies) {
+          // Check se esta perto de algum ponto do trail
+          for (const p of trailPoints) {
+            const dist = Phaser.Math.Distance.Between(p.x, p.y, enemySprite.x, enemySprite.y);
+            if (dist < 20) {
+              const enemy = enemySprite as unknown as Enemy;
+              if (typeof enemy.takeDamage === 'function') {
+                // Trail tick damage: 30% do dano base
+                const killed = enemy.takeDamage(Math.floor(this.damage * 0.3));
+                if (killed) {
+                  this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+                }
+              }
+
+              // Slow: reduz velocidade dos inimigos na trilha
+              const enemyBody = enemySprite.body as Phaser.Physics.Arcade.Body | null;
+              if (enemyBody) {
+                enemyBody.velocity.scale(this.trailSlowScale);
+              }
+              enemySprite.setTint(0x3388ff);
+              this.scene.time.delayedCall(500, () => {
+                if (enemySprite.active) enemySprite.clearTint();
+              });
+
+              break; // So aplica uma vez por tick por inimigo
+            }
+          }
+        }
+      },
+    });
+
+    // Speed boost: aumenta velocidade do jogador temporariamente
+    this.player.stats.speed = Math.floor(this.player.stats.baseSpeed * (1 + this.speedBoost));
+    this.player.setTint(0x3388ff);
+    this.scene.time.delayedCall(2500, () => {
+      this.player.stats.speed = this.player.stats.baseSpeed;
+      if (this.player.active) this.player.clearTint();
+    });
+  }
+
+  update(_time: number, _delta: number): void {}
+
+  upgrade(): void {
+    this.level++;
+    this.damage += 5;
+    this.dashDistance += 12;
+    this.trailDuration += 300;
+    this.speedBoost += 0.03;
+    this.cooldown = Math.max(1200, this.cooldown - 120);
+    this.timer.destroy();
+    this.timer = this.scene.time.addEvent({
+      delay: this.cooldown, loop: true, callback: () => this.dash(),
+    });
+  }
+
+  destroy(): void { this.timer.destroy(); }
+}

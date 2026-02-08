@@ -37,7 +37,7 @@ const ATTACK_SCALES: Readonly<Record<string, number>> = {
   "atk-dragon-claw": 0.65, // 96x78 → 62x51
   "atk-dragon-pulse": 2.0, // 32x32 → 64x64
   "atk-dragon-rush": 1.0, // 65x64 → 65x64
-  "atk-draco-meteor": 0.7, // 96x58 → 67x41
+  "atk-draco-meteor": 1.5, // 96x58 → 67x41
   "atk-smokescreen": 1.4, // 45x45 → 63x63
   "atk-flame-charge": 0.8, // 20x96 → 16x77
   "atk-flare-blitz": 0.7, // 96x83 → 67x58
@@ -560,11 +560,13 @@ export class ShowcaseScene extends Phaser.Scene {
   }
 
   private isBoss(config: EnemyConfig | BossConfig): config is BossConfig {
-    return 'isBoss' in config && (config as BossConfig).isBoss === true;
+    return "isBoss" in config && (config as BossConfig).isBoss === true
   }
 
   private addEnemiesSection(y: number): number {
-    const enemyKeys = Object.keys(ENEMIES).filter(k => !this.isBoss(ENEMIES[k]))
+    const enemyKeys = Object.keys(ENEMIES).filter(
+      (k) => !this.isBoss(ENEMIES[k]),
+    )
 
     for (const key of enemyKeys) {
       const enemy = ENEMIES[key]
@@ -684,14 +686,21 @@ export class ShowcaseScene extends Phaser.Scene {
   }
 
   private addBossesSection(y: number): number {
-    const bossKeys = Object.keys(ENEMIES).filter(k => this.isBoss(ENEMIES[k]))
+    const bossKeys = Object.keys(ENEMIES).filter((k) => this.isBoss(ENEMIES[k]))
 
     // Map boss attack pattern to sprite/anim keys
-    const bossAttackSprites: Record<string, { atkKey: string; animKey: string; scale: number }> = {
-      'charge': { atkKey: 'atk-bite', animKey: 'anim-bite', scale: 2.0 },
-      'fan': { atkKey: 'atk-venoshock', animKey: 'anim-venoshock', scale: 1.5 },
-      'aoe-tremor': { atkKey: 'atk-thrash', animKey: 'anim-thrash', scale: 2.5 },
-      'aoe-land': { atkKey: 'atk-stomp', animKey: 'anim-stomp', scale: 4.0 },
+    const bossAttackSprites: Record<
+      string,
+      { atkKey: string; animKey: string; scale: number }
+    > = {
+      charge: { atkKey: "atk-bite", animKey: "anim-bite", scale: 2.0 },
+      fan: { atkKey: "atk-venoshock", animKey: "anim-venoshock", scale: 1.5 },
+      "aoe-tremor": {
+        atkKey: "atk-thrash",
+        animKey: "anim-thrash",
+        scale: 2.5,
+      },
+      "aoe-land": { atkKey: "atk-stomp", animKey: "anim-stomp", scale: 4.0 },
     }
 
     for (const key of bossKeys) {
@@ -699,10 +708,20 @@ export class ShowcaseScene extends Phaser.Scene {
 
       // Faixa de fundo dourada
       const rowBg = this.add.graphics()
-      rowBg.fillStyle(0xFFD700, 0.05)
-      rowBg.fillRect(0, y - ROW_HEIGHT / 2 + 5, this.cameras.main.width, ROW_HEIGHT - 10)
-      rowBg.lineStyle(1, 0xFFD700, 0.2)
-      rowBg.strokeRect(0, y - ROW_HEIGHT / 2 + 5, this.cameras.main.width, ROW_HEIGHT - 10)
+      rowBg.fillStyle(0xffd700, 0.05)
+      rowBg.fillRect(
+        0,
+        y - ROW_HEIGHT / 2 + 5,
+        this.cameras.main.width,
+        ROW_HEIGHT - 10,
+      )
+      rowBg.lineStyle(1, 0xffd700, 0.2)
+      rowBg.strokeRect(
+        0,
+        y - ROW_HEIGHT / 2 + 5,
+        this.cameras.main.width,
+        ROW_HEIGHT - 10,
+      )
 
       // Walk sprite animado (maior que inimigos normais)
       const sprKey = boss.sprite.key
@@ -720,26 +739,44 @@ export class ShowcaseScene extends Phaser.Scene {
       badgeBg.lineStyle(1, 0xff0000, 0.6)
       badgeBg.strokeRoundedRect(LABEL_X + 60, y - 28, 45, 16, 4)
 
-      this.add.text(LABEL_X + 82, y - 20, "BOSS", {
-        fontSize: "10px", color: "#ff4444", fontFamily: "monospace", fontStyle: "bold",
-      }).setOrigin(0.5, 0.5)
+      this.add
+        .text(LABEL_X + 82, y - 20, "BOSS", {
+          fontSize: "10px",
+          color: "#ff4444",
+          fontFamily: "monospace",
+          fontStyle: "bold",
+        })
+        .setOrigin(0.5, 0.5)
 
       // Nome
-      this.add.text(LABEL_X + 70, y - 6, boss.name.toUpperCase(), {
-        fontSize: "14px", color: "#FFD700", fontFamily: "monospace", fontStyle: "bold",
-      }).setOrigin(0, 0.5)
+      this.add
+        .text(LABEL_X + 70, y - 6, boss.name.toUpperCase(), {
+          fontSize: "14px",
+          color: "#FFD700",
+          fontFamily: "monospace",
+          fontStyle: "bold",
+        })
+        .setOrigin(0, 0.5)
 
       // Stats
       const statsText = `HP:${boss.hp}  SPD:${boss.speed}  DMG:${boss.damage}  XP:${boss.xpValue}`
-      this.add.text(LABEL_X + 70, y + 12, statsText, {
-        fontSize: "9px", color: "#aaaaaa", fontFamily: "monospace",
-      }).setOrigin(0, 0.5)
+      this.add
+        .text(LABEL_X + 70, y + 12, statsText, {
+          fontSize: "9px",
+          color: "#aaaaaa",
+          fontFamily: "monospace",
+        })
+        .setOrigin(0, 0.5)
 
       // Ataque especial info
       const atkInfo = `${boss.bossAttack.name} (${boss.bossAttack.pattern}) — DMG:${boss.bossAttack.damage}`
-      this.add.text(LABEL_X + 70, y + 26, atkInfo, {
-        fontSize: "8px", color: "#ff8844", fontFamily: "monospace",
-      }).setOrigin(0, 0.5)
+      this.add
+        .text(LABEL_X + 70, y + 26, atkInfo, {
+          fontSize: "8px",
+          color: "#ff8844",
+          fontFamily: "monospace",
+        })
+        .setOrigin(0, 0.5)
 
       // Boss attack sprite demo
       const atkMapping = bossAttackSprites[boss.bossAttack.pattern]
@@ -754,11 +791,17 @@ export class ShowcaseScene extends Phaser.Scene {
             targets: atkSprite,
             x: DEMO_END_X,
             duration: 1500,
-            onComplete: () => { if (atkSprite.active) atkSprite.destroy() },
+            onComplete: () => {
+              if (atkSprite.active) atkSprite.destroy()
+            },
           })
         }
         spawnBossAtk()
-        const timer = this.time.addEvent({ delay: 2500, callback: spawnBossAtk, loop: true })
+        const timer = this.time.addEvent({
+          delay: 2500,
+          callback: spawnBossAtk,
+          loop: true,
+        })
         this.activeTimers.push(timer)
       }
 

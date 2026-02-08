@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
-import type { UpgradeOption, PlayerState, HeldItemType, AttackType, GachaRewardType } from '../types';
+import type { UpgradeOption, PlayerState, HeldItemType, AttackType, GachaRewardType, PokemonForm } from '../types';
+import { ATTACKS } from '../config';
 import { SoundManager } from '../audio/SoundManager';
 import { Boss } from '../entities/Boss';
+import { GameScene } from './GameScene';
 
 interface StatsData extends PlayerState {
   time: number;
@@ -31,6 +33,10 @@ export class UIScene extends Phaser.Scene {
   private bossHpContainer!: Phaser.GameObjects.Container;
   private gachaContainer!: Phaser.GameObjects.Container;
   private activeBoss: Boss | null = null;
+  private devPanelContainer!: Phaser.GameObjects.Container;
+  private devPanelOpen = false;
+  private devSearchText = '';
+  private devPanelKeyHandler: ((event: KeyboardEvent) => void) | null = null;
 
   private readonly textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
     fontSize: '14px',
@@ -114,6 +120,19 @@ export class UIScene extends Phaser.Scene {
 
     // ── Gacha ────────────────────────────────────────────────────────
     gameScene.events.on('show-gacha', () => this.showGachaOverlay());
+
+    // ── Dev Panel (only in dev mode) ──────────────────────────────
+    this.devPanelContainer = this.add.container(0, 0).setDepth(500).setVisible(false);
+    // Auto-open when dev-mode-ready fires from GameScene
+    gameScene.events.on('dev-mode-ready', () => {
+      this.createDevButton(width);
+      // Auto-open the panel
+      if (!this.devPanelOpen) {
+        this.devPanelOpen = true;
+        this.rebuildDevPanel();
+        this.devPanelContainer.setVisible(true);
+      }
+    });
   }
 
   private updateHUD(stats: StatsData): void {
@@ -535,6 +554,326 @@ export class UIScene extends Phaser.Scene {
         gameScene.events.emit('gacha-reward', rewardType);
       });
     });
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // ═══ DEV PANEL ═════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════════════
+
+  private createDevButton(screenWidth: number): void {
+    const btnX = screenWidth - 35;
+    const btnY = 55;
+    const btnW = 50;
+    const btnH = 22;
+
+    const btnGfx = this.add.graphics().setDepth(500);
+    const drawBtn = (hover: boolean): void => {
+      btnGfx.clear();
+      btnGfx.fillStyle(hover ? 0x228844 : 0x114422, 0.9);
+      btnGfx.fillRoundedRect(btnX - btnW / 2, btnY - btnH / 2, btnW, btnH, 4);
+      btnGfx.lineStyle(1, hover ? 0x44ff44 : 0x228822);
+      btnGfx.strokeRoundedRect(btnX - btnW / 2, btnY - btnH / 2, btnW, btnH, 4);
+    };
+    drawBtn(false);
+
+    this.add.text(btnX, btnY, 'DEV', {
+      fontSize: '10px', color: '#44ff44', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5).setDepth(501);
+
+    const hitbox = this.add.rectangle(btnX, btnY, btnW, btnH, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true }).setDepth(502);
+    hitbox.on('pointerover', () => drawBtn(true));
+    hitbox.on('pointerout', () => drawBtn(false));
+    hitbox.on('pointerdown', () => {
+      SoundManager.playClick();
+      this.toggleDevPanel();
+    });
+  }
+
+  private toggleDevPanel(): void {
+    if (this.devPanelOpen) {
+      this.devPanelContainer.setVisible(false);
+      this.devPanelOpen = false;
+      if (this.devPanelKeyHandler) {
+        window.removeEventListener('keydown', this.devPanelKeyHandler);
+        this.devPanelKeyHandler = null;
+      }
+      return;
+    }
+    this.devPanelOpen = true;
+    this.rebuildDevPanel();
+    this.devPanelContainer.setVisible(true);
+  }
+
+  private rebuildDevPanel(): void {
+    this.devPanelContainer.removeAll(true);
+
+    const { width, height } = this.cameras.main;
+    const panelW = Math.min(340, width - 20);
+    const panelH = height - 40;
+    const panelX = width - panelW - 10;
+    const panelY = 20;
+
+    // Panel background
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0a0a1e, 0.95);
+    bg.fillRoundedRect(panelX, panelY, panelW, panelH, 8);
+    bg.lineStyle(1, 0x44ff44, 0.5);
+    bg.strokeRoundedRect(panelX, panelY, panelW, panelH, 8);
+    this.devPanelContainer.add(bg);
+
+    // Title
+    this.devPanelContainer.add(this.add.text(panelX + panelW / 2, panelY + 12, 'DEV PANEL', {
+      fontSize: '12px', color: '#44ff44', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5));
+
+    // Close button
+    const closeBtn = this.add.text(panelX + panelW - 15, panelY + 8, 'X', {
+      fontSize: '12px', color: '#ff4444', fontFamily: 'monospace', fontStyle: 'bold',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    closeBtn.on('pointerdown', () => { SoundManager.playClick(); this.toggleDevPanel(); });
+    this.devPanelContainer.add(closeBtn);
+
+    let yPos = panelY + 30;
+    const gs = this.scene.get('GameScene') as GameScene;
+
+    // ── Utility buttons ──────────────────────────────────────────
+    const utilBtns = [
+      { label: 'Level Up', color: '#ffcc00', action: () => gs.events.emit('request-level-up') },
+      { label: 'God Mode', color: gs.player.godMode ? '#44ff44' : '#ff4444', action: () => {
+        gs.player.godMode = !gs.player.godMode;
+        gs.player.stats.hp = gs.player.stats.maxHp;
+        gs.events.emit('stats-refresh');
+        this.rebuildDevPanel();
+      }},
+      { label: 'Kill All', color: '#ff6666', action: () => gs.events.emit('pokeball-bomb') },
+      { label: 'Spawn x5', color: '#ff8844', action: () => {
+        for (let i = 0; i < 5; i++) gs.spawnSingleDummy();
+      }},
+      { label: 'Full Heal', color: '#66ff66', action: () => {
+        gs.player.stats.hp = gs.player.stats.maxHp;
+        gs.events.emit('stats-refresh');
+      }},
+      { label: 'Boss', color: '#ff2222', action: () => {
+        gs.getSpawnSystem().spawnBoss('raticate');
+      }},
+    ];
+
+    const btnW = (panelW - 20) / 2 - 5;
+    utilBtns.forEach((btn, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const bx = panelX + 10 + col * (btnW + 10);
+      const by = yPos + row * 25;
+
+      const gfx = this.add.graphics();
+      gfx.fillStyle(0x1a1a3e, 0.9);
+      gfx.fillRoundedRect(bx, by, btnW, 20, 3);
+      this.devPanelContainer.add(gfx);
+
+      const text = this.add.text(bx + btnW / 2, by + 10, btn.label, {
+        fontSize: '10px', color: btn.color, fontFamily: 'monospace', fontStyle: 'bold',
+      }).setOrigin(0.5);
+      this.devPanelContainer.add(text);
+
+      const hit = this.add.rectangle(bx + btnW / 2, by + 10, btnW, 20, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true });
+      hit.on('pointerdown', () => { SoundManager.playClick(); btn.action(); });
+      this.devPanelContainer.add(hit);
+    });
+    yPos += Math.ceil(utilBtns.length / 2) * 25 + 10;
+
+    // ── Form buttons ─────────────────────────────────────────────
+    this.devPanelContainer.add(this.add.text(panelX + 10, yPos, 'FORMA:', {
+      fontSize: '9px', color: '#888888', fontFamily: 'monospace',
+    }));
+    yPos += 14;
+
+    const forms: PokemonForm[] = ['base', 'stage1', 'stage2'];
+    const formLabels = ['Base', 'Stage1', 'Stage2'];
+    const formBtnW = (panelW - 30) / 3;
+    forms.forEach((form, i) => {
+      const bx = panelX + 10 + i * (formBtnW + 5);
+      const isActive = gs.player.getForm() === form;
+      const gfx = this.add.graphics();
+      gfx.fillStyle(isActive ? 0x228822 : 0x1a1a3e, 0.9);
+      gfx.fillRoundedRect(bx, yPos, formBtnW, 18, 3);
+      if (isActive) { gfx.lineStyle(1, 0x44ff44); gfx.strokeRoundedRect(bx, yPos, formBtnW, 18, 3); }
+      this.devPanelContainer.add(gfx);
+
+      this.devPanelContainer.add(this.add.text(bx + formBtnW / 2, yPos + 9, formLabels[i], {
+        fontSize: '9px', color: isActive ? '#44ff44' : '#aaaaaa', fontFamily: 'monospace', fontStyle: 'bold',
+      }).setOrigin(0.5));
+
+      const hit = this.add.rectangle(bx + formBtnW / 2, yPos + 9, formBtnW, 18, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true });
+      hit.on('pointerdown', () => {
+        SoundManager.playClick();
+        gs.player.evolve(form, true);
+        gs.events.emit('stats-refresh');
+        this.rebuildDevPanel();
+      });
+      this.devPanelContainer.add(hit);
+    });
+    yPos += 28;
+
+    // ── Search bar ───────────────────────────────────────────────
+    this.devPanelContainer.add(this.add.text(panelX + 10, yPos, 'ATAQUES:', {
+      fontSize: '9px', color: '#888888', fontFamily: 'monospace',
+    }));
+    yPos += 14;
+
+    const searchBg = this.add.graphics();
+    searchBg.fillStyle(0x111133, 0.9);
+    searchBg.fillRoundedRect(panelX + 10, yPos, panelW - 20, 20, 3);
+    searchBg.lineStyle(1, 0x333366);
+    searchBg.strokeRoundedRect(panelX + 10, yPos, panelW - 20, 20, 3);
+    this.devPanelContainer.add(searchBg);
+
+    const searchDisplay = this.add.text(panelX + 15, yPos + 10,
+      this.devSearchText || 'Clique para buscar...', {
+        fontSize: '10px',
+        color: this.devSearchText ? '#ffffff' : '#555555',
+        fontFamily: 'monospace',
+      }).setOrigin(0, 0.5);
+    this.devPanelContainer.add(searchDisplay);
+
+    // Click-to-focus search: only captures keys when user clicks the search bar
+    if (this.devPanelKeyHandler) {
+      window.removeEventListener('keydown', this.devPanelKeyHandler);
+      this.devPanelKeyHandler = null;
+    }
+    const searchHit = this.add.rectangle(panelX + 10 + (panelW - 20) / 2, yPos + 10, panelW - 20, 20, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true });
+    searchHit.on('pointerdown', () => {
+      if (this.devPanelKeyHandler) return; // already focused
+      searchBg.clear();
+      searchBg.fillStyle(0x111155, 0.95);
+      searchBg.fillRoundedRect(panelX + 10, yPos, panelW - 20, 20, 3);
+      searchBg.lineStyle(1, 0x44ff44);
+      searchBg.strokeRoundedRect(panelX + 10, yPos, panelW - 20, 20, 3);
+
+      const onKey = (event: KeyboardEvent): void => {
+        if (event.key === 'Escape') {
+          // Unfocus search, remove handler
+          window.removeEventListener('keydown', onKey);
+          this.devPanelKeyHandler = null;
+          this.rebuildDevPanel();
+          return;
+        }
+        if (event.key === 'Backspace') {
+          event.preventDefault();
+          this.devSearchText = this.devSearchText.slice(0, -1);
+          this.rebuildDevPanel();
+          return;
+        }
+        if (event.key.length === 1 && this.devSearchText.length < 20) {
+          event.preventDefault();
+          this.devSearchText += event.key.toLowerCase();
+          this.rebuildDevPanel();
+        }
+      };
+      this.devPanelKeyHandler = onKey;
+      window.addEventListener('keydown', onKey);
+    });
+    this.devPanelContainer.add(searchHit);
+
+    // Cleanup on scene shutdown
+    this.events.once('shutdown', () => {
+      if (this.devPanelKeyHandler) {
+        window.removeEventListener('keydown', this.devPanelKeyHandler);
+        this.devPanelKeyHandler = null;
+      }
+    });
+
+    yPos += 25;
+
+    // ── Attack list ──────────────────────────────────────────────
+    const allAttacks = Object.values(ATTACKS);
+    const filtered = this.devSearchText
+      ? allAttacks.filter(a =>
+          a.name.toLowerCase().includes(this.devSearchText) ||
+          a.key.toLowerCase().includes(this.devSearchText))
+      : allAttacks;
+
+    const attackFactory = gs.getAttackFactory();
+    const listHeight = panelH - (yPos - panelY) - 10;
+    const itemH = 22;
+    const maxVisible = Math.floor(listHeight / itemH);
+
+    const elementColors: Record<string, string> = {
+      fire: '#ff6600', water: '#4488ff', ice: '#88ddff',
+      dragon: '#7744ff', flying: '#aaddff', normal: '#aaaaaa',
+    };
+
+    filtered.slice(0, maxVisible).forEach((atk, i) => {
+      const iy = yPos + i * itemH;
+      const isActive = gs.player.hasAttack(atk.key as AttackType);
+      const currentAttack = gs.player.getAttack(atk.key as AttackType);
+      const level = currentAttack?.level ?? 0;
+
+      // Row background
+      const rowGfx = this.add.graphics();
+      rowGfx.fillStyle(isActive ? 0x1a2a1a : 0x111122, 0.8);
+      rowGfx.fillRoundedRect(panelX + 5, iy, panelW - 10, itemH - 2, 2);
+      this.devPanelContainer.add(rowGfx);
+
+      // Element color indicator
+      const elemColor = Phaser.Display.Color.HexStringToColor(elementColors[atk.element] ?? '#888888').color;
+      rowGfx.fillStyle(elemColor, 0.8);
+      rowGfx.fillRect(panelX + 5, iy, 3, itemH - 2);
+
+      // Name + level
+      const nameStr = isActive ? `${atk.name} Lv${level}` : atk.name;
+      this.devPanelContainer.add(this.add.text(panelX + 12, iy + (itemH - 2) / 2, nameStr, {
+        fontSize: '9px',
+        color: isActive ? '#44ff44' : '#cccccc',
+        fontFamily: 'monospace',
+      }).setOrigin(0, 0.5));
+
+      // Toggle button
+      const toggleX = panelX + panelW - 60;
+      const toggleText = isActive ? 'OFF' : 'ON';
+      const toggleColor = isActive ? '#ff4444' : '#44ff44';
+
+      const toggleBtn = this.add.text(toggleX, iy + (itemH - 2) / 2, `[${toggleText}]`, {
+        fontSize: '9px', color: toggleColor, fontFamily: 'monospace', fontStyle: 'bold',
+      }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      toggleBtn.on('pointerdown', () => {
+        SoundManager.playClick();
+        const type = atk.key as AttackType;
+        if (isActive) {
+          attackFactory.removeAttack(type);
+        } else if (attackFactory.isRegistered(type)) {
+          attackFactory.createAttack(type);
+        }
+        gs.events.emit('stats-refresh');
+        this.rebuildDevPanel();
+      });
+      this.devPanelContainer.add(toggleBtn);
+
+      // Level +/- buttons (only if active)
+      if (isActive && currentAttack) {
+        const lvUpBtn = this.add.text(panelX + panelW - 22, iy + (itemH - 2) / 2, '+', {
+          fontSize: '10px', color: '#66ff66', fontFamily: 'monospace', fontStyle: 'bold',
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        lvUpBtn.on('pointerdown', () => {
+          SoundManager.playClick();
+          if (currentAttack.level < 8) currentAttack.upgrade();
+          gs.events.emit('stats-refresh');
+          this.rebuildDevPanel();
+        });
+        this.devPanelContainer.add(lvUpBtn);
+      }
+    });
+
+    // Show count
+    if (filtered.length > maxVisible) {
+      this.devPanelContainer.add(this.add.text(panelX + panelW / 2, panelY + panelH - 5,
+        `+${filtered.length - maxVisible} mais...`, {
+          fontSize: '8px', color: '#555555', fontFamily: 'monospace',
+        }).setOrigin(0.5, 1));
+    }
   }
 
   private showGameOver(data: GameOverData): void {

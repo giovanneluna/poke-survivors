@@ -29,7 +29,38 @@ export const ATTACK_CATEGORIES: Readonly<Record<AttackType, AttackCategory>> = {
   aerialAce: 'projectile',
   flareRush: 'dash',
   dragonRush: 'dash',
-  // Prime
+  // Charmander prime
   heatWave: 'area',
   dracoMeteor: 'area',
+  // ── Squirtle base ───────────────────────────────────────────────────
+  waterGun: 'projectile',
+  bubble: 'projectile',
+  tackle: 'cone',
+  rapidSpin: 'orbital',
+  withdraw: 'aura',
+  aquaJet: 'dash',
+  // Wartortle
+  waterPulse: 'projectile',
+  hydroPump: 'cone',
+  aquaTail: 'cone',
+  whirlpool: 'area',
+  // Blastoise
+  iceBeam: 'projectile',
+  flashCannon: 'projectile',
+  surf: 'area',
+  liquidation: 'area',
+  // Squirtle evoluções
+  scald: 'projectile',
+  bubbleBeam: 'projectile',
+  bodySlam: 'cone',
+  gyroBall: 'orbital',
+  waterfall: 'dash',
+  originPulse: 'cone',
+  muddyWater: 'projectile',
+  crabhammer: 'cone',
+  waterSpout: 'projectile',
+  blizzard: 'projectile',
+  // Squirtle prime
+  rainDance: 'area',
+  hydroCannon: 'area',
 } as const;

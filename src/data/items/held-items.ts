@@ -13,4 +13,6 @@ export const HELD_ITEMS: Readonly<Record<string, HeldItemConfig>> = {
   shellBell:   { key: 'shellBell',   name: 'Shell Bell',    description: '+1.5% lifesteal por nível',      icon: 'item-shell-bell',   color: 0xffcc44, effect: 'lifesteal',  maxLevel: 5 },
   focusBand:   { key: 'focusBand',   name: 'Focus Band',    description: 'Sobrevive golpe fatal (CD -10s/nv)', icon: 'item-focus-band', color: 0xff8800, effect: 'endure',   maxLevel: 3 },
   magnet:      { key: 'magnet',      name: 'Magnet',        description: '+20% alcance de coleta de XP',   icon: 'item-magnet',       color: 0xaa44ff, effect: 'magnetRange', maxLevel: 5 },
+  mysticWater: { key: 'mysticWater', name: 'Mystic Water',  description: '+10% dano de água por nível',    icon: 'item-mystic-water', color: 0x3388ff, effect: 'waterDmg',   maxLevel: 5 },
+  neverMeltIce: { key: 'neverMeltIce', name: 'Never-Melt Ice', description: '+10% dano de gelo por nível', icon: 'item-never-melt-ice', color: 0x88ddff, effect: 'iceDmg',  maxLevel: 5 },
 } as const;
