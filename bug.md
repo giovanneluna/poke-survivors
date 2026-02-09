@@ -17,3 +17,7 @@
   - Por fim, aos 2 minutos vai virum circiculo lotado de ratata, ele vai tipo um circulo ao redor do pokemon.
 
   - Muitos estão falando que charmander esta extremamente mais forte que o squirtle "squirtle" não tem dano. Ou seja, o foco dele é projetil teremos que trazer mais um pouco de ricochetes ou ataques que explodem dano em area.
+
+ - O icone de fruta para healar, vai ser um leaftovers, mas pegue outras berrys para colocarmos lá, algumas curarão mais vida, e poderão dar buffs do tipo, 2x de ataque por 30 segundos por ai vai. 
+
+  - Mude o ICONE da parte de "items" que fica la embaixo para os icones corretos das coisas.
