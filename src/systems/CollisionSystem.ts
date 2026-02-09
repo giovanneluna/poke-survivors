@@ -254,12 +254,34 @@ export class CollisionSystem {
     this.attackColliders.set(attackType, colliders);
   }
 
+  // ── Destructible-only collisions (for collision:'none' attacks with bullets) ──
+  setupDestructibleOnlyCollisions(
+    attackType: string,
+    bullets: Phaser.Physics.Arcade.Group,
+    getDamage: () => number,
+  ): void {
+    const colliders: Phaser.Physics.Arcade.Collider[] = [];
+    colliders.push(this.ctx.scene.physics.add.overlap(bullets, this.ctx.destructibles, (bulletObj, destObj) => {
+      const bullet = bulletObj as Phaser.Physics.Arcade.Sprite;
+      const dest = destObj as Destructible;
+      if (!bullet.active || !dest.active) return;
+      bullets.killAndHide(bullet);
+      const body = bullet.body as Phaser.Physics.Arcade.Body;
+      body.checkCollision.none = true; body.enable = false;
+      const destroyed = dest.takeDamage(getDamage());
+      if (destroyed) this.pickupSystem.onDestructibleDestroyed(dest);
+    }));
+    this.attackColliders.set(`${attackType}-dest`, colliders);
+  }
+
   // ── Remove colliders for attack evolution ─────────────────────────
   removeAttackColliders(type: string): void {
-    const colliders = this.attackColliders.get(type);
-    if (colliders) {
-      colliders.forEach(c => c.destroy());
-      this.attackColliders.delete(type);
+    for (const key of [type, `${type}-dest`]) {
+      const colliders = this.attackColliders.get(key);
+      if (colliders) {
+        colliders.forEach(c => c.destroy());
+        this.attackColliders.delete(key);
+      }
     }
   }
 

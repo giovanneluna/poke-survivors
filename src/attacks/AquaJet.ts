@@ -32,8 +32,23 @@ const DIR_ORIGIN: Record<CardinalDir, { x: number; y: number }> = {
 };
 
 /**
+ * Hitbox relativo ao sprite.x/y (que é player + offset), considerando origin.
+ * halfW = meia-largura perpendicular, reach = alcance na direção do dash.
+ */
+const HITBOX_HALF_W = 40;
+const HITBOX_REACH = 140;
+
+interface ActiveDash {
+  sprite: Phaser.GameObjects.Sprite;
+  hitEnemies: Set<number>;
+  cardinal: CardinalDir;
+  offset: { x: number; y: number };
+}
+
+/**
  * Aqua Jet: dash aquático na direção do movimento.
  * Usa sprites direcionais (up/down/left/right) sem rotação.
+ * Dano aplicado continuamente durante a animação (segue o jogador).
  */
 export class AquaJet implements Attack {
   readonly type = 'aquaJet' as const;
@@ -47,6 +62,7 @@ export class AquaJet implements Attack {
   private dashDistance = 80;
   private speedBoost = 0.15;
   private speedBoostDuration = 2000;
+  private activeDash: ActiveDash | null = null;
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -64,17 +80,12 @@ export class AquaJet implements Attack {
     const angle = Math.atan2(dir.y, dir.x);
     const cardinal = angleToCardinal(angle);
 
-    const startX = this.player.x;
-    const startY = this.player.y;
-    const endX = startX + Math.cos(angle) * this.dashDistance;
-    const endY = startY + Math.sin(angle) * this.dashDistance;
-
     // Sprite direcional — sem rotação
     const textureKey = `atk-aqua-jet-${cardinal}`;
     const animKey = `anim-aqua-jet-${cardinal}`;
     const offset = DIR_OFFSET[cardinal];
-
     const origin = DIR_ORIGIN[cardinal];
+
     const chargeSprite = this.scene.add.sprite(
       this.player.x + offset.x,
       this.player.y + offset.y,
@@ -90,12 +101,26 @@ export class AquaJet implements Attack {
       }
     };
     this.scene.events.on('update', followCharge);
+
+    // Ativar hit detection contínua
+    this.activeDash = {
+      sprite: chargeSprite,
+      hitEnemies: new Set(),
+      cardinal,
+      offset,
+    };
+
     chargeSprite.once('animationcomplete', () => {
       this.scene.events.off('update', followCharge);
+      this.activeDash = null;
       chargeSprite.destroy();
     });
 
-    // Trail de água ao longo do caminho
+    // Trail de água ao longo da posição atual
+    const startX = this.player.x;
+    const startY = this.player.y;
+    const endX = startX + Math.cos(angle) * this.dashDistance;
+    const endY = startY + Math.sin(angle) * this.dashDistance;
     const steps = 5;
     for (let i = 0; i < steps; i++) {
       const t = i / steps;
@@ -103,40 +128,14 @@ export class AquaJet implements Attack {
       const py = startY + (endY - startY) * t;
 
       this.scene.time.delayedCall(i * 30, () => {
-        this.scene.add.particles(px, py, 'water-particle', {
+        const p = this.scene.add.particles(px, py, 'water-particle', {
           speed: { min: 20, max: 60 }, lifespan: 300, quantity: 4,
           scale: { start: 1.5, end: 0 }, tint: [0x3388ff, 0x44aaff, 0x66ccff],
           emitting: false,
-        }).explode();
+        });
+        p.explode();
+        this.scene.time.delayedCall(400, () => p.destroy());
       });
-    }
-
-    // Dano a inimigos no caminho
-    const enemies = getSpatialGrid().getActiveEnemies();
-
-    for (const enemy of enemies) {
-      const distToLine = Phaser.Math.Distance.Between(
-        enemy.x, enemy.y,
-        (startX + endX) / 2, (startY + endY) / 2
-      );
-      if (distToLine > this.dashDistance * 0.7) continue;
-
-      const dx = endX - startX;
-      const dy = endY - startY;
-      const len = Math.sqrt(dx * dx + dy * dy);
-      if (len === 0) continue;
-      const perpDist = Math.abs(
-        (dy * (enemy.x - startX) - dx * (enemy.y - startY)) / len
-      );
-      if (perpDist > 25) continue;
-
-      if (typeof enemy.takeDamage === 'function') {
-        setDamageSource(this.type);
-        const killed = enemy.takeDamage(this.damage);
-        if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-        }
-      }
     }
 
     // Speed boost temporário
@@ -146,7 +145,43 @@ export class AquaJet implements Attack {
     });
   }
 
-  update(_time: number, _delta: number): void {}
+  update(_time: number, _delta: number): void {
+    if (!this.activeDash) return;
+    const { sprite, hitEnemies, cardinal, offset } = this.activeDash;
+    if (!sprite.active) { this.activeDash = null; return; }
+
+    // Posição base do sprite (segue o jogador)
+    const sx = this.player.x + offset.x;
+    const sy = this.player.y + offset.y;
+
+    const enemies = getSpatialGrid().queryRadius(sx, sy, HITBOX_REACH + 20);
+
+    for (const enemy of enemies) {
+      const uid = (enemy.getData('uid') as number) ?? 0;
+      if (hitEnemies.has(uid)) continue;
+
+      // Posição do inimigo relativa ao sprite
+      const dx = enemy.x - sx;
+      const dy = enemy.y - sy;
+
+      // Hitbox retangular baseado na direção cardinal
+      let hit = false;
+      switch (cardinal) {
+        case 'up':    hit = Math.abs(dx) < HITBOX_HALF_W && dy > -HITBOX_REACH && dy < 10; break;
+        case 'down':  hit = Math.abs(dx) < HITBOX_HALF_W && dy > -10 && dy < HITBOX_REACH; break;
+        case 'left':  hit = dx > -HITBOX_REACH && dx < 10 && Math.abs(dy) < HITBOX_HALF_W; break;
+        case 'right': hit = dx > -10 && dx < HITBOX_REACH && Math.abs(dy) < HITBOX_HALF_W; break;
+      }
+      if (!hit) continue;
+
+      hitEnemies.add(uid);
+      setDamageSource(this.type);
+      const killed = enemy.takeDamage(this.damage);
+      if (killed) {
+        this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
+      }
+    }
+  }
 
   upgrade(): void {
     this.level++;
@@ -160,5 +195,8 @@ export class AquaJet implements Attack {
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.timer.destroy();
+    this.activeDash = null;
+  }
 }

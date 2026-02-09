@@ -156,8 +156,15 @@ const REGISTRY: Partial<Record<AttackType, AttackEntry>> = {
   waterGun: {
     create: (ctx) => new WaterGun(ctx.scene, ctx.player, ctx.enemyGroup),
     collision: 'none',
+    getGroup: (a) => (a as WaterGun).getBullets(),
+    getDamage: (a) => () => (a as WaterGun).getDamage(),
   },
-  waterPulse: { create: (ctx) => new WaterPulse(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  waterPulse: {
+    create: (ctx) => new WaterPulse(ctx.scene, ctx.player, ctx.enemyGroup),
+    collision: 'none',
+    getGroup: (a) => (a as WaterPulse).getBullets(),
+    getDamage: (a) => () => (a as WaterPulse).getDamage(),
+  },
   iceBeam: {
     create: (ctx) => new IceBeam(ctx.scene, ctx.player, ctx.enemyGroup),
     collision: 'projectile',
@@ -200,6 +207,8 @@ const REGISTRY: Partial<Record<AttackType, AttackEntry>> = {
   bubble: {
     create: (ctx) => new Bubble(ctx.scene, ctx.player, ctx.enemyGroup),
     collision: 'none',
+    getGroup: (a) => (a as Bubble).getBullets(),
+    getDamage: (a) => () => (a as Bubble).getDamage(),
   },
   tackle: { create: (ctx) => new Tackle(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
   withdraw: {
@@ -251,7 +260,12 @@ const REGISTRY: Partial<Record<AttackType, AttackEntry>> = {
   solarBeam: { create: (ctx) => new SolarBeam(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
   petalDance: { create: (ctx) => new PetalDance(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
   gigaDrain: { create: (ctx) => new GigaDrain(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
-  energyBall: { create: (ctx) => new EnergyBall(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
+  energyBall: {
+    create: (ctx) => new EnergyBall(ctx.scene, ctx.player, ctx.enemyGroup),
+    collision: 'none',
+    getGroup: (a) => (a as EnergyBall).getBullets(),
+    getDamage: (a) => () => (a as EnergyBall).getDamage(),
+  },
   frenzyPlant: { create: (ctx) => new FrenzyPlant(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
   petalBlizzard: { create: (ctx) => new PetalBlizzard(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
   powerWhip: { create: (ctx) => new PowerWhip(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
@@ -324,7 +338,16 @@ export class AttackFactory {
   }
 
   private setupCollisions(type: AttackType, attack: Attack, entry: AttackEntry): void {
-    if (entry.collision === 'none' || !entry.getGroup) return;
+    // Attacks with collision:'none' that have a bullet group still need destructible overlap
+    if (entry.collision === 'none') {
+      if (entry.getGroup && entry.getDamage) {
+        const group = entry.getGroup(attack);
+        const getDamage = entry.getDamage(attack);
+        this.collisionSystem.setupDestructibleOnlyCollisions(type, group, getDamage);
+      }
+      return;
+    }
+    if (!entry.getGroup) return;
     if (entry.collision !== 'deflect' && !entry.getDamage) return;
 
     const group = entry.getGroup(attack);

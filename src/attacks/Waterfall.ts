@@ -31,12 +31,21 @@ const DIR_ORIGIN: Record<CardinalDir, { x: number; y: number }> = {
   right: { x: 0, y: 0.5 },
 };
 
+const HITBOX_HALF_W = 40;
+const HITBOX_REACH = 140;
+
+interface ActiveDash {
+  sprite: Phaser.GameObjects.Sprite;
+  hitEnemies: Set<number>;
+  cardinal: CardinalDir;
+  offset: { x: number; y: number };
+}
+
 /**
  * Waterfall: evolucao do Aqua Jet.
  * Dash longo com trilha de agua persistente que aplica slow.
- * Equivalente ao Flare Rush do Charmander, com tematica aquatica.
- * Trail permanece e reduz velocidade dos inimigos que passam por ela.
- * Usa sprites direcionais (up/down/left/right) sem rotação.
+ * Dano do dash aplicado continuamente (segue o jogador).
+ * Trail tick damage + slow usa posições fixas no chão (correto).
  */
 export class Waterfall implements Attack {
   readonly type = 'waterfall' as const;
@@ -50,6 +59,7 @@ export class Waterfall implements Attack {
   private dashDistance = 130;
   private trailDuration = 2000;
   private speedBoost = 0.25;
+  private activeDash: ActiveDash | null = null;
 
   /** Fator de reducao de velocidade nos inimigos na trilha */
   private readonly trailSlowScale = 0.5;
@@ -90,8 +100,8 @@ export class Waterfall implements Attack {
     const textureKey = `atk-aqua-jet-${cardinal}`;
     const animKey = `anim-aqua-jet-${cardinal}`;
     const offset = DIR_OFFSET[cardinal];
-
     const origin = DIR_ORIGIN[cardinal];
+
     const rushSprite = this.scene.add.sprite(
       this.player.x + offset.x,
       this.player.y + offset.y,
@@ -107,8 +117,18 @@ export class Waterfall implements Attack {
       }
     };
     this.scene.events.on('update', followRush);
+
+    // Ativar hit detection contínua
+    this.activeDash = {
+      sprite: rushSprite,
+      hitEnemies: new Set(),
+      cardinal,
+      offset,
+    };
+
     rushSprite.once('animationcomplete', () => {
       this.scene.events.off('update', followRush);
+      this.activeDash = null;
       rushSprite.destroy();
     });
 
@@ -116,7 +136,6 @@ export class Waterfall implements Attack {
     for (let i = 0; i < trailPoints.length; i++) {
       const p = trailPoints[i];
       this.scene.time.delayedCall(i * 25, () => {
-        // Particulas de splash (auto-destroy)
         const splashPart = this.scene.add.particles(p.x, p.y, 'water-particle', {
           speed: { min: 20, max: 50 }, lifespan: 350, quantity: 5,
           scale: { start: 1.8, end: 0 }, tint: [0x3388ff, 0x44aaff, 0x66ccff],
@@ -135,33 +154,7 @@ export class Waterfall implements Attack {
       });
     }
 
-    // Dano ao longo da trilha (imediato)
-    const enemies = getSpatialGrid().getActiveEnemies();
-
-    for (const enemy of enemies) {
-      const dx = endX - startX;
-      const dy = endY - startY;
-      const len = Math.sqrt(dx * dx + dy * dy);
-      if (len === 0) continue;
-
-      const perpDist = Math.abs(
-        (dy * (enemy.x - startX) - dx * (enemy.y - startY)) / len
-      );
-      if (perpDist > 30) continue;
-
-      const projT = ((enemy.x - startX) * dx + (enemy.y - startY) * dy) / (len * len);
-      if (projT < -0.1 || projT > 1.1) continue;
-
-      if (typeof enemy.takeDamage === 'function') {
-        setDamageSource(this.type);
-        const killed = enemy.takeDamage(this.damage);
-        if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-        }
-      }
-    }
-
-    // Trail damage + slow tick (inimigos que passam pela trilha depois)
+    // Trail damage + slow tick (posições FIXAS no chão — correto)
     let trailElapsed = 0;
     const trailTick = this.scene.time.addEvent({
       delay: 400, loop: true,
@@ -171,17 +164,13 @@ export class Waterfall implements Attack {
 
         const liveEnemies = getSpatialGrid().getActiveEnemies();
         for (const enemy of liveEnemies) {
-          // Check se esta perto de algum ponto do trail
           for (const p of trailPoints) {
             const dist = Phaser.Math.Distance.Between(p.x, p.y, enemy.x, enemy.y);
             if (dist < 20) {
-              if (typeof enemy.takeDamage === 'function') {
-                // Trail tick damage: 30% do dano base
-                setDamageSource(this.type);
-                const killed = enemy.takeDamage(Math.floor(this.damage * 0.3));
-                if (killed) {
-                  this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-                }
+              setDamageSource(this.type);
+              const killed = enemy.takeDamage(Math.floor(this.damage * 0.3));
+              if (killed) {
+                this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
               }
 
               // Slow: reduz velocidade dos inimigos na trilha
@@ -208,7 +197,40 @@ export class Waterfall implements Attack {
     });
   }
 
-  update(_time: number, _delta: number): void {}
+  update(_time: number, _delta: number): void {
+    if (!this.activeDash) return;
+    const { sprite, hitEnemies, cardinal, offset } = this.activeDash;
+    if (!sprite.active) { this.activeDash = null; return; }
+
+    const sx = this.player.x + offset.x;
+    const sy = this.player.y + offset.y;
+
+    const enemies = getSpatialGrid().queryRadius(sx, sy, HITBOX_REACH + 20);
+
+    for (const enemy of enemies) {
+      const uid = (enemy.getData('uid') as number) ?? 0;
+      if (hitEnemies.has(uid)) continue;
+
+      const dx = enemy.x - sx;
+      const dy = enemy.y - sy;
+
+      let hit = false;
+      switch (cardinal) {
+        case 'up':    hit = Math.abs(dx) < HITBOX_HALF_W && dy > -HITBOX_REACH && dy < 10; break;
+        case 'down':  hit = Math.abs(dx) < HITBOX_HALF_W && dy > -10 && dy < HITBOX_REACH; break;
+        case 'left':  hit = dx > -HITBOX_REACH && dx < 10 && Math.abs(dy) < HITBOX_HALF_W; break;
+        case 'right': hit = dx > -10 && dx < HITBOX_REACH && Math.abs(dy) < HITBOX_HALF_W; break;
+      }
+      if (!hit) continue;
+
+      hitEnemies.add(uid);
+      setDamageSource(this.type);
+      const killed = enemy.takeDamage(this.damage);
+      if (killed) {
+        this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
+      }
+    }
+  }
 
   upgrade(): void {
     this.level++;
@@ -223,5 +245,8 @@ export class Waterfall implements Attack {
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.timer.destroy();
+    this.activeDash = null;
+  }
 }

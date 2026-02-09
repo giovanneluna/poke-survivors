@@ -31,9 +31,20 @@ const DIR_ORIGIN: Record<CardinalDir, { x: number; y: number }> = {
   right: { x: 0, y: 0.5 },
 };
 
+const HITBOX_HALF_W = 25;
+const HITBOX_REACH = 140;
+
+interface ActiveDash {
+  sprite: Phaser.GameObjects.Sprite;
+  hitEnemies: Set<number>;
+  cardinal: CardinalDir;
+  offset: { x: number; y: number };
+}
+
 /**
  * Flame Charge: dash em chamas na direção do movimento.
  * Usa sprites direcionais (up/down/left/right) sem rotação.
+ * Dano aplicado continuamente durante a animação (segue o jogador).
  */
 export class FlameCharge implements Attack {
   readonly type = 'flameCharge' as const;
@@ -47,6 +58,7 @@ export class FlameCharge implements Attack {
   private dashDistance = 80;
   private speedBoost = 0.15;
   private speedBoostDuration = 2000;
+  private activeDash: ActiveDash | null = null;
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -64,17 +76,12 @@ export class FlameCharge implements Attack {
     const angle = Math.atan2(dir.y, dir.x);
     const cardinal = angleToCardinal(angle);
 
-    const startX = this.player.x;
-    const startY = this.player.y;
-    const endX = startX + Math.cos(angle) * this.dashDistance;
-    const endY = startY + Math.sin(angle) * this.dashDistance;
-
     // Sprite direcional — sem rotação, escala 1x (pixel-perfect)
     const textureKey = `atk-flame-charge-${cardinal}`;
     const animKey = `anim-flame-charge-${cardinal}`;
     const offset = DIR_OFFSET[cardinal];
-
     const origin = DIR_ORIGIN[cardinal];
+
     const chargeSprite = this.scene.add.sprite(
       this.player.x + offset.x,
       this.player.y + offset.y,
@@ -90,12 +97,26 @@ export class FlameCharge implements Attack {
       }
     };
     this.scene.events.on('update', followCharge);
+
+    // Ativar hit detection contínua
+    this.activeDash = {
+      sprite: chargeSprite,
+      hitEnemies: new Set(),
+      cardinal,
+      offset,
+    };
+
     chargeSprite.once('animationcomplete', () => {
       this.scene.events.off('update', followCharge);
+      this.activeDash = null;
       chargeSprite.destroy();
     });
 
     // Trail de fogo ao longo do caminho
+    const startX = this.player.x;
+    const startY = this.player.y;
+    const endX = startX + Math.cos(angle) * this.dashDistance;
+    const endY = startY + Math.sin(angle) * this.dashDistance;
     const steps = 5;
     for (let i = 0; i < steps; i++) {
       const t = i / steps;
@@ -113,34 +134,6 @@ export class FlameCharge implements Attack {
       });
     }
 
-    // Dano a inimigos no caminho
-    const enemies = getSpatialGrid().getActiveEnemies();
-
-    for (const enemy of enemies) {
-      const distToLine = Phaser.Math.Distance.Between(
-        enemy.x, enemy.y,
-        (startX + endX) / 2, (startY + endY) / 2
-      );
-      if (distToLine > this.dashDistance * 0.7) continue;
-
-      const dx = endX - startX;
-      const dy = endY - startY;
-      const len = Math.sqrt(dx * dx + dy * dy);
-      if (len === 0) continue;
-      const perpDist = Math.abs(
-        (dy * (enemy.x - startX) - dx * (enemy.y - startY)) / len
-      );
-      if (perpDist > 25) continue;
-
-      if (typeof enemy.takeDamage === 'function') {
-        setDamageSource(this.type);
-        const killed = enemy.takeDamage(this.damage);
-        if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-        }
-      }
-    }
-
     // Speed boost temporário (sem tint — evita parecer que o jogador está tomando dano)
     this.player.stats.speed = Math.floor(this.player.stats.baseSpeed * (1 + this.speedBoost));
     this.scene.time.delayedCall(this.speedBoostDuration, () => {
@@ -148,7 +141,40 @@ export class FlameCharge implements Attack {
     });
   }
 
-  update(_time: number, _delta: number): void {}
+  update(_time: number, _delta: number): void {
+    if (!this.activeDash) return;
+    const { sprite, hitEnemies, cardinal, offset } = this.activeDash;
+    if (!sprite.active) { this.activeDash = null; return; }
+
+    const sx = this.player.x + offset.x;
+    const sy = this.player.y + offset.y;
+
+    const enemies = getSpatialGrid().queryRadius(sx, sy, HITBOX_REACH + 20);
+
+    for (const enemy of enemies) {
+      const uid = (enemy.getData('uid') as number) ?? 0;
+      if (hitEnemies.has(uid)) continue;
+
+      const dx = enemy.x - sx;
+      const dy = enemy.y - sy;
+
+      let hit = false;
+      switch (cardinal) {
+        case 'up':    hit = Math.abs(dx) < HITBOX_HALF_W && dy > -HITBOX_REACH && dy < 10; break;
+        case 'down':  hit = Math.abs(dx) < HITBOX_HALF_W && dy > -10 && dy < HITBOX_REACH; break;
+        case 'left':  hit = dx > -HITBOX_REACH && dx < 10 && Math.abs(dy) < HITBOX_HALF_W; break;
+        case 'right': hit = dx > -10 && dx < HITBOX_REACH && Math.abs(dy) < HITBOX_HALF_W; break;
+      }
+      if (!hit) continue;
+
+      hitEnemies.add(uid);
+      setDamageSource(this.type);
+      const killed = enemy.takeDamage(this.damage);
+      if (killed) {
+        this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
+      }
+    }
+  }
 
   upgrade(): void {
     this.level++;
@@ -162,5 +188,8 @@ export class FlameCharge implements Attack {
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.timer.destroy();
+    this.activeDash = null;
+  }
 }

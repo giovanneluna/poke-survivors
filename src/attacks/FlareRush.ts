@@ -31,10 +31,21 @@ const DIR_ORIGIN: Record<CardinalDir, { x: number; y: number }> = {
   right: { x: 0, y: 0.5 },
 };
 
+const HITBOX_HALF_W = 25;
+const HITBOX_REACH = 140;
+
+interface ActiveDash {
+  sprite: Phaser.GameObjects.Sprite;
+  hitEnemies: Set<number>;
+  cardinal: CardinalDir;
+  offset: { x: number; y: number };
+}
+
 /**
  * Flare Rush: dash longo com rastro de fogo persistente.
  * Evolução de Flame Charge + Quick Claw.
- * Usa sprites direcionais (up/down/left/right) sem rotação.
+ * Dano do dash aplicado continuamente (segue o jogador).
+ * Trail tick damage usa posições fixas no chão (correto — não segue o player).
  */
 export class FlareRush implements Attack {
   readonly type = 'flareRush' as const;
@@ -48,6 +59,7 @@ export class FlareRush implements Attack {
   private dashDistance = 130;
   private trailDuration = 2000;
   private speedBoost = 0.25;
+  private activeDash: ActiveDash | null = null;
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -85,8 +97,8 @@ export class FlareRush implements Attack {
     const textureKey = `atk-flame-charge-${cardinal}`;
     const animKey = `anim-flame-charge-${cardinal}`;
     const offset = DIR_OFFSET[cardinal];
-
     const origin = DIR_ORIGIN[cardinal];
+
     const rushSprite = this.scene.add.sprite(
       this.player.x + offset.x,
       this.player.y + offset.y,
@@ -102,8 +114,18 @@ export class FlareRush implements Attack {
       }
     };
     this.scene.events.on('update', followRush);
+
+    // Ativar hit detection contínua
+    this.activeDash = {
+      sprite: rushSprite,
+      hitEnemies: new Set(),
+      cardinal,
+      offset,
+    };
+
     rushSprite.once('animationcomplete', () => {
       this.scene.events.off('update', followRush);
+      this.activeDash = null;
       rushSprite.destroy();
     });
 
@@ -117,7 +139,7 @@ export class FlareRush implements Attack {
           emitting: false,
         });
         particles.explode();
-        this.scene.time.delayedCall(400, () => particles.destroy());
+        this.scene.time.delayedCall(450, () => particles.destroy());
 
         // Zona de fogo visual
         const fire = this.scene.add.circle(p.x, p.y, 12, 0xff4400, 0.3);
@@ -129,33 +151,7 @@ export class FlareRush implements Attack {
       });
     }
 
-    // Dano ao longo da trilha (imediato)
-    const enemies = getSpatialGrid().getActiveEnemies();
-
-    for (const enemy of enemies) {
-      const dashDx = endX - startX;
-      const dashDy = endY - startY;
-      const dashLen = Math.sqrt(dashDx * dashDx + dashDy * dashDy);
-      if (dashLen === 0) continue;
-
-      const perpDist = Math.abs(
-        (dashDy * (enemy.x - startX) - dashDx * (enemy.y - startY)) / dashLen
-      );
-      if (perpDist > 30) continue;
-
-      const projT = ((enemy.x - startX) * dashDx + (enemy.y - startY) * dashDy) / (dashLen * dashLen);
-      if (projT < -0.1 || projT > 1.1) continue;
-
-      if (typeof enemy.takeDamage === 'function') {
-        setDamageSource(this.type);
-        const killed = enemy.takeDamage(this.damage);
-        if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-        }
-      }
-    }
-
-    // Trail damage tick — O(n) line-segment check em vez de O(n×10) point check
+    // Trail damage tick — dano persistente no chão (posições FIXAS, correto)
     const dx = endX - startX;
     const dy = endY - startY;
     const trailLen = Math.sqrt(dx * dx + dy * dy);
@@ -169,21 +165,17 @@ export class FlareRush implements Attack {
 
         const liveEnemies = getSpatialGrid().getActiveEnemies();
         for (const enemy of liveEnemies) {
-          // Distância perpendicular ao segmento
           const perpDist = Math.abs(
             (dy * (enemy.x - startX) - dx * (enemy.y - startY)) / trailLen
           );
           if (perpDist > 20) continue;
-          // Projeção no segmento
           const projT = ((enemy.x - startX) * dx + (enemy.y - startY) * dy) / (trailLen * trailLen);
           if (projT < -0.1 || projT > 1.1) continue;
 
-          if (typeof enemy.takeDamage === 'function') {
-            setDamageSource(this.type);
-            const killed = enemy.takeDamage(Math.floor(this.damage * 0.3));
-            if (killed) {
-              this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-            }
+          setDamageSource(this.type);
+          const killed = enemy.takeDamage(Math.floor(this.damage * 0.3));
+          if (killed) {
+            this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
           }
         }
       },
@@ -196,7 +188,40 @@ export class FlareRush implements Attack {
     });
   }
 
-  update(_time: number, _delta: number): void {}
+  update(_time: number, _delta: number): void {
+    if (!this.activeDash) return;
+    const { sprite, hitEnemies, cardinal, offset } = this.activeDash;
+    if (!sprite.active) { this.activeDash = null; return; }
+
+    const sx = this.player.x + offset.x;
+    const sy = this.player.y + offset.y;
+
+    const enemies = getSpatialGrid().queryRadius(sx, sy, HITBOX_REACH + 20);
+
+    for (const enemy of enemies) {
+      const uid = (enemy.getData('uid') as number) ?? 0;
+      if (hitEnemies.has(uid)) continue;
+
+      const dx = enemy.x - sx;
+      const dy = enemy.y - sy;
+
+      let hit = false;
+      switch (cardinal) {
+        case 'up':    hit = Math.abs(dx) < HITBOX_HALF_W && dy > -HITBOX_REACH && dy < 10; break;
+        case 'down':  hit = Math.abs(dx) < HITBOX_HALF_W && dy > -10 && dy < HITBOX_REACH; break;
+        case 'left':  hit = dx > -HITBOX_REACH && dx < 10 && Math.abs(dy) < HITBOX_HALF_W; break;
+        case 'right': hit = dx > -10 && dx < HITBOX_REACH && Math.abs(dy) < HITBOX_HALF_W; break;
+      }
+      if (!hit) continue;
+
+      hitEnemies.add(uid);
+      setDamageSource(this.type);
+      const killed = enemy.takeDamage(this.damage);
+      if (killed) {
+        this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
+      }
+    }
+  }
 
   upgrade(): void {
     this.level++;
@@ -211,5 +236,8 @@ export class FlareRush implements Attack {
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.timer.destroy();
+    this.activeDash = null;
+  }
 }

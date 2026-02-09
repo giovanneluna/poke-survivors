@@ -50,11 +50,13 @@ export class DragonRush implements Attack {
       const px = startX + (endX - startX) * t;
       const py = startY + (endY - startY) * t;
       this.scene.time.delayedCall(i * 25, () => {
-        this.scene.add.particles(px, py, 'dragon-particle', {
+        const trailP = this.scene.add.particles(px, py, 'dragon-particle', {
           speed: { min: 30, max: 80 }, lifespan: 300, quantity: 5,
           scale: { start: 1.5, end: 0 }, tint: [0x7744ff, 0x9966ff],
           emitting: false,
-        }).explode();
+        });
+        trailP.explode();
+        this.scene.time.delayedCall(400, () => trailP.destroy());
       });
     }
 
@@ -70,12 +72,14 @@ export class DragonRush implements Attack {
 
     // Explosão no ponto final
     this.scene.time.delayedCall(steps * 25, () => {
-      this.scene.add.particles(endX, endY, 'dragon-particle', {
+      const burstP = this.scene.add.particles(endX, endY, 'dragon-particle', {
         speed: { min: 60, max: 150 }, lifespan: 400, quantity: 15,
         scale: { start: 2, end: 0 }, angle: { min: 0, max: 360 },
         tint: [0x7744ff, 0x9966ff, 0xcc88ff],
         emitting: false,
-      }).explode();
+      });
+      burstP.explode();
+      this.scene.time.delayedCall(500, () => burstP.destroy());
     });
 
     // Dano na linha + AoE stun no final
