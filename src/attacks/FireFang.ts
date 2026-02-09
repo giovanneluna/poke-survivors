@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Fire Fang: mordida flamejante no inimigo mais próximo.
@@ -16,17 +16,15 @@ export class FireFang implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
   private range = 70;
   private burnChance = 0.2;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.fireFang.baseDamage;
     this.cooldown = ATTACKS.fireFang.baseCooldown;
 
@@ -36,21 +34,7 @@ export class FireFang implements Attack {
   }
 
   private bite(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
-
-    // Encontra o inimigo mais próximo dentro do range
-    let closest: Phaser.Physics.Arcade.Sprite | null = null;
-    let closestDist = Infinity;
-    for (const enemy of enemies) {
-      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-      if (dist < closestDist && dist <= this.range) {
-        closest = enemy;
-        closestDist = dist;
-      }
-    }
+    const closest = getSpatialGrid().queryNearest(this.player.x, this.player.y, this.range);
     if (!closest) return;
 
     // Visual: fire fang animado na posição do inimigo
@@ -67,12 +51,11 @@ export class FireFang implements Attack {
     }).explode();
 
     // Dano
-    const enemy = closest as unknown as Enemy;
-    if (typeof enemy.takeDamage === 'function') {
+    if (typeof closest.takeDamage === 'function') {
       setDamageSource(this.type);
-      const killed = enemy.takeDamage(this.damage);
+      const killed = closest.takeDamage(this.damage);
       if (killed) {
-        this.scene.events.emit('cone-attack-kill', closest.x, closest.y, enemy.xpValue);
+        this.scene.events.emit('cone-attack-kill', closest.x, closest.y, closest.xpValue);
       }
       // Burn effect (visual tint)
       if (!killed && Math.random() < this.burnChance) {

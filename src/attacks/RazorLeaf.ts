@@ -3,6 +3,7 @@ import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Razor Leaf: folhas cortantes disparadas no inimigo mais próximo.
@@ -15,7 +16,6 @@ export class RazorLeaf implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: ArcadeGroup;
   private readonly bullets: ArcadeGroup;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
@@ -23,10 +23,9 @@ export class RazorLeaf implements Attack {
   private projectileCount = 1;
   private fireId = 0;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.razorLeaf.baseDamage;
     this.cooldown = ATTACKS.razorLeaf.baseCooldown;
 
@@ -43,13 +42,11 @@ export class RazorLeaf implements Attack {
   }
 
   private fire(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (activeEnemies.length === 0) return;
 
     // Ordena por distância ao player
-    const sorted = enemies
+    const sorted = activeEnemies
       .map(enemy => ({
         enemy,
         dist: Phaser.Math.Distance.Between(
@@ -66,12 +63,11 @@ export class RazorLeaf implements Attack {
 
       // Inimigo muito perto: dano direto
       if (sorted[i].dist < 20) {
-        const enemy = target as unknown as import('../entities/Enemy').Enemy;
-        if (typeof enemy.takeDamage === 'function') {
+        if (typeof target.takeDamage === 'function') {
           setDamageSource(this.type);
-          const killed = enemy.takeDamage(this.damage);
+          const killed = target.takeDamage(this.damage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', target.x, target.y, enemy.xpValue);
+            this.scene.events.emit('cone-attack-kill', target.x, target.y, target.xpValue);
           }
         }
         continue;

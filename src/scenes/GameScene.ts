@@ -15,6 +15,7 @@ import { AttackFactory } from "../systems/AttackFactory"
 import { UpgradeSystem } from "../systems/UpgradeSystem"
 import { DebugSystem } from "../systems/DebugSystem"
 import { PassiveSystem, getPassive } from "../systems/PassiveSystem"
+import { initSpatialGrid, getSpatialGrid } from "../systems/SpatialHashGrid"
 import { resetDamageTotals, getDamageTotals } from "../systems/DamageTracker"
 
 export class GameScene extends Phaser.Scene {
@@ -117,6 +118,9 @@ export class GameScene extends Phaser.Scene {
       devConfig: this.devConfig,
       difficulty: this.difficulty,
     }
+
+    // ── Spatial hash grid (deve ser antes dos systems) ──────────────
+    initSpatialGrid(128)
 
     // ── Instantiate systems ─────────────────────────────────────────
     new PassiveSystem(this.starterKey) // self-registers as module singleton
@@ -232,16 +236,13 @@ export class GameScene extends Phaser.Scene {
     })
 
     this.events.on("pokeball-bomb", () => {
-      this.enemyGroup.getChildren().forEach((child) => {
-        const enemy = child as Enemy
-        if (enemy.active) {
-          const killed = enemy.takeDamage(400)
-          if (killed) {
-            this.player.stats.kills++
-            this.pickupSystem.spawnXpGem(enemy.x, enemy.y, enemy.xpValue)
-          }
+      for (const enemy of getSpatialGrid().getActiveEnemies()) {
+        const killed = enemy.takeDamage(400)
+        if (killed) {
+          this.player.stats.kills++
+          this.pickupSystem.spawnXpGem(enemy.x, enemy.y, enemy.xpValue)
         }
-      })
+      }
     })
 
     this.events.on(
@@ -288,23 +289,13 @@ export class GameScene extends Phaser.Scene {
             })
             .explode()
 
-          this.enemyGroup.getChildren().forEach((child) => {
-            const enemy = child as Enemy
-            if (!enemy.active) return
-            const d = Phaser.Math.Distance.Between(
-              data.x,
-              data.y,
-              enemy.x,
-              enemy.y,
-            )
-            if (d < radius) {
-              const killed = enemy.takeDamage(aoeDamage)
-              if (killed) {
-                this.player.stats.kills++
-                this.pickupSystem.spawnXpGem(enemy.x, enemy.y, enemy.xpValue)
-              }
+          for (const enemy of getSpatialGrid().queryRadius(data.x, data.y, radius)) {
+            const killed = enemy.takeDamage(aoeDamage)
+            if (killed) {
+              this.player.stats.kills++
+              this.pickupSystem.spawnXpGem(enemy.x, enemy.y, enemy.xpValue)
             }
-          })
+          }
         } else if (data.type === "torrent") {
           const radius = 60
           this.add
@@ -319,23 +310,13 @@ export class GameScene extends Phaser.Scene {
             .explode()
 
           const now = this.time.now
-          this.enemyGroup.getChildren().forEach((child) => {
-            const enemy = child as Enemy
-            if (!enemy.active) return
-            const d = Phaser.Math.Distance.Between(
-              data.x,
-              data.y,
-              enemy.x,
-              enemy.y,
+          for (const enemy of getSpatialGrid().queryRadius(data.x, data.y, radius)) {
+            enemy.applyWet(
+              ps.getWetSpeedMultiplier(),
+              ps.getStatusDuration(),
+              now,
             )
-            if (d < radius) {
-              enemy.applyWet(
-                ps.getWetSpeedMultiplier(),
-                ps.getStatusDuration(),
-                now,
-              )
-            }
-          })
+          }
         } else if (data.type === "overgrow") {
           const radius = 55
           this.add
@@ -350,23 +331,13 @@ export class GameScene extends Phaser.Scene {
             .explode()
 
           const now = this.time.now
-          this.enemyGroup.getChildren().forEach((child) => {
-            const enemy = child as Enemy
-            if (!enemy.active) return
-            const d = Phaser.Math.Distance.Between(
-              data.x,
-              data.y,
-              enemy.x,
-              enemy.y,
+          for (const enemy of getSpatialGrid().queryRadius(data.x, data.y, radius)) {
+            enemy.applyPoison(
+              ps.getPoisonDps(),
+              ps.getStatusDuration(),
+              now,
             )
-            if (d < radius) {
-              enemy.applyPoison(
-                ps.getPoisonDps(),
-                ps.getStatusDuration(),
-                now,
-              )
-            }
-          })
+          }
         }
 
         passiveChainDepth--
@@ -526,18 +497,13 @@ export class GameScene extends Phaser.Scene {
     // Shockwave — empurra inimigos
     const px = this.player.x
     const py = this.player.y
-    this.enemyGroup.getChildren().forEach((child) => {
-      const enemy = child as Phaser.Physics.Arcade.Sprite
-      if (!enemy.active) return
-      const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y)
-      if (dist < 150) {
-        const angle = Math.atan2(enemy.y - py, enemy.x - px)
-        enemy.setPosition(
-          enemy.x + Math.cos(angle) * 80,
-          enemy.y + Math.sin(angle) * 80,
-        )
-      }
-    })
+    for (const enemy of getSpatialGrid().queryRadius(px, py, 150)) {
+      const angle = Math.atan2(enemy.y - py, enemy.x - px)
+      enemy.setPosition(
+        enemy.x + Math.cos(angle) * 80,
+        enemy.y + Math.sin(angle) * 80,
+      )
+    }
 
     // Particles
     this.add.particles(px, py, 'fire-particle', {
@@ -595,9 +561,7 @@ export class GameScene extends Phaser.Scene {
   // ── Dev mode: spawn training dummies ──────────────────────────
   private spawnDevDummies(): void {
     // Count active dummies
-    const activeCount = this.enemyGroup
-      .getChildren()
-      .filter((c) => c.active).length
+    const activeCount = getSpatialGrid().getActiveCount()
     const desiredCount = 5
     const toSpawn = desiredCount - activeCount
 
@@ -618,6 +582,7 @@ export class GameScene extends Phaser.Scene {
 
     const enemy = new Enemy(this, ex, ey, config)
     this.enemyGroup.add(enemy)
+    getSpatialGrid().insert(enemy)
   }
 
   // Expose para o UIScene acessar via scene.get()

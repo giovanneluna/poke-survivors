@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Spore: esporos perfeitos com 100% stun em area.
@@ -17,16 +17,14 @@ export class Spore implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private cooldown: number;
   private radius = 90;
   private stunDuration = 1500;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.cooldown = ATTACKS.spore.baseCooldown;
 
     this.timer = scene.time.addEvent({
@@ -73,22 +71,17 @@ export class Spore implements Attack {
     }).explode();
 
     // Stun todos inimigos no raio
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().queryRadius(cx, cy, this.radius);
 
-    for (const enemySprite of enemies) {
-      const dist = Phaser.Math.Distance.Between(cx, cy, enemySprite.x, enemySprite.y);
-      if (dist > this.radius) continue;
-
+    for (const enemy of enemies) {
       // Stun: zera velocidade, aplica tint verde
-      const enemyBody = enemySprite.body as Phaser.Physics.Arcade.Body | null;
+      const enemyBody = enemy.body as Phaser.Physics.Arcade.Body | null;
       if (enemyBody) {
         enemyBody.velocity.set(0, 0);
-        enemySprite.setTint(0x66bb66);
+        enemy.setTint(0x66bb66);
 
         // Texto "ZZZ" flutuante
-        const zzz = this.scene.add.text(enemySprite.x, enemySprite.y - 15, 'ZZZ', {
+        const zzz = this.scene.add.text(enemy.x, enemy.y - 15, 'ZZZ', {
           fontSize: '10px', color: '#88dd88', fontFamily: 'monospace',
           stroke: '#000', strokeThickness: 2,
         }).setOrigin(0.5).setDepth(50);
@@ -99,8 +92,8 @@ export class Spore implements Attack {
 
         // Restaurar apos a duracao do stun
         this.scene.time.delayedCall(this.stunDuration, () => {
-          if (enemySprite.active) {
-            enemySprite.clearTint();
+          if (enemy.active) {
+            enemy.clearTint();
           }
         });
       }
@@ -108,12 +101,11 @@ export class Spore implements Attack {
       // Dano (0 base, mas pode escalar com upgrade se necessario)
       const baseDmg = ATTACKS.spore.baseDamage;
       if (baseDmg > 0) {
-        const enemy = enemySprite as unknown as Enemy;
         if (typeof enemy.takeDamage === 'function') {
           setDamageSource(this.type);
           const killed = enemy.takeDamage(baseDmg);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+            this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
           }
         }
       }

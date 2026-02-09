@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Stun Spore: esporos paralisantes em área no inimigo mais próximo.
@@ -17,17 +17,15 @@ export class StunSpore implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
   private radius = 60;
   private stunDuration = 1000;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.stunSpore.baseDamage;
     this.cooldown = ATTACKS.stunSpore.baseCooldown;
 
@@ -37,13 +35,11 @@ export class StunSpore implements Attack {
   }
 
   private release(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (activeEnemies.length === 0) return;
 
     // Encontra inimigo mais próximo
-    const nearest = enemies.reduce((best, e) => {
+    const nearest = activeEnemies.reduce((best, e) => {
       const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, e.x, e.y);
       const bd = Phaser.Math.Distance.Between(this.player.x, this.player.y, best.x, best.y);
       return d < bd ? e : best;
@@ -68,29 +64,26 @@ export class StunSpore implements Attack {
     });
 
     // Aplica dano + stun a todos inimigos no raio
-    for (const enemySprite of enemies) {
-      const dist = Phaser.Math.Distance.Between(tx, ty, enemySprite.x, enemySprite.y);
-      if (dist > this.radius) continue;
-
+    const nearbyEnemies = getSpatialGrid().queryRadius(tx, ty, this.radius);
+    for (const enemy of nearbyEnemies) {
       // Dano
-      const enemy = enemySprite as unknown as Enemy;
       if (typeof enemy.takeDamage === 'function') {
         setDamageSource(this.type);
         const killed = enemy.takeDamage(this.damage);
         if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
           continue;
         }
       }
 
       // Stun: velocity 0 + tint amarelo
-      const body = enemySprite.body as Phaser.Physics.Arcade.Body;
+      const body = enemy.body as Phaser.Physics.Arcade.Body;
       body.velocity.set(0, 0);
-      enemySprite.setTint(0xffcc00);
+      enemy.setTint(0xffcc00);
 
       // Remove stun após duração
       this.scene.time.delayedCall(this.stunDuration, () => {
-        if (enemySprite.active) enemySprite.clearTint();
+        if (enemy.active) enemy.clearTint();
       });
     }
   }

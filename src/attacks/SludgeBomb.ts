@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Sludge Bomb: projétil tóxico que explode em AoE ao atingir um inimigo.
@@ -16,7 +16,6 @@ export class SludgeBomb implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: ArcadeGroup;
   private readonly bullets: ArcadeGroup;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
@@ -25,10 +24,9 @@ export class SludgeBomb implements Attack {
   private fireId = 0;
   private aoeRadius = 50;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.sludgeBomb.baseDamage;
     this.cooldown = ATTACKS.sludgeBomb.baseCooldown;
 
@@ -45,12 +43,10 @@ export class SludgeBomb implements Attack {
   }
 
   private fire(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (activeEnemies.length === 0) return;
 
-    const sorted = enemies
+    const sorted = activeEnemies
       .map(enemy => ({
         enemy,
         dist: Phaser.Math.Distance.Between(
@@ -67,12 +63,11 @@ export class SludgeBomb implements Attack {
 
       // Inimigo muito perto: dano direto + explosão
       if (sorted[i].dist < 20) {
-        const enemy = target as unknown as Enemy;
-        if (typeof enemy.takeDamage === 'function') {
+        if (typeof target.takeDamage === 'function') {
           setDamageSource(this.type);
-          const killed = enemy.takeDamage(this.damage);
+          const killed = target.takeDamage(this.damage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', target.x, target.y, enemy.xpValue);
+            this.scene.events.emit('cone-attack-kill', target.x, target.y, target.xpValue);
           }
         }
         this.explode(target.x, target.y);
@@ -145,21 +140,16 @@ export class SludgeBomb implements Attack {
     }).explode();
 
     // Dano AoE: 60% do dano base com distance falloff
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().queryRadius(hx, hy, this.aoeRadius);
 
-    for (const enemySprite of enemies) {
-      const dist = Phaser.Math.Distance.Between(hx, hy, enemySprite.x, enemySprite.y);
-      if (dist > this.aoeRadius) continue;
-
-      const enemy = enemySprite as unknown as Enemy;
+    for (const enemy of enemies) {
       if (typeof enemy.takeDamage === 'function') {
+        const dist = Phaser.Math.Distance.Between(hx, hy, enemy.x, enemy.y);
         const falloff = 1 - (dist / this.aoeRadius) * 0.4;
         setDamageSource(this.type);
         const killed = enemy.takeDamage(Math.floor(this.damage * 0.6 * falloff));
         if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
         }
       }
     }

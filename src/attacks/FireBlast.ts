@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Fire Blast: evolução do Fire Spin.
@@ -16,7 +16,6 @@ export class FireBlast implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: ArcadeGroup;
   private readonly orbs: ArcadeGroup;
   private orbCount = 5;
   private radius = 90;
@@ -26,10 +25,9 @@ export class FireBlast implements Attack {
   private pulseTimer: Phaser.Time.TimerEvent;
   private readonly pulseRadius = 120;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.fireBlast.baseDamage;
 
     this.orbs = scene.physics.add.group();
@@ -82,15 +80,10 @@ export class FireBlast implements Attack {
     });
 
     // Dano AoE no pulso
-    const enemies = this.enemyGroup.getChildren();
-    for (const child of enemies) {
-      const enemy = child as Enemy;
-      if (!enemy.active) continue;
-      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-      if (dist <= this.pulseRadius) {
-        setDamageSource(this.type);
-        enemy.takeDamage(Math.floor(this.damage * 0.5));
-      }
+    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.pulseRadius);
+    for (const enemy of enemies) {
+      setDamageSource(this.type);
+      enemy.takeDamage(Math.floor(this.damage * 0.5));
     }
   }
 

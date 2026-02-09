@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Surf: onda 360° que empurra inimigos para fora.
@@ -16,7 +16,6 @@ export class Surf implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -24,10 +23,9 @@ export class Surf implements Attack {
   private pushForce = 200;
   private readonly waveDuration = 1500;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.surf.baseDamage;
     this.cooldown = ATTACKS.surf.baseCooldown;
 
@@ -101,19 +99,17 @@ export class Surf implements Attack {
         // Inner edge do anel (nao acertar no centro depois que a onda passou)
         const innerRadius = Math.max(0, currentRadius - 40);
 
-        const enemies = this.enemyGroup.getChildren().filter(
-          (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-        );
+        const enemies = getSpatialGrid().queryRadius(cx, cy, currentRadius);
 
-        for (const enemySprite of enemies) {
-          const dist = Phaser.Math.Distance.Between(cx, cy, enemySprite.x, enemySprite.y);
-          if (dist > currentRadius || dist < innerRadius) continue;
+        for (const enemy of enemies) {
+          const dist = Phaser.Math.Distance.Between(cx, cy, enemy.x, enemy.y);
+          if (dist < innerRadius) continue;
 
-          const uid = enemySprite.getData('uid') ?? 0;
+          const uid = enemy.getData('uid') ?? 0;
 
           // Push outward (sempre aplica)
-          const angleToEnemy = Math.atan2(enemySprite.y - cy, enemySprite.x - cx);
-          const body = enemySprite.body as Phaser.Physics.Arcade.Body;
+          const angleToEnemy = Math.atan2(enemy.y - cy, enemy.x - cx);
+          const body = enemy.body as Phaser.Physics.Arcade.Body;
           body.velocity.x += Math.cos(angleToEnemy) * this.pushForce;
           body.velocity.y += Math.sin(angleToEnemy) * this.pushForce;
 
@@ -121,12 +117,11 @@ export class Surf implements Attack {
           if (hitSet.has(uid)) continue;
           hitSet.add(uid);
 
-          const enemy = enemySprite as unknown as Enemy;
           if (typeof enemy.takeDamage === 'function') {
             setDamageSource(this.type);
             const killed = enemy.takeDamage(this.damage);
             if (killed) {
-              this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+              this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
             }
           }
         }

@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Frenzy Plant: raízes gigantes irrompem do chão no cluster de inimigos mais denso.
@@ -17,17 +17,15 @@ export class FrenzyPlant implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
   private radius = 100;
   private stunDuration = 1500;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.frenzyPlant.baseDamage;
     this.cooldown = ATTACKS.frenzyPlant.baseCooldown;
 
@@ -39,13 +37,11 @@ export class FrenzyPlant implements Attack {
   }
 
   private summon(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (activeEnemies.length === 0) return;
 
     // Posição: média dos 3 inimigos mais próximos (cluster targeting)
-    const sorted = enemies
+    const sorted = activeEnemies
       .map(e => ({
         sprite: e,
         dist: Phaser.Math.Distance.Between(this.player.x, this.player.y, e.x, e.y),
@@ -111,27 +107,24 @@ export class FrenzyPlant implements Attack {
 
     // Dano + stun em TODOS os inimigos no raio
     const stunDur = this.stunDuration;
-    for (const enemySprite of enemies) {
-      const dist = Phaser.Math.Distance.Between(tx, ty, enemySprite.x, enemySprite.y);
-      if (dist > this.radius) continue;
-
-      const enemy = enemySprite as unknown as Enemy;
+    const nearbyEnemies = getSpatialGrid().queryRadius(tx, ty, this.radius);
+    for (const enemy of nearbyEnemies) {
       if (typeof enemy.takeDamage === 'function') {
         setDamageSource(this.type);
         const killed = enemy.takeDamage(this.damage);
         if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
         }
       }
 
       // Stun visual: velocity 0 + tint amarelo
-      const body = enemySprite.body as Phaser.Physics.Arcade.Body;
+      const body = enemy.body as Phaser.Physics.Arcade.Body;
       body.velocity.set(0, 0);
-      enemySprite.setTint(0xccaa00);
+      enemy.setTint(0xccaa00);
 
       this.scene.time.delayedCall(stunDur, () => {
-        if (enemySprite.active) {
-          enemySprite.clearTint();
+        if (enemy.active) {
+          enemy.clearTint();
         }
       });
     }

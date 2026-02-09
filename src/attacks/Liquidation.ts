@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Liquidation: golpe aquatico 360° no cluster de inimigos mais denso.
@@ -16,7 +16,6 @@ export class Liquidation implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -24,10 +23,9 @@ export class Liquidation implements Attack {
   private slowPercent = 30;
   private readonly slowDuration = 2000;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.liquidation.baseDamage;
     this.cooldown = ATTACKS.liquidation.baseCooldown;
 
@@ -40,9 +38,7 @@ export class Liquidation implements Attack {
 
   /** Encontra o cluster de inimigos mais denso (media ponderada por proximidade) */
   private findDensestCluster(): { x: number; y: number } | null {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().getActiveEnemies();
     if (enemies.length === 0) return null;
 
     let bestScore = -1;
@@ -113,36 +109,32 @@ export class Liquidation implements Attack {
     }).explode();
 
     // Dano instantaneo + slow em todos os inimigos no raio
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().queryRadius(tx, ty, this.radius);
 
-    for (const enemySprite of enemies) {
-      const dist = Phaser.Math.Distance.Between(tx, ty, enemySprite.x, enemySprite.y);
-      if (dist > this.radius) continue;
+    for (const enemy of enemies) {
+      const dist = Phaser.Math.Distance.Between(tx, ty, enemy.x, enemy.y);
 
-      const enemy = enemySprite as unknown as Enemy;
       if (typeof enemy.takeDamage === 'function') {
         // Dano com falloff suave pelo centro
         const falloff = 1 - (dist / this.radius) * 0.3;
         setDamageSource(this.type);
         const killed = enemy.takeDamage(Math.floor(this.damage * falloff));
         if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
           continue;
         }
       }
 
       // Slow: reduz velocidade do body + tint azul
-      const body = enemySprite.body as Phaser.Physics.Arcade.Body;
+      const body = enemy.body as Phaser.Physics.Arcade.Body;
       const slowMultiplier = 1 - this.slowPercent / 100;
       body.velocity.x *= slowMultiplier;
       body.velocity.y *= slowMultiplier;
-      enemySprite.setTint(0x3388ff);
+      enemy.setTint(0x3388ff);
 
       this.scene.time.delayedCall(this.slowDuration, () => {
-        if (enemySprite.active) {
-          enemySprite.clearTint();
+        if (enemy.active) {
+          enemy.clearTint();
           // Restaurar velocidade normal (o Enemy.update recalcula, entao apenas limpar o tint)
         }
       });

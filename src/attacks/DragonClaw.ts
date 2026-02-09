@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Dragon Claw: garras dracônicas com multi-hit.
@@ -16,7 +16,6 @@ export class DragonClaw implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -24,10 +23,9 @@ export class DragonClaw implements Attack {
   private hitCount = 3;
   private readonly arcAngleDeg = 100;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.dragonClaw.baseDamage;
     this.cooldown = ATTACKS.dragonClaw.baseCooldown;
 
@@ -67,18 +65,11 @@ export class DragonClaw implements Attack {
         });
 
         // Dano em arco
-        const enemies = this.enemyGroup.getChildren().filter(
-          (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-        );
+        const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);
 
-        for (const enemySprite of enemies) {
-          const dist = Phaser.Math.Distance.Between(
-            this.player.x, this.player.y, enemySprite.x, enemySprite.y
-          );
-          if (dist > this.range) continue;
-
+        for (const enemy of enemies) {
           const angleToEnemy = Math.atan2(
-            enemySprite.y - this.player.y, enemySprite.x - this.player.x
+            enemy.y - this.player.y, enemy.x - this.player.x
           );
           const angleDiff = Math.abs(
             Phaser.Math.Angle.ShortestBetween(
@@ -88,12 +79,11 @@ export class DragonClaw implements Attack {
           );
           if (angleDiff > this.arcAngleDeg / 2) continue;
 
-          const enemy = enemySprite as unknown as Enemy;
           if (typeof enemy.takeDamage === 'function') {
             setDamageSource(this.type);
             const killed = enemy.takeDamage(this.damage);
             if (killed) {
-              this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+              this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
             }
           }
         }

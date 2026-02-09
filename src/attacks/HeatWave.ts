@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Heat Wave: onda de calor 360° devastadora.
@@ -16,17 +16,15 @@ export class HeatWave implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
   private maxRadius = 180;
   private waveDuration = 600;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.heatWave.baseDamage;
     this.cooldown = ATTACKS.heatWave.baseCooldown;
 
@@ -73,26 +71,22 @@ export class HeatWave implements Attack {
       this.scene.time.delayedCall(w * (this.waveDuration / waves), () => {
         const currentRadius = (this.maxRadius / waves) * (w + 1);
 
-        const enemies = this.enemyGroup.getChildren().filter(
-          (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-        );
+        const enemies = getSpatialGrid().queryRadius(cx, cy, currentRadius);
 
-        for (const enemySprite of enemies) {
-          const uid = enemySprite.getData('uid') ?? 0;
+        for (const enemy of enemies) {
+          const uid = enemy.getData('uid') ?? 0;
           if (hitSet.has(uid)) continue;
 
-          const dist = Phaser.Math.Distance.Between(cx, cy, enemySprite.x, enemySprite.y);
-          if (dist > currentRadius) continue;
+          const dist = Phaser.Math.Distance.Between(cx, cy, enemy.x, enemy.y);
 
           hitSet.add(uid);
-          const enemy = enemySprite as unknown as Enemy;
           if (typeof enemy.takeDamage === 'function') {
             // Dano diminui com distância
             const falloff = 1 - (dist / this.maxRadius) * 0.4;
             setDamageSource(this.type);
             const killed = enemy.takeDamage(Math.floor(this.damage * falloff));
             if (killed) {
-              this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+              this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
             }
           }
         }

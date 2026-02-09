@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Outrage: modo berserk 360° por duração, confusão ao final.
@@ -16,7 +16,6 @@ export class Outrage implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -25,10 +24,9 @@ export class Outrage implements Attack {
   private confusionDuration = 1500;
   private isActive = false;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.outrage.baseDamage;
     this.cooldown = ATTACKS.outrage.baseCooldown;
 
@@ -80,21 +78,13 @@ export class Outrage implements Attack {
         }).explode();
 
         // Dano 360°
-        const enemies = this.enemyGroup.getChildren().filter(
-          (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-        );
-        for (const enemySprite of enemies) {
-          const dist = Phaser.Math.Distance.Between(
-            this.player.x, this.player.y, enemySprite.x, enemySprite.y
-          );
-          if (dist > this.radius) continue;
-
-          const enemy = enemySprite as unknown as Enemy;
+        const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.radius);
+        for (const enemy of enemies) {
           if (typeof enemy.takeDamage === 'function') {
             setDamageSource(this.type);
             const killed = enemy.takeDamage(this.damage);
             if (killed) {
-              this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+              this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
             }
           }
         }

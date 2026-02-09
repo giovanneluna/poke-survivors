@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Solar Beam: raio solar devastador que perfura TODOS os inimigos na linha.
@@ -19,7 +19,6 @@ export class SolarBeam implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: ArcadeGroup;
   private readonly bullets: ArcadeGroup;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
@@ -29,10 +28,9 @@ export class SolarBeam implements Attack {
   /** Raio de colisão centro-a-centro para considerar hit */
   private static readonly HIT_RADIUS = 24;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.solarBeam.baseDamage;
     this.cooldown = ATTACKS.solarBeam.baseCooldown;
 
@@ -49,13 +47,11 @@ export class SolarBeam implements Attack {
   }
 
   private fire(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (activeEnemies.length === 0) return;
 
     // Mira no inimigo mais próximo
-    const nearest = enemies.reduce((best, e) => {
+    const nearest = activeEnemies.reduce((best, e) => {
       const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, e.x, e.y);
       const bd = Phaser.Math.Distance.Between(this.player.x, this.player.y, best.x, best.y);
       return d < bd ? e : best;
@@ -122,36 +118,33 @@ export class SolarBeam implements Attack {
       (b): b is Phaser.Physics.Arcade.Sprite => (b as Phaser.Physics.Arcade.Sprite).active
     );
 
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().getActiveEnemies();
 
     for (const bullet of activeBullets) {
       const hitSet = bullet.getData('hitSet') as Set<number>;
 
-      for (const enemySprite of enemies) {
-        const uid = (enemySprite.getData('uid') as number) ?? 0;
+      for (const enemy of enemies) {
+        const uid = (enemy.getData('uid') as number) ?? 0;
         if (hitSet.has(uid)) continue;
 
         const dist = Phaser.Math.Distance.Between(
-          bullet.x, bullet.y, enemySprite.x, enemySprite.y
+          bullet.x, bullet.y, enemy.x, enemy.y
         );
         if (dist > SolarBeam.HIT_RADIUS) continue;
 
         // Hit! Marcar como atingido, aplicar dano, NÃO matar o bullet
         hitSet.add(uid);
 
-        const enemy = enemySprite as unknown as Enemy;
         if (typeof enemy.takeDamage === 'function') {
           setDamageSource(this.type);
           const killed = enemy.takeDamage(this.damage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+            this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
           }
         }
 
         // Flash verde de hit
-        this.scene.add.particles(enemySprite.x, enemySprite.y, 'fire-particle', {
+        this.scene.add.particles(enemy.x, enemy.y, 'fire-particle', {
           speed: { min: 20, max: 50 },
           lifespan: 200,
           quantity: 4,

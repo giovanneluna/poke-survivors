@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Bubble Beam: evolucao do Bubble.
@@ -14,7 +15,6 @@ export class BubbleBeam implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: ArcadeGroup;
   private readonly bullets: ArcadeGroup;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
@@ -31,10 +31,9 @@ export class BubbleBeam implements Attack {
   /** Duracao do slow em ms */
   private readonly slowDurationMs = 2000;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.bubbleBeam.baseDamage;
     this.cooldown = ATTACKS.bubbleBeam.baseCooldown;
 
@@ -51,23 +50,10 @@ export class BubbleBeam implements Attack {
   }
 
   private fire(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
+    const nearest = getSpatialGrid().queryNearest(this.player.x, this.player.y);
+    if (!nearest) return;
 
-    // Alvo mais proximo
-    const closest = enemies
-      .map(enemy => ({
-        enemy,
-        dist: Phaser.Math.Distance.Between(
-          this.player.x, this.player.y,
-          enemy.x, enemy.y
-        ),
-      }))
-      .sort((a, b) => a.dist - b.dist)[0];
-
-    const target = closest.enemy;
+    const target = nearest;
     const baseAngle = Math.atan2(
       target.y - this.player.y,
       target.x - this.player.x
@@ -137,33 +123,30 @@ export class BubbleBeam implements Attack {
     body.checkCollision.none = true;
     body.enable = false;
 
-    // Efeito visual de estouro
-    this.scene.add.particles(px, py, 'water-particle', {
+    // Efeito visual de estouro (auto-destroy após lifespan)
+    const burstParticles = this.scene.add.particles(px, py, 'water-particle', {
       speed: { min: 20, max: 60 },
       lifespan: 300,
       quantity: 5,
       scale: { start: 1.2, end: 0 },
       tint: [0x3388ff, 0x44aaff, 0x88ccff],
       emitting: false,
-    }).explode();
+    });
+    burstParticles.explode();
+    this.scene.time.delayedCall(400, () => burstParticles.destroy());
 
     // Aplica slow em inimigos no raio
-    const nearbyEnemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const nearbyEnemies = getSpatialGrid().queryRadius(px, py, this.slowRadius);
 
-    for (const enemySprite of nearbyEnemies) {
-      const dist = Phaser.Math.Distance.Between(px, py, enemySprite.x, enemySprite.y);
-      if (dist > this.slowRadius) continue;
-
+    for (const enemy of nearbyEnemies) {
       // Tint visual de slow
-      enemySprite.setTint(0x3388ff);
+      enemy.setTint(0x3388ff);
       this.scene.time.delayedCall(this.slowDurationMs, () => {
-        if (enemySprite.active) enemySprite.clearTint();
+        if (enemy.active) enemy.clearTint();
       });
 
       // Reduz velocidade
-      const enemyBody = enemySprite.body as Phaser.Physics.Arcade.Body | null;
+      const enemyBody = enemy.body as Phaser.Physics.Arcade.Body | null;
       if (enemyBody) {
         enemyBody.velocity.scale(this.slowVelocityScale);
       }

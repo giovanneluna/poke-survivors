@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Draco Meteor: chuva de meteoros apocalíptica.
@@ -17,7 +17,6 @@ export class DracoMeteor implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -25,10 +24,9 @@ export class DracoMeteor implements Attack {
   private impactRadius = 50;
   private spreadRange = 200;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.dracoMeteor.baseDamage;
     this.cooldown = ATTACKS.dracoMeteor.baseCooldown;
 
@@ -102,22 +100,17 @@ export class DracoMeteor implements Attack {
             this.scene.cameras.main.shake(100, 0.005);
 
             // Dano AoE
-            const enemies = this.enemyGroup.getChildren().filter(
-              (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-            );
+            const enemies = getSpatialGrid().queryRadius(targetX, targetY, this.impactRadius);
 
-            for (const enemySprite of enemies) {
-              const dist = Phaser.Math.Distance.Between(targetX, targetY, enemySprite.x, enemySprite.y);
-              if (dist > this.impactRadius) continue;
-
-              const enemy = enemySprite as unknown as Enemy;
+            for (const enemy of enemies) {
               if (typeof enemy.takeDamage === 'function') {
                 // Dano máximo no centro, diminui com distância
+                const dist = Phaser.Math.Distance.Between(targetX, targetY, enemy.x, enemy.y);
                 const falloff = 1 - (dist / this.impactRadius) * 0.5;
                 setDamageSource(this.type);
                 const killed = enemy.takeDamage(Math.floor(this.damage * falloff));
                 if (killed) {
-                  this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+                  this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
                 }
               }
             }

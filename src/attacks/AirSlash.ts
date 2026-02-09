@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Air Slash: lâmina de ar que atravessa inimigos.
@@ -16,17 +16,15 @@ export class AirSlash implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
   private bladeCount = 1;
   private pierceCount = 3;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.airSlash.baseDamage;
     this.cooldown = ATTACKS.airSlash.baseCooldown;
 
@@ -69,21 +67,16 @@ export class AirSlash implements Attack {
           blade.y += vy * 0.016;
 
           // Check hit com inimigos
-          const enemies = this.enemyGroup.getChildren().filter(
-            (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-          );
-          for (const enemySprite of enemies) {
-            if (hitSet.has(enemySprite.getData('uid') ?? 0)) continue;
-            const dist = Phaser.Math.Distance.Between(blade.x, blade.y, enemySprite.x, enemySprite.y);
-            if (dist > 25) continue;
+          const enemies = getSpatialGrid().queryRadius(blade.x, blade.y, 25);
+          for (const enemy of enemies) {
+            if (hitSet.has(enemy.getData('uid') ?? 0)) continue;
 
-            hitSet.add(enemySprite.getData('uid') ?? 0);
-            const enemy = enemySprite as unknown as Enemy;
+            hitSet.add(enemy.getData('uid') ?? 0);
             if (typeof enemy.takeDamage === 'function') {
               setDamageSource(this.type);
               const killed = enemy.takeDamage(this.damage);
               if (killed) {
-                this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+                this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
               }
             }
             pierced++;

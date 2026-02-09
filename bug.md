@@ -3,6 +3,8 @@
  Outro amigo disse que estava com ()
   - O usuario falou que o jogo começou a travar, e ele estava assim Com smoekscreen, inferno, flametorwser, flarerush e fireblast e estava lagando
   ![alt text](Discord_cmytWqnSRu.png).
+-Outro com o wartottle estava lagando
+
 
   - Em alguns casos, quando for upar de nivel ou upgrade o jogo continua rodando por baixo dos panos, "skills sendo jogadas", monstros andando e etc.
 

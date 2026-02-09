@@ -29,7 +29,7 @@ export const ARBOK: BossConfig = {
     aoeColor: 0x9944cc,
     zoneDuration: 3000,
     zoneTickRate: 500,
-    zoneEffect: 'damage',
+    zoneEffect: 'poison',
   }, {
     name: 'Glare',
     pattern: 'beam',

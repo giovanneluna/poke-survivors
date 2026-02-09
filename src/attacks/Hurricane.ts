@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Hurricane: tornado que puxa inimigos para o centro.
@@ -16,7 +16,6 @@ export class Hurricane implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -24,10 +23,9 @@ export class Hurricane implements Attack {
   private pullForce = 100;
   private duration = 3000;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.hurricane.baseDamage;
     this.cooldown = ATTACKS.hurricane.baseCooldown;
 
@@ -38,12 +36,10 @@ export class Hurricane implements Attack {
 
   private summon(): void {
     // Spawna tornado perto do cluster de inimigos mais denso
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().getActiveEnemies();
     if (enemies.length === 0) return;
 
-    // Posição: média dos inimigos próximos ou inimigo mais perto
+    // Posição: inimigo mais perto
     let tx = this.player.x + Phaser.Math.Between(-100, 100);
     let ty = this.player.y + Phaser.Math.Between(-100, 100);
     if (enemies.length > 0) {
@@ -88,27 +84,21 @@ export class Hurricane implements Attack {
           return;
         }
 
-        const aliveEnemies = this.enemyGroup.getChildren().filter(
-          (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-        );
+        const aliveEnemies = getSpatialGrid().queryRadius(tx, ty, this.radius);
 
-        for (const enemySprite of aliveEnemies) {
-          const dist = Phaser.Math.Distance.Between(tx, ty, enemySprite.x, enemySprite.y);
-          if (dist > this.radius) continue;
-
+        for (const enemy of aliveEnemies) {
           // Pull para o centro
-          const angleToCenter = Math.atan2(ty - enemySprite.y, tx - enemySprite.x);
-          const body = enemySprite.body as Phaser.Physics.Arcade.Body;
+          const angleToCenter = Math.atan2(ty - enemy.y, tx - enemy.x);
+          const body = enemy.body as Phaser.Physics.Arcade.Body;
           body.velocity.x += Math.cos(angleToCenter) * this.pullForce;
           body.velocity.y += Math.sin(angleToCenter) * this.pullForce;
 
           // Dano
-          const enemy = enemySprite as unknown as Enemy;
           if (typeof enemy.takeDamage === 'function') {
             setDamageSource(this.type);
             const killed = enemy.takeDamage(this.damage);
             if (killed) {
-              this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+              this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
             }
           }
         }

@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Muddy Water: evolucao do Water Pulse.
@@ -17,7 +17,6 @@ export class MuddyWater implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: ArcadeGroup;
   private readonly bullets: ArcadeGroup;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
@@ -29,10 +28,9 @@ export class MuddyWater implements Attack {
   private static readonly SPEED = 220;
   private static readonly MUDDY_TINTS: readonly number[] = [0x664422, 0x886633, 0x3388ff] as const;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.muddyWater.baseDamage;
     this.cooldown = ATTACKS.muddyWater.baseCooldown;
 
@@ -49,13 +47,11 @@ export class MuddyWater implements Attack {
   }
 
   private fire(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (activeEnemies.length === 0) return;
 
     // Ordena por distancia ao player
-    const sorted = enemies
+    const sorted = activeEnemies
       .map(enemy => ({
         enemy,
         dist: Phaser.Math.Distance.Between(
@@ -72,12 +68,11 @@ export class MuddyWater implements Attack {
 
       // Inimigo muito perto: dano direto
       if (sorted[i].dist < 20) {
-        const enemy = target as unknown as Enemy;
-        if (typeof enemy.takeDamage === 'function') {
+        if (typeof target.takeDamage === 'function') {
           setDamageSource(this.type);
-          const killed = enemy.takeDamage(this.damage);
+          const killed = target.takeDamage(this.damage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', target.x, target.y, enemy.xpValue);
+            this.scene.events.emit('cone-attack-kill', target.x, target.y, target.xpValue);
           }
         }
         this.spawnMissDebuff(target.x, target.y);
@@ -146,27 +141,24 @@ export class MuddyWater implements Attack {
         continue;
       }
 
-      const enemies = this.enemyGroup.getChildren().filter(
-        (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-      );
+      const enemies = getSpatialGrid().getActiveEnemies();
 
-      for (const enemySprite of enemies) {
+      for (const enemy of enemies) {
         // Evita hit duplicado no mesmo inimigo
-        const enemyId = enemySprite.getData('instanceId') as number | undefined;
+        const enemyId = enemy.getData('instanceId') as number | undefined;
         if (enemyId !== undefined && hitEnemies?.has(enemyId)) continue;
 
         const dist = Phaser.Math.Distance.Between(
-          bullet.x, bullet.y, enemySprite.x, enemySprite.y
+          bullet.x, bullet.y, enemy.x, enemy.y
         );
         if (dist > 22) continue;
 
         // Hit confirmado
-        const enemy = enemySprite as unknown as Enemy;
         if (typeof enemy.takeDamage === 'function') {
           setDamageSource(this.type);
           const killed = enemy.takeDamage(this.damage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+            this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
           }
         }
 
@@ -177,10 +169,10 @@ export class MuddyWater implements Attack {
         }
 
         // Debuff visual de precisao
-        this.spawnMissDebuff(enemySprite.x, enemySprite.y);
+        this.spawnMissDebuff(enemy.x, enemy.y);
 
         // Flash de impacto (sem destruir projetil)
-        this.scene.add.particles(enemySprite.x, enemySprite.y, 'water-particle', {
+        this.scene.add.particles(enemy.x, enemy.y, 'water-particle', {
           speed: { min: 15, max: 40 },
           lifespan: 150,
           quantity: 3,

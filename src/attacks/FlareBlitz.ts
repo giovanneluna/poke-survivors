@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Flare Blitz: dash devastador em chamas com recoil.
@@ -16,7 +16,6 @@ export class FlareBlitz implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -24,10 +23,9 @@ export class FlareBlitz implements Attack {
   private explosionRadius = 60;
   private recoilPercent = 0.08;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.flareBlitz.baseDamage;
     this.cooldown = ATTACKS.flareBlitz.baseCooldown;
 
@@ -80,11 +78,9 @@ export class FlareBlitz implements Attack {
     });
 
     // Dano: inimigos na linha + raio de explosão
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().getActiveEnemies();
 
-    for (const enemySprite of enemies) {
+    for (const enemy of enemies) {
       // Check distância à linha do dash
       const dx = endX - startX;
       const dy = endY - startY;
@@ -92,25 +88,24 @@ export class FlareBlitz implements Attack {
       if (len === 0) continue;
 
       const perpDist = Math.abs(
-        (dy * (enemySprite.x - startX) - dx * (enemySprite.y - startY)) / len
+        (dy * (enemy.x - startX) - dx * (enemy.y - startY)) / len
       );
-      const projT = ((enemySprite.x - startX) * dx + (enemySprite.y - startY) * dy) / (len * len);
+      const projT = ((enemy.x - startX) * dx + (enemy.y - startY) * dy) / (len * len);
 
       // Na linha do dash (±30px) ou no raio de explosão
       const inLine = perpDist < 30 && projT >= -0.1 && projT <= 1.1;
-      const distToEnd = Phaser.Math.Distance.Between(enemySprite.x, enemySprite.y, endX, endY);
+      const distToEnd = Phaser.Math.Distance.Between(enemy.x, enemy.y, endX, endY);
       const inExplosion = distToEnd <= this.explosionRadius;
 
       if (!inLine && !inExplosion) continue;
 
-      const enemy = enemySprite as unknown as Enemy;
       if (typeof enemy.takeDamage === 'function') {
         // Dano aumentado se na explosão
         const dmg = inExplosion ? Math.floor(this.damage * 1.3) : this.damage;
         setDamageSource(this.type);
         const killed = enemy.takeDamage(dmg);
         if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
         }
       }
     }

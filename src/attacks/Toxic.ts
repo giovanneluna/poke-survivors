@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Toxic: aura de veneno persistente ao redor do jogador.
@@ -18,17 +18,15 @@ export class Toxic implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private radius = 65;
   private tickDamage = 5;
   private maxStacks = 5;
   private readonly acidClouds: Phaser.GameObjects.Sprite[] = [];
   private tickTimer: Phaser.Time.TimerEvent;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.tickDamage = ATTACKS.toxic.baseDamage;
 
     // 3 nuvens de acido orbitando com tint roxo
@@ -47,27 +45,25 @@ export class Toxic implements Attack {
   }
 
   private tick(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().getActiveEnemies();
 
-    for (const enemySprite of enemies) {
+    for (const enemy of enemies) {
       const dist = Phaser.Math.Distance.Between(
-        this.player.x, this.player.y, enemySprite.x, enemySprite.y
+        this.player.x, this.player.y, enemy.x, enemy.y
       );
 
       if (dist > this.radius) {
         // Fora do raio: resetar stacks
-        if (enemySprite.getData('toxicStacks') !== undefined) {
-          enemySprite.setData('toxicStacks', 0);
+        if (enemy.getData('toxicStacks') !== undefined) {
+          enemy.setData('toxicStacks', 0);
         }
         continue;
       }
 
       // Dentro do raio: incrementar stacks
-      const currentStacks = (enemySprite.getData('toxicStacks') as number | undefined) ?? 0;
+      const currentStacks = (enemy.getData('toxicStacks') as number | undefined) ?? 0;
       const newStacks = Math.min(currentStacks + 1, this.maxStacks);
-      enemySprite.setData('toxicStacks', newStacks);
+      enemy.setData('toxicStacks', newStacks);
 
       // Dano escala com stacks
       const scaledDamage = this.tickDamage + newStacks * 2;
@@ -75,21 +71,20 @@ export class Toxic implements Attack {
       // Visual: tint roxo proporcional aos stacks
       const intensity = Math.floor(0x99 - newStacks * 0x10);
       const tintColor = (intensity << 16) | (0x44 << 8) | 0xcc;
-      enemySprite.setTint(tintColor);
+      enemy.setTint(tintColor);
 
       // Aplicar dano
-      const enemy = enemySprite as unknown as Enemy;
       if (typeof enemy.takeDamage === 'function') {
         setDamageSource(this.type);
         const killed = enemy.takeDamage(scaledDamage);
         if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
         }
       }
 
       // Limpar tint apos um curto tempo
       this.scene.time.delayedCall(400, () => {
-        if (enemySprite.active) enemySprite.clearTint();
+        if (enemy.active) enemy.clearTint();
       });
     }
   }

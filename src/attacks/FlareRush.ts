@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 type CardinalDir = 'up' | 'down' | 'left' | 'right';
 
@@ -42,7 +42,6 @@ export class FlareRush implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -50,10 +49,9 @@ export class FlareRush implements Attack {
   private trailDuration = 2000;
   private speedBoost = 0.25;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.flareRush.baseDamage;
     this.cooldown = ATTACKS.flareRush.baseCooldown;
 
@@ -113,11 +111,13 @@ export class FlareRush implements Attack {
     for (let i = 0; i < trailPoints.length; i++) {
       const p = trailPoints[i];
       this.scene.time.delayedCall(i * 25, () => {
-        this.scene.add.particles(p.x, p.y, 'fire-particle', {
+        const particles = this.scene.add.particles(p.x, p.y, 'fire-particle', {
           speed: { min: 20, max: 50 }, lifespan: 350, quantity: 5,
           scale: { start: 1.8, end: 0 }, tint: [0xff4400, 0xff6600, 0xffaa00],
           emitting: false,
-        }).explode();
+        });
+        particles.explode();
+        this.scene.time.delayedCall(400, () => particles.destroy());
 
         // Zona de fogo visual
         const fire = this.scene.add.circle(p.x, p.y, 12, 0xff4400, 0.3);
@@ -130,58 +130,59 @@ export class FlareRush implements Attack {
     }
 
     // Dano ao longo da trilha (imediato)
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().getActiveEnemies();
 
-    for (const enemySprite of enemies) {
-      const dx = endX - startX;
-      const dy = endY - startY;
-      const len = Math.sqrt(dx * dx + dy * dy);
-      if (len === 0) continue;
+    for (const enemy of enemies) {
+      const dashDx = endX - startX;
+      const dashDy = endY - startY;
+      const dashLen = Math.sqrt(dashDx * dashDx + dashDy * dashDy);
+      if (dashLen === 0) continue;
 
       const perpDist = Math.abs(
-        (dy * (enemySprite.x - startX) - dx * (enemySprite.y - startY)) / len
+        (dashDy * (enemy.x - startX) - dashDx * (enemy.y - startY)) / dashLen
       );
       if (perpDist > 30) continue;
 
-      const projT = ((enemySprite.x - startX) * dx + (enemySprite.y - startY) * dy) / (len * len);
+      const projT = ((enemy.x - startX) * dashDx + (enemy.y - startY) * dashDy) / (dashLen * dashLen);
       if (projT < -0.1 || projT > 1.1) continue;
 
-      const enemy = enemySprite as unknown as Enemy;
       if (typeof enemy.takeDamage === 'function') {
         setDamageSource(this.type);
         const killed = enemy.takeDamage(this.damage);
         if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
         }
       }
     }
 
-    // Trail damage tick (inimigos que passam pela trilha depois)
+    // Trail damage tick — O(n) line-segment check em vez de O(n×10) point check
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const trailLen = Math.sqrt(dx * dx + dy * dy);
     let trailElapsed = 0;
     const trailTick = this.scene.time.addEvent({
       delay: 400, loop: true,
       callback: () => {
         trailElapsed += 400;
         if (trailElapsed >= this.trailDuration) { trailTick.destroy(); return; }
+        if (trailLen === 0) return;
 
-        const liveEnemies = this.enemyGroup.getChildren().filter(
-          (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-        );
-        for (const enemySprite of liveEnemies) {
-          for (const p of trailPoints) {
-            const dist = Phaser.Math.Distance.Between(p.x, p.y, enemySprite.x, enemySprite.y);
-            if (dist < 18) {
-              const enemy = enemySprite as unknown as Enemy;
-              if (typeof enemy.takeDamage === 'function') {
-                setDamageSource(this.type);
-                const killed = enemy.takeDamage(Math.floor(this.damage * 0.3));
-                if (killed) {
-                  this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
-                }
-              }
-              break;
+        const liveEnemies = getSpatialGrid().getActiveEnemies();
+        for (const enemy of liveEnemies) {
+          // Distância perpendicular ao segmento
+          const perpDist = Math.abs(
+            (dy * (enemy.x - startX) - dx * (enemy.y - startY)) / trailLen
+          );
+          if (perpDist > 20) continue;
+          // Projeção no segmento
+          const projT = ((enemy.x - startX) * dx + (enemy.y - startY) * dy) / (trailLen * trailLen);
+          if (projT < -0.1 || projT > 1.1) continue;
+
+          if (typeof enemy.takeDamage === 'function') {
+            setDamageSource(this.type);
+            const killed = enemy.takeDamage(Math.floor(this.damage * 0.3));
+            if (killed) {
+              this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
             }
           }
         }

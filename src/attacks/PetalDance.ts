@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Petal Dance: dança de pétalas 360° que expande em espiral ao redor do jogador.
@@ -16,7 +16,6 @@ export class PetalDance implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -28,10 +27,9 @@ export class PetalDance implements Attack {
   private tickEvent: Phaser.Time.TimerEvent | null = null;
   private currentRadius = 30;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.petalDance.baseDamage;
     this.cooldown = ATTACKS.petalDance.baseCooldown;
 
@@ -83,22 +81,14 @@ export class PetalDance implements Attack {
         elapsed += 200;
         this.currentRadius = startRadius + radiusGrowthRate * elapsed;
 
-        const enemies = this.enemyGroup.getChildren().filter(
-          (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-        );
+        const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.currentRadius);
 
-        for (const enemySprite of enemies) {
-          const dist = Phaser.Math.Distance.Between(
-            this.player.x, this.player.y, enemySprite.x, enemySprite.y
-          );
-          if (dist > this.currentRadius) continue;
-
-          const enemy = enemySprite as unknown as Enemy;
+        for (const enemy of enemies) {
           if (typeof enemy.takeDamage === 'function') {
             setDamageSource(this.type);
             const killed = enemy.takeDamage(this.damage);
             if (killed) {
-              this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+              this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
             }
           }
         }

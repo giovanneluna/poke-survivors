@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import type { Attack } from '../types';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Smokescreen: aura de fumaça ao redor do jogador que causa slow.
@@ -15,17 +15,17 @@ export class Smokescreen implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private radius = 60;
   private slowAmount = 0.5; // multiplicador de velocidade
   private tickDamage = 2;
   private readonly smokeClouds: Phaser.GameObjects.Sprite[] = [];
   private tickTimer: Phaser.Time.TimerEvent;
+  private readonly tintedEnemies: Set<Phaser.Physics.Arcade.Sprite> = new Set();
+  private clearTintTimer: Phaser.Time.TimerEvent;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
 
     // Cria 4 nuvens de fumaça animadas orbitando
     for (let i = 0; i < 4; i++) {
@@ -39,40 +39,41 @@ export class Smokescreen implements Attack {
     this.tickTimer = scene.time.addEvent({
       delay: 500, loop: true, callback: () => this.tick(),
     });
+
+    // Um único timer para limpar tints em batch (a cada 400ms)
+    this.clearTintTimer = scene.time.addEvent({
+      delay: 400, loop: true, callback: () => this.clearTints(),
+    });
+  }
+
+  private clearTints(): void {
+    for (const sprite of this.tintedEnemies) {
+      if (sprite.active) sprite.clearTint();
+    }
+    this.tintedEnemies.clear();
   }
 
   private tick(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.radius);
 
-    for (const enemySprite of enemies) {
-      const dist = Phaser.Math.Distance.Between(
-        this.player.x, this.player.y, enemySprite.x, enemySprite.y
-      );
-      if (dist > this.radius) continue;
-
+    for (const enemy of enemies) {
       // Slow visual
-      enemySprite.setTint(0x888888);
-      const body = enemySprite.body as Phaser.Physics.Arcade.Body;
+      enemy.setTint(0x888888);
+      const body = enemy.body as Phaser.Physics.Arcade.Body;
       body.velocity.scale(this.slowAmount);
+      this.tintedEnemies.add(enemy);
 
       // Tick damage
       if (this.tickDamage > 0) {
-        const enemy = enemySprite as unknown as Enemy;
         if (typeof enemy.takeDamage === 'function') {
           setDamageSource(this.type);
           const killed = enemy.takeDamage(this.tickDamage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+            this.tintedEnemies.delete(enemy);
+            this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
           }
         }
       }
-
-      // Limpar tint após um curto tempo
-      this.scene.time.delayedCall(400, () => {
-        if (enemySprite.active) enemySprite.clearTint();
-      });
     }
   }
 
@@ -104,6 +105,8 @@ export class Smokescreen implements Attack {
 
   destroy(): void {
     this.tickTimer.destroy();
+    this.clearTintTimer.destroy();
+    this.tintedEnemies.clear();
     for (const cloud of this.smokeClouds) cloud.destroy();
   }
 }

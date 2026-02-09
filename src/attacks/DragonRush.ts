@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Dragon Rush: carga dracônica com stun AoE.
@@ -16,7 +16,6 @@ export class DragonRush implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -24,10 +23,9 @@ export class DragonRush implements Attack {
   private stunRadius = 70;
   private stunDuration = 1200;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.dragonRush.baseDamage;
     this.cooldown = ATTACKS.dragonRush.baseCooldown;
 
@@ -81,11 +79,9 @@ export class DragonRush implements Attack {
     });
 
     // Dano na linha + AoE stun no final
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().getActiveEnemies();
 
-    for (const enemySprite of enemies) {
+    for (const enemy of enemies) {
       // Dano na linha do dash
       const dx = endX - startX;
       const dy = endY - startY;
@@ -93,32 +89,31 @@ export class DragonRush implements Attack {
       if (len === 0) continue;
 
       const perpDist = Math.abs(
-        (dy * (enemySprite.x - startX) - dx * (enemySprite.y - startY)) / len
+        (dy * (enemy.x - startX) - dx * (enemy.y - startY)) / len
       );
-      const projT = ((enemySprite.x - startX) * dx + (enemySprite.y - startY) * dy) / (len * len);
+      const projT = ((enemy.x - startX) * dx + (enemy.y - startY) * dy) / (len * len);
       const inLine = perpDist < 25 && projT >= -0.1 && projT <= 1.1;
 
       // Stun AoE no ponto de impacto
-      const distToEnd = Phaser.Math.Distance.Between(enemySprite.x, enemySprite.y, endX, endY);
+      const distToEnd = Phaser.Math.Distance.Between(enemy.x, enemy.y, endX, endY);
       const inStunRadius = distToEnd <= this.stunRadius;
 
       if (!inLine && !inStunRadius) continue;
 
-      const enemy = enemySprite as unknown as Enemy;
       if (typeof enemy.takeDamage === 'function') {
         setDamageSource(this.type);
         const killed = enemy.takeDamage(this.damage);
         if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
         }
 
         // Stun para os que estão no raio
         if (!killed && inStunRadius) {
-          enemySprite.setTint(0x7744ff);
-          const body = enemySprite.body as Phaser.Physics.Arcade.Body;
+          enemy.setTint(0x7744ff);
+          const body = enemy.body as Phaser.Physics.Arcade.Body;
           body.setVelocity(0, 0);
           this.scene.time.delayedCall(this.stunDuration, () => {
-            if (enemySprite.active) enemySprite.clearTint();
+            if (enemy.active) enemy.clearTint();
           });
         }
       }

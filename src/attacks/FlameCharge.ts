@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 type CardinalDir = 'up' | 'down' | 'left' | 'right';
 
@@ -41,7 +41,6 @@ export class FlameCharge implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -49,10 +48,9 @@ export class FlameCharge implements Attack {
   private speedBoost = 0.15;
   private speedBoostDuration = 2000;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.flameCharge.baseDamage;
     this.cooldown = ATTACKS.flameCharge.baseCooldown;
 
@@ -105,22 +103,22 @@ export class FlameCharge implements Attack {
       const py = startY + (endY - startY) * t;
 
       this.scene.time.delayedCall(i * 30, () => {
-        this.scene.add.particles(px, py, 'fire-particle', {
+        const trailPart = this.scene.add.particles(px, py, 'fire-particle', {
           speed: { min: 20, max: 60 }, lifespan: 300, quantity: 4,
           scale: { start: 1.5, end: 0 }, tint: [0xff4400, 0xff6600, 0xffaa00],
           emitting: false,
-        }).explode();
+        });
+        trailPart.explode();
+        this.scene.time.delayedCall(400, () => trailPart.destroy());
       });
     }
 
     // Dano a inimigos no caminho
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().getActiveEnemies();
 
-    for (const enemySprite of enemies) {
+    for (const enemy of enemies) {
       const distToLine = Phaser.Math.Distance.Between(
-        enemySprite.x, enemySprite.y,
+        enemy.x, enemy.y,
         (startX + endX) / 2, (startY + endY) / 2
       );
       if (distToLine > this.dashDistance * 0.7) continue;
@@ -130,16 +128,15 @@ export class FlameCharge implements Attack {
       const len = Math.sqrt(dx * dx + dy * dy);
       if (len === 0) continue;
       const perpDist = Math.abs(
-        (dy * (enemySprite.x - startX) - dx * (enemySprite.y - startY)) / len
+        (dy * (enemy.x - startX) - dx * (enemy.y - startY)) / len
       );
       if (perpDist > 25) continue;
 
-      const enemy = enemySprite as unknown as Enemy;
       if (typeof enemy.takeDamage === 'function') {
         setDamageSource(this.type);
         const killed = enemy.takeDamage(this.damage);
         if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
         }
       }
     }

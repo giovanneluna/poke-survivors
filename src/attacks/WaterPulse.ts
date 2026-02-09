@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Water Pulse: projétil homing que explode no contato com dano em área.
@@ -16,7 +16,6 @@ export class WaterPulse implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: ArcadeGroup;
   private readonly bullets: ArcadeGroup;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
@@ -28,10 +27,9 @@ export class WaterPulse implements Attack {
   /** Distância centro-a-centro para considerar colisão (visual match) */
   private static readonly HIT_RADIUS = 18;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.waterPulse.baseDamage;
     this.cooldown = ATTACKS.waterPulse.baseCooldown;
 
@@ -48,12 +46,10 @@ export class WaterPulse implements Attack {
   }
 
   private fire(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (activeEnemies.length === 0) return;
 
-    const sorted = enemies
+    const sorted = activeEnemies
       .map(enemy => ({
         enemy,
         dist: Phaser.Math.Distance.Between(
@@ -69,12 +65,11 @@ export class WaterPulse implements Attack {
       const target = sorted[i].enemy;
 
       if (sorted[i].dist < 20) {
-        const enemy = target as unknown as Enemy;
-        if (typeof enemy.takeDamage === 'function') {
+        if (typeof target.takeDamage === 'function') {
           setDamageSource(this.type);
-          const killed = enemy.takeDamage(this.damage);
+          const killed = target.takeDamage(this.damage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', target.x, target.y, enemy.xpValue);
+            this.scene.events.emit('cone-attack-kill', target.x, target.y, target.xpValue);
           }
         }
         this.spawnImpact(target.x, target.y);
@@ -126,24 +121,21 @@ export class WaterPulse implements Attack {
       (b): b is Phaser.Physics.Arcade.Sprite => (b as Phaser.Physics.Arcade.Sprite).active
     );
 
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().getActiveEnemies();
 
     for (const bullet of activeBullets) {
-      for (const enemySprite of enemies) {
+      for (const enemy of enemies) {
         const dist = Phaser.Math.Distance.Between(
-          bullet.x, bullet.y, enemySprite.x, enemySprite.y
+          bullet.x, bullet.y, enemy.x, enemy.y
         );
         if (dist > WaterPulse.HIT_RADIUS) continue;
 
         // Hit direto no inimigo que tocou
-        const enemy = enemySprite as unknown as Enemy;
         if (typeof enemy.takeDamage === 'function') {
           setDamageSource(this.type);
           const killed = enemy.takeDamage(this.damage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+            this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
           }
         }
 
@@ -162,19 +154,15 @@ export class WaterPulse implements Attack {
     impact.once('animationcomplete', () => impact.destroy());
 
     // AoE: dano em todos inimigos no raio da explosão
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    for (const enemySprite of enemies) {
-      const dist = Phaser.Math.Distance.Between(x, y, enemySprite.x, enemySprite.y);
-      if (dist > this.aoeRadius) continue;
-      const enemy = enemySprite as unknown as Enemy;
+    const aoeEnemies = getSpatialGrid().queryRadius(x, y, this.aoeRadius);
+    for (const enemy of aoeEnemies) {
       if (typeof enemy.takeDamage === 'function') {
+        const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
         const falloff = 1 - (dist / this.aoeRadius) * 0.4;
         setDamageSource(this.type);
         const killed = enemy.takeDamage(Math.floor(this.damage * 0.6 * falloff));
         if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
         }
       }
     }

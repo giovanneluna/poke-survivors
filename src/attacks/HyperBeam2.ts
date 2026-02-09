@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Hyper Beam 2: raio devastador que PERFURA inimigos (nao morre na colisao).
@@ -17,17 +17,15 @@ export class HyperBeam2 implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: ArcadeGroup;
   private readonly bullets: ArcadeGroup;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
   private fireId = 0;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.hyperBeam2.baseDamage;
     this.cooldown = ATTACKS.hyperBeam2.baseCooldown;
 
@@ -44,13 +42,11 @@ export class HyperBeam2 implements Attack {
   }
 
   private fire(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (activeEnemies.length === 0) return;
 
     // Encontrar inimigo mais proximo
-    const sorted = enemies
+    const sorted = activeEnemies
       .map(enemy => ({
         enemy,
         dist: Phaser.Math.Distance.Between(
@@ -129,33 +125,30 @@ export class HyperBeam2 implements Attack {
     const activeBullets = this.bullets.getChildren().filter(
       (b): b is Phaser.Physics.Arcade.Sprite => (b as Phaser.Physics.Arcade.Sprite).active
     );
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().getActiveEnemies();
 
     for (const bullet of activeBullets) {
       const hitSet = bullet.getData('hitSet') as Set<number>;
 
-      for (const enemySprite of enemies) {
-        const uid = (enemySprite.getData('uid') as number) ?? 0;
+      for (const enemy of enemies) {
+        const uid = (enemy.getData('uid') as number) ?? 0;
         if (hitSet.has(uid)) continue;
 
         const dist = Phaser.Math.Distance.Between(
-          bullet.x, bullet.y, enemySprite.x, enemySprite.y
+          bullet.x, bullet.y, enemy.x, enemy.y
         );
         if (dist > HyperBeam2.HIT_RADIUS) continue;
 
         hitSet.add(uid);
-        const enemy = enemySprite as unknown as Enemy;
         if (typeof enemy.takeDamage === 'function') {
           setDamageSource(this.type);
           const killed = enemy.takeDamage(this.damage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+            this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
           }
         }
 
-        this.scene.add.particles(enemySprite.x, enemySprite.y, 'fire-particle', {
+        this.scene.add.particles(enemy.x, enemy.y, 'fire-particle', {
           speed: { min: 20, max: 50 },
           lifespan: 200,
           quantity: 4,

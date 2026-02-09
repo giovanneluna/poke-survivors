@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 type CardinalDir = 'up' | 'down' | 'left' | 'right';
 
@@ -44,7 +44,6 @@ export class Waterfall implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -55,10 +54,9 @@ export class Waterfall implements Attack {
   /** Fator de reducao de velocidade nos inimigos na trilha */
   private readonly trailSlowScale = 0.5;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.waterfall.baseDamage;
     this.cooldown = ATTACKS.waterfall.baseCooldown;
 
@@ -118,12 +116,14 @@ export class Waterfall implements Attack {
     for (let i = 0; i < trailPoints.length; i++) {
       const p = trailPoints[i];
       this.scene.time.delayedCall(i * 25, () => {
-        // Particulas de splash
-        this.scene.add.particles(p.x, p.y, 'water-particle', {
+        // Particulas de splash (auto-destroy)
+        const splashPart = this.scene.add.particles(p.x, p.y, 'water-particle', {
           speed: { min: 20, max: 50 }, lifespan: 350, quantity: 5,
           scale: { start: 1.8, end: 0 }, tint: [0x3388ff, 0x44aaff, 0x66ccff],
           emitting: false,
-        }).explode();
+        });
+        splashPart.explode();
+        this.scene.time.delayedCall(450, () => splashPart.destroy());
 
         // Zona de agua visual (circulo azul translucido)
         const waterZone = this.scene.add.circle(p.x, p.y, 14, 0x3388ff, 0.3);
@@ -136,30 +136,27 @@ export class Waterfall implements Attack {
     }
 
     // Dano ao longo da trilha (imediato)
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().getActiveEnemies();
 
-    for (const enemySprite of enemies) {
+    for (const enemy of enemies) {
       const dx = endX - startX;
       const dy = endY - startY;
       const len = Math.sqrt(dx * dx + dy * dy);
       if (len === 0) continue;
 
       const perpDist = Math.abs(
-        (dy * (enemySprite.x - startX) - dx * (enemySprite.y - startY)) / len
+        (dy * (enemy.x - startX) - dx * (enemy.y - startY)) / len
       );
       if (perpDist > 30) continue;
 
-      const projT = ((enemySprite.x - startX) * dx + (enemySprite.y - startY) * dy) / (len * len);
+      const projT = ((enemy.x - startX) * dx + (enemy.y - startY) * dy) / (len * len);
       if (projT < -0.1 || projT > 1.1) continue;
 
-      const enemy = enemySprite as unknown as Enemy;
       if (typeof enemy.takeDamage === 'function') {
         setDamageSource(this.type);
         const killed = enemy.takeDamage(this.damage);
         if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
         }
       }
     }
@@ -172,32 +169,29 @@ export class Waterfall implements Attack {
         trailElapsed += 400;
         if (trailElapsed >= this.trailDuration) { trailTick.destroy(); return; }
 
-        const liveEnemies = this.enemyGroup.getChildren().filter(
-          (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-        );
-        for (const enemySprite of liveEnemies) {
+        const liveEnemies = getSpatialGrid().getActiveEnemies();
+        for (const enemy of liveEnemies) {
           // Check se esta perto de algum ponto do trail
           for (const p of trailPoints) {
-            const dist = Phaser.Math.Distance.Between(p.x, p.y, enemySprite.x, enemySprite.y);
+            const dist = Phaser.Math.Distance.Between(p.x, p.y, enemy.x, enemy.y);
             if (dist < 20) {
-              const enemy = enemySprite as unknown as Enemy;
               if (typeof enemy.takeDamage === 'function') {
                 // Trail tick damage: 30% do dano base
                 setDamageSource(this.type);
                 const killed = enemy.takeDamage(Math.floor(this.damage * 0.3));
                 if (killed) {
-                  this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+                  this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
                 }
               }
 
               // Slow: reduz velocidade dos inimigos na trilha
-              const enemyBody = enemySprite.body as Phaser.Physics.Arcade.Body | null;
+              const enemyBody = enemy.body as Phaser.Physics.Arcade.Body | null;
               if (enemyBody) {
                 enemyBody.velocity.scale(this.trailSlowScale);
               }
-              enemySprite.setTint(0x3388ff);
+              enemy.setTint(0x3388ff);
               this.scene.time.delayedCall(500, () => {
-                if (enemySprite.active) enemySprite.clearTint();
+                if (enemy.active) enemy.clearTint();
               });
 
               break; // So aplica uma vez por tick por inimigo

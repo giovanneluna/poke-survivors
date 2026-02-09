@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Blaze Kick: chute flamejante com AoE de fogo.
@@ -16,17 +16,15 @@ export class BlazeKick implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
   private range = 80;
   private splashRadius = 45;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.blazeKick.baseDamage;
     this.cooldown = ATTACKS.blazeKick.baseCooldown;
 
@@ -36,21 +34,7 @@ export class BlazeKick implements Attack {
   }
 
   private kick(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
-
-    // Encontra mais próximo
-    let closest: Phaser.Physics.Arcade.Sprite | null = null;
-    let closestDist = Infinity;
-    for (const enemy of enemies) {
-      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
-      if (dist < closestDist && dist <= this.range) {
-        closest = enemy;
-        closestDist = dist;
-      }
-    }
+    const closest = getSpatialGrid().queryNearest(this.player.x, this.player.y, this.range);
     if (!closest) return;
 
     const tx = closest.x;
@@ -79,18 +63,15 @@ export class BlazeKick implements Attack {
     });
 
     // Dano: alvo principal + splash
-    for (const enemySprite of enemies) {
-      const dist = Phaser.Math.Distance.Between(tx, ty, enemySprite.x, enemySprite.y);
-      if (dist > this.splashRadius) continue;
-
-      const enemy = enemySprite as unknown as Enemy;
+    const splashEnemies = getSpatialGrid().queryRadius(tx, ty, this.splashRadius);
+    for (const enemy of splashEnemies) {
       if (typeof enemy.takeDamage === 'function') {
         // Alvo direto recebe dano cheio, splash recebe 60%
-        const dmg = enemySprite === closest ? this.damage : Math.floor(this.damage * 0.6);
+        const dmg = enemy === closest ? this.damage : Math.floor(this.damage * 0.6);
         setDamageSource(this.type);
         const killed = enemy.takeDamage(dmg);
         if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
         }
       }
     }

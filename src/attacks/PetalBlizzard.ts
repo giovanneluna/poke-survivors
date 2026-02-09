@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Petal Blizzard: tempestade de pétalas que cobre toda a tela.
@@ -17,7 +17,6 @@ export class PetalBlizzard implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -28,10 +27,9 @@ export class PetalBlizzard implements Attack {
   private activeSprites: Phaser.GameObjects.Sprite[] = [];
   private tickEvent: Phaser.Time.TimerEvent | null = null;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.petalBlizzard.baseDamage;
     this.cooldown = ATTACKS.petalBlizzard.baseCooldown;
 
@@ -94,17 +92,14 @@ export class PetalBlizzard implements Attack {
       callback: () => {
         elapsed += 300;
 
-        const enemies = this.enemyGroup.getChildren().filter(
-          (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-        );
+        const enemies = getSpatialGrid().getActiveEnemies();
 
-        for (const enemySprite of enemies) {
-          const enemy = enemySprite as unknown as Enemy;
+        for (const enemy of enemies) {
           if (typeof enemy.takeDamage === 'function') {
             setDamageSource(this.type);
             const killed = enemy.takeDamage(this.damage);
             if (killed) {
-              this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+              this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
             }
           }
         }

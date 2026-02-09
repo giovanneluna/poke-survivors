@@ -5,6 +5,7 @@ import type {
   EnemyBoomerangConfig, EnemySlowAuraConfig,
 } from '../types';
 import { getPassive } from '../systems/PassiveSystem';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { recordDamage } from '../systems/DamageTracker';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
@@ -355,6 +356,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   cleanup(): void {
     this.isDead = true;
+    getSpatialGrid().remove(this);
     if (this.hpBar) { this.hpBar.destroy(); this.hpBar = null; }
     if (this.shadow) { this.shadow.destroy(); this.shadow = null; }
     this.destroy();

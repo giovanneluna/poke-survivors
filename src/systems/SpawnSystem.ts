@@ -5,6 +5,7 @@ import { Enemy } from '../entities/Enemy';
 import { Boss } from '../entities/Boss';
 import { SoundManager } from '../audio/SoundManager';
 import type { GameContext } from './GameContext';
+import { getSpatialGrid } from './SpatialHashGrid';
 
 export class SpawnSystem {
   private spawnTimer!: Phaser.Time.TimerEvent;
@@ -62,6 +63,7 @@ export class SpawnSystem {
       }
 
       enemy.moveToward(playerPos);
+      getSpatialGrid().updatePosition(enemy);
       const dist = Phaser.Math.Distance.Between(playerX, playerY, enemy.x, enemy.y);
       if (dist > SPAWN.despawnDistance && enemy.shouldDespawn()) { enemy.cleanup(); return; }
 
@@ -112,13 +114,14 @@ export class SpawnSystem {
     const wave = this.getCurrentWave();
     const maxMult = DIFFICULTY[this.ctx.difficulty].maxEnemiesMultiplier;
     const maxEnemies = Math.round(wave.maxEnemies * maxMult);
-    const activeCount = this.ctx.enemyGroup.getChildren().filter(c => (c as Phaser.Physics.Arcade.Sprite).active).length;
+    const activeCount = getSpatialGrid().getActiveCount();
     if (activeCount >= maxEnemies) return;
 
     const config = this.pickEnemyType(wave);
     const pos = this.getSpawnPosition();
     const enemy = new Enemy(this.ctx.scene, pos.x, pos.y, config);
     this.ctx.enemyGroup.add(enemy);
+    getSpatialGrid().insert(enemy);
   }
 
   private getCurrentWave(): WaveConfig {
@@ -159,17 +162,13 @@ export class SpawnSystem {
     healer.lastHealTick = time;
 
     const cfg = healer.healAura!;
-    this.ctx.enemyGroup.getChildren().forEach(other => {
-      const otherEnemy = other as Enemy;
-      if (otherEnemy === healer || !otherEnemy.active) return;
-      const d = Phaser.Math.Distance.Between(healer.x, healer.y, otherEnemy.x, otherEnemy.y);
-      if (d <= cfg.radius) {
-        otherEnemy.heal(cfg.hpPerSecond);
-        // Visual: green flash on healed enemy
-        otherEnemy.setTint(0x44ff44);
-        this.ctx.scene.time.delayedCall(150, () => { if (otherEnemy.active) otherEnemy.clearTint(); });
-      }
-    });
+    const nearby = getSpatialGrid().queryRadius(healer.x, healer.y, cfg.radius);
+    for (const otherEnemy of nearby) {
+      if (otherEnemy === healer) continue;
+      otherEnemy.heal(cfg.hpPerSecond);
+      otherEnemy.setTint(0x44ff44);
+      this.ctx.scene.time.delayedCall(150, () => { if (otherEnemy.active) otherEnemy.clearTint(); });
+    }
   }
 
   // ── Boomerang projectile (Cubone/Marowak) ───────────────────────
@@ -337,6 +336,7 @@ export class SpawnSystem {
       const pos = this.getSpawnPosition();
       const boss = new Boss(scene, pos.x, pos.y, scaledConfig);
       this.ctx.enemyGroup.add(boss);
+      getSpatialGrid().insert(boss);
       SoundManager.playBossSpawn();
 
       // Trackear boss para enrage e queue sequencial
@@ -365,6 +365,7 @@ export class SpawnSystem {
       const pos = this.getSpawnPosition();
       const boss = new Boss(scene, pos.x, pos.y, bossConfig);
       this.ctx.enemyGroup.add(boss);
+      getSpatialGrid().insert(boss);
       SoundManager.playBossSpawn();
 
       scene.events.emit('boss-spawned', {
@@ -974,6 +975,9 @@ export class SpawnSystem {
                 player.body!.velocity.x + Math.cos(pullAngle) * pullForce,
                 player.body!.velocity.y + Math.sin(pullAngle) * pullForce
               );
+            } else if (effect === 'poison') {
+              const poisonDps = attack.damage > 0 ? attack.damage : 5;
+              player.applyPoison(poisonDps, tickRate + 500, scene.time.now);
             }
           },
         });

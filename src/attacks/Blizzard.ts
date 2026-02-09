@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Blizzard: evolucao do Ice Beam.
@@ -17,7 +17,6 @@ export class Blizzard implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: ArcadeGroup;
   private readonly bullets: ArcadeGroup;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
@@ -41,10 +40,9 @@ export class Blizzard implements Attack {
     spawnTime: number;
   }> = new Map();
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.blizzard.baseDamage;
     this.cooldown = ATTACKS.blizzard.baseCooldown;
 
@@ -61,13 +59,11 @@ export class Blizzard implements Attack {
   }
 
   private launch(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (activeEnemies.length === 0) return;
 
     // Seleciona alvos ALEATORIOS (nao mais proximos)
-    const shuffled = Phaser.Utils.Array.Shuffle([...enemies]);
+    const shuffled = Phaser.Utils.Array.Shuffle([...activeEnemies]);
     const count = Math.min(this.projectileCount + this.player.stats.projectileBonus, shuffled.length);
 
     for (let i = 0; i < count; i++) {
@@ -151,17 +147,9 @@ export class Blizzard implements Attack {
       const bullet = tracking.bullet;
 
       // Encontra inimigo mais proximo ao projetil
-      const enemies = this.enemyGroup.getChildren().filter(
-        (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-      );
+      const nearest = getSpatialGrid().queryNearest(bullet.x, bullet.y);
 
-      if (enemies.length === 0) continue;
-
-      const nearest = enemies.reduce((best, e) => {
-        const dBest = Phaser.Math.Distance.Between(bullet.x, bullet.y, best.x, best.y);
-        const dCurr = Phaser.Math.Distance.Between(bullet.x, bullet.y, e.x, e.y);
-        return dCurr < dBest ? e : best;
-      });
+      if (!nearest) continue;
 
       // Ajusta velocidade em direcao ao inimigo
       const angleToTarget = Math.atan2(
@@ -181,12 +169,11 @@ export class Blizzard implements Attack {
       );
 
       if (dist < Blizzard.HIT_DISTANCE) {
-        const enemy = nearest as unknown as Enemy;
-        if (typeof enemy.takeDamage === 'function') {
+        if (typeof nearest.takeDamage === 'function') {
           setDamageSource(this.type);
-          const killed = enemy.takeDamage(this.damage);
+          const killed = nearest.takeDamage(this.damage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', nearest.x, nearest.y, enemy.xpValue);
+            this.scene.events.emit('cone-attack-kill', nearest.x, nearest.y, nearest.xpValue);
           }
         }
 
@@ -233,26 +220,21 @@ export class Blizzard implements Attack {
     }).explode();
 
     // Slow em inimigos no raio
-    const nearbyEnemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const nearbyEnemies = getSpatialGrid().queryRadius(x, y, Blizzard.FREEZE_RADIUS);
 
-    for (const enemySprite of nearbyEnemies) {
-      const dist = Phaser.Math.Distance.Between(x, y, enemySprite.x, enemySprite.y);
-      if (dist > Blizzard.FREEZE_RADIUS) continue;
-
+    for (const enemy of nearbyEnemies) {
       // Tint azul de freeze
-      enemySprite.setTint(0x88ddff);
+      enemy.setTint(0x88ddff);
 
       // Reduz velocidade em 50%
-      const enemyBody = enemySprite.body as Phaser.Physics.Arcade.Body | null;
+      const enemyBody = enemy.body as Phaser.Physics.Arcade.Body | null;
       if (enemyBody) {
         enemyBody.velocity.scale(Blizzard.FREEZE_SLOW_MULTIPLIER);
       }
 
       // Remove tint apos duracao
       this.scene.time.delayedCall(Blizzard.FREEZE_DURATION_MS, () => {
-        if (enemySprite.active) enemySprite.clearTint();
+        if (enemy.active) enemy.clearTint();
       });
     }
   }

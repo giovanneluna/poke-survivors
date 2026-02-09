@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Aerial Ace: lâminas homing que nunca erram.
@@ -16,17 +17,15 @@ export class AerialAce implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
   private bladeCount = 2;
   private speed = 280;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.aerialAce.baseDamage;
     this.cooldown = ATTACKS.aerialAce.baseCooldown;
 
@@ -36,13 +35,11 @@ export class AerialAce implements Attack {
   }
 
   private launch(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (activeEnemies.length === 0) return;
 
     // Ordena por distância
-    const sorted = enemies
+    const sorted = activeEnemies
       .map(e => ({ enemy: e, dist: Phaser.Math.Distance.Between(this.player.x, this.player.y, e.x, e.y) }))
       .sort((a, b) => a.dist - b.dist);
 
@@ -72,17 +69,11 @@ export class AerialAce implements Attack {
             if (!alive || !blade.active) return;
 
             // Encontra target vivo (se morreu, busca próximo)
-            let currentTarget = target;
+            let currentTarget: Phaser.Physics.Arcade.Sprite = target;
             if (!currentTarget.active) {
-              const liveEnemies = this.enemyGroup.getChildren().filter(
-                (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-              );
-              if (liveEnemies.length === 0) { cleanup(); return; }
-              currentTarget = liveEnemies.reduce((best, e) => {
-                const d = Phaser.Math.Distance.Between(blade.x, blade.y, e.x, e.y);
-                const bd = Phaser.Math.Distance.Between(blade.x, blade.y, best.x, best.y);
-                return d < bd ? e : best;
-              });
+              const nearest = getSpatialGrid().queryNearest(blade.x, blade.y);
+              if (!nearest) { cleanup(); return; }
+              currentTarget = nearest;
             }
 
             // Mover em direção ao target
@@ -96,12 +87,11 @@ export class AerialAce implements Attack {
             // Check hit
             const dist = Phaser.Math.Distance.Between(blade.x, blade.y, currentTarget.x, currentTarget.y);
             if (dist < 20) {
-              const enemy = currentTarget as unknown as Enemy;
-              if (typeof enemy.takeDamage === 'function') {
+              if (typeof (currentTarget as Enemy).takeDamage === 'function') {
                 setDamageSource(this.type);
-                const killed = enemy.takeDamage(this.damage);
+                const killed = (currentTarget as Enemy).takeDamage(this.damage);
                 if (killed) {
-                  this.scene.events.emit('cone-attack-kill', currentTarget.x, currentTarget.y, enemy.xpValue);
+                  this.scene.events.emit('cone-attack-kill', currentTarget.x, currentTarget.y, (currentTarget as Enemy).xpValue);
                 }
               }
               // Impacto visual

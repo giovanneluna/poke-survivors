@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Leaf Blade: lâmina vegetal direcional com alta chance de crítico.
@@ -17,7 +17,6 @@ export class LeafBlade implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -25,10 +24,9 @@ export class LeafBlade implements Attack {
   private readonly arcAngleDeg = 70;
   private critChance = 0.3;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.leafBlade.baseDamage;
     this.cooldown = ATTACKS.leafBlade.baseCooldown;
 
@@ -61,18 +59,11 @@ export class LeafBlade implements Attack {
     });
 
     // Dano em arco estreito
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);
 
-    for (const enemySprite of enemies) {
-      const dist = Phaser.Math.Distance.Between(
-        this.player.x, this.player.y, enemySprite.x, enemySprite.y
-      );
-      if (dist > this.range) continue;
-
+    for (const enemy of enemies) {
       const angleToEnemy = Math.atan2(
-        enemySprite.y - this.player.y, enemySprite.x - this.player.x
+        enemy.y - this.player.y, enemy.x - this.player.x
       );
       const angleDiff = Math.abs(
         Phaser.Math.Angle.ShortestBetween(
@@ -86,20 +77,19 @@ export class LeafBlade implements Attack {
       const isCrit = Math.random() < this.critChance;
       const finalDmg = isCrit ? Math.floor(this.damage * 1.5) : this.damage;
 
-      const enemy = enemySprite as unknown as Enemy;
       if (typeof enemy.takeDamage === 'function') {
         setDamageSource(this.type);
         const killed = enemy.takeDamage(finalDmg);
         if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
         }
       }
 
       // Visual flash on crit
-      if (isCrit && enemySprite.active) {
-        enemySprite.setTint(0xffff00);
+      if (isCrit && enemy.active) {
+        enemy.setTint(0xffff00);
         this.scene.time.delayedCall(100, () => {
-          if (enemySprite.active) enemySprite.clearTint();
+          if (enemy.active) enemy.clearTint();
         });
       }
     }

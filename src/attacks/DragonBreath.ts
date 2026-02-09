@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Dragon Breath: sopro dracônico frontal com chance de stun.
@@ -15,7 +15,6 @@ export class DragonBreath implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -23,10 +22,9 @@ export class DragonBreath implements Attack {
   private stunChance = 0.15;
   private readonly coneAngleDeg = 45;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.dragonBreath.baseDamage;
     this.cooldown = ATTACKS.dragonBreath.baseCooldown;
 
@@ -69,20 +67,17 @@ export class DragonBreath implements Attack {
     }).explode();
 
     // Dano em cone
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);
 
-    for (const enemySprite of enemies) {
+    for (const enemy of enemies) {
       const dist = Phaser.Math.Distance.Between(
-        this.player.x, this.player.y, enemySprite.x, enemySprite.y
+        this.player.x, this.player.y, enemy.x, enemy.y
       );
-      if (dist > this.range) continue;
 
       let inCone = dist < 25;
       if (!inCone) {
         const angleToEnemy = Math.atan2(
-          enemySprite.y - this.player.y, enemySprite.x - this.player.x
+          enemy.y - this.player.y, enemy.x - this.player.x
         );
         const angleDiff = Math.abs(
           Phaser.Math.Angle.ShortestBetween(dirAngleDeg, Phaser.Math.RadToDeg(angleToEnemy))
@@ -91,21 +86,20 @@ export class DragonBreath implements Attack {
       }
 
       if (inCone) {
-        const enemy = enemySprite as unknown as Enemy;
         if (typeof enemy.takeDamage === 'function') {
           setDamageSource(this.type);
           const killed = enemy.takeDamage(this.damage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+            this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
           }
           // Stun: paralisa o inimigo brevemente
           if (!killed && Math.random() < this.stunChance) {
-            enemySprite.setTint(0x7744ff);
-            const body = enemySprite.body as Phaser.Physics.Arcade.Body;
+            enemy.setTint(0x7744ff);
+            const body = enemy.body as Phaser.Physics.Arcade.Body;
             body.setVelocity(0, 0);
             this.scene.time.delayedCall(800, () => {
-              if (enemySprite.active) {
-                enemySprite.clearTint();
+              if (enemy.active) {
+                enemy.clearTint();
                 // Velocidade será restaurada no próximo moveToward()
               }
             });

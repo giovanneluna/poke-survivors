@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Gyro Ball: evolucao do Rapid Spin.
@@ -17,7 +17,6 @@ export class GyroBall implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: ArcadeGroup;
   private readonly orbs: ArcadeGroup;
   private orbCount = 5;
   private radius = 90;
@@ -33,10 +32,9 @@ export class GyroBall implements Attack {
   /** Bonus de dano em inimigos slowed */
   private readonly slowBonusDmg = 1.5;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.gyroBall.baseDamage;
 
     this.orbs = scene.physics.add.group();
@@ -105,19 +103,12 @@ export class GyroBall implements Attack {
     });
 
     // Dano AoE no pulso (40% do dano base) com bonus em slowed
-    const enemies = this.enemyGroup.getChildren();
-    for (const child of enemies) {
-      const enemy = child as Enemy;
-      if (!enemy.active) continue;
-      const dist = Phaser.Math.Distance.Between(
-        this.player.x, this.player.y, enemy.x, enemy.y
-      );
-      if (dist > this.pulseRadius) continue;
-
+    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.pulseRadius);
+    for (const enemy of enemies) {
       let pulseDmg = Math.floor(this.damage * 0.4);
 
       // Bonus contra inimigos lentos
-      const enemyBody = (enemy as unknown as Phaser.Physics.Arcade.Sprite).body as Phaser.Physics.Arcade.Body | null;
+      const enemyBody = enemy.body as Phaser.Physics.Arcade.Body | null;
       if (enemyBody) {
         const speed = enemyBody.velocity.length();
         if (speed < this.slowThreshold) {

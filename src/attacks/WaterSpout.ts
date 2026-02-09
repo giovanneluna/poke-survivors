@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Water Spout: evolucao do Whirlpool (area -> projetil).
@@ -17,7 +17,6 @@ export class WaterSpout implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: ArcadeGroup;
   private readonly bullets: ArcadeGroup;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
@@ -31,10 +30,9 @@ export class WaterSpout implements Attack {
   private static readonly WHIRLPOOL_TICK_MS = 250;
   private static readonly WHIRLPOOL_TICK_DMG = 8;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.waterSpout.baseDamage;
     this.cooldown = ATTACKS.waterSpout.baseCooldown;
 
@@ -126,35 +124,29 @@ export class WaterSpout implements Attack {
     for (const bullet of activeBullets) {
       if (bullet.getData('hasHit')) continue;
 
-      const enemies = this.enemyGroup.getChildren().filter(
-        (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-      );
+      const enemies = getSpatialGrid().queryRadius(bullet.x, bullet.y, 24);
 
-      for (const enemySprite of enemies) {
-        const dist = Phaser.Math.Distance.Between(
-          bullet.x, bullet.y, enemySprite.x, enemySprite.y
-        );
-        if (dist > 24) continue;
-
+      for (const enemy of enemies) {
         // Hit direto
-        const enemy = enemySprite as unknown as Enemy;
         if (typeof enemy.takeDamage === 'function') {
           setDamageSource(this.type);
           const killed = enemy.takeDamage(this.damage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+            this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
           }
         }
 
-        // Impacto visual
-        this.scene.add.particles(bullet.x, bullet.y, 'water-particle', {
+        // Impacto visual (auto-destroy)
+        const impactPart = this.scene.add.particles(bullet.x, bullet.y, 'water-particle', {
           speed: { min: 40, max: 100 },
           lifespan: 250,
           quantity: 8,
           scale: { start: 2, end: 0 },
           tint: [0x0044ff, 0x3388ff, 0x66ccff],
           emitting: false,
-        }).explode();
+        });
+        impactPart.explode();
+        this.scene.time.delayedCall(350, () => impactPart.destroy());
 
         // Marca como atingido e spawna whirlpool
         bullet.setData('hasHit', true);
@@ -198,20 +190,14 @@ export class WaterSpout implements Attack {
         tickCount++;
 
         // Dano AoE
-        const nearbyEnemies = this.enemyGroup.getChildren().filter(
-          (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-        );
+        const nearbyEnemies = getSpatialGrid().queryRadius(x, y, radius);
 
-        for (const enemySprite of nearbyEnemies) {
-          const dist = Phaser.Math.Distance.Between(x, y, enemySprite.x, enemySprite.y);
-          if (dist > radius) continue;
-
-          const enemy = enemySprite as unknown as Enemy;
+        for (const enemy of nearbyEnemies) {
           if (typeof enemy.takeDamage === 'function') {
             setDamageSource(this.type);
             const killed = enemy.takeDamage(tickDmg);
             if (killed) {
-              this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+              this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
             }
           }
         }

@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Leaf Storm: tempestade de folhas em area devastadora.
@@ -17,17 +17,15 @@ export class LeafStorm implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
   private radius = 90;
   private readonly duration = 2000;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.leafStorm.baseDamage;
     this.cooldown = ATTACKS.leafStorm.baseCooldown;
 
@@ -38,9 +36,7 @@ export class LeafStorm implements Attack {
 
   private storm(): void {
     // Encontrar inimigo mais proximo para posicionar a tempestade
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().getActiveEnemies();
     if (enemies.length === 0) return;
 
     const nearest = enemies.reduce((best, e) => {
@@ -93,24 +89,18 @@ export class LeafStorm implements Attack {
         // Reset hit set cada tick para permitir multi-hit
         hitSet.clear();
 
-        const aliveEnemies = this.enemyGroup.getChildren().filter(
-          (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-        );
+        const aliveEnemies = getSpatialGrid().queryRadius(cx, cy, this.radius);
 
-        for (const enemySprite of aliveEnemies) {
-          const dist = Phaser.Math.Distance.Between(cx, cy, enemySprite.x, enemySprite.y);
-          if (dist > this.radius) continue;
-
-          const uid = enemySprite.getData('uid') as number | undefined ?? 0;
+        for (const enemy of aliveEnemies) {
+          const uid = enemy.getData('uid') as number | undefined ?? 0;
           if (hitSet.has(uid)) continue;
           hitSet.add(uid);
 
-          const enemy = enemySprite as unknown as Enemy;
           if (typeof enemy.takeDamage === 'function') {
             setDamageSource(this.type);
             const killed = enemy.takeDamage(this.damage);
             if (killed) {
-              this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+              this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
             }
           }
         }

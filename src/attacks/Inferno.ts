@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Inferno: evolução do Ember.
@@ -15,7 +15,6 @@ export class Inferno implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: ArcadeGroup;
   private readonly bullets: ArcadeGroup;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
@@ -24,10 +23,9 @@ export class Inferno implements Attack {
   private readonly explosionRadius = 60;
   private fireId = 0;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.inferno.baseDamage;
     this.cooldown = ATTACKS.inferno.baseCooldown;
 
@@ -44,12 +42,10 @@ export class Inferno implements Attack {
   }
 
   private fire(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (activeEnemies.length === 0) return;
 
-    const sorted = enemies
+    const sorted = activeEnemies
       .map(enemy => ({
         enemy,
         dist: Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y),
@@ -63,12 +59,11 @@ export class Inferno implements Attack {
 
       // Dano direto se inimigo está muito perto
       if (sorted[i].dist < 20) {
-        const enemy = target as unknown as Enemy;
-        if (typeof enemy.takeDamage === 'function') {
+        if (typeof target.takeDamage === 'function') {
           setDamageSource(this.type);
-          const killed = enemy.takeDamage(this.damage);
+          const killed = target.takeDamage(this.damage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', target.x, target.y, enemy.xpValue);
+            this.scene.events.emit('cone-attack-kill', target.x, target.y, target.xpValue);
           }
         }
         this.explodeAt(target.x, target.y);
@@ -89,6 +84,10 @@ export class Inferno implements Attack {
 
       this.scene.physics.moveToObject(bullet, target, 280);
 
+      // Destruir trail anterior se bullet foi reciclada
+      const oldTrail = bullet.getData('trail') as Phaser.GameObjects.Particles.ParticleEmitter | null;
+      if (oldTrail) oldTrail.destroy();
+
       const trail = this.scene.add.particles(0, 0, 'fire-particle', {
         follow: bullet,
         speed: { min: 10, max: 30 },
@@ -98,6 +97,7 @@ export class Inferno implements Attack {
         frequency: 40,
         tint: [0xff2200, 0xff6600, 0xffcc00],
       });
+      bullet.setData('trail', trail);
 
       this.scene.time.delayedCall(3000, () => {
         if (bullet.active && bullet.getData('fireId') === currentFireId) {
@@ -105,7 +105,12 @@ export class Inferno implements Attack {
           body.checkCollision.none = true;
           body.enable = false;
         }
-        trail.destroy();
+        // Destruir trail se ainda pertence a este disparo
+        const currentTrail = bullet.getData('trail') as Phaser.GameObjects.Particles.ParticleEmitter | null;
+        if (currentTrail === trail) {
+          trail.destroy();
+          bullet.setData('trail', null);
+        }
       });
     }
   }
@@ -117,28 +122,25 @@ export class Inferno implements Attack {
     explosion.play('anim-fire-hit');
     explosion.once('animationcomplete', () => explosion.destroy());
 
-    // Partículas complementares
-    this.scene.add.particles(x, y, 'fire-particle', {
+    // Partículas complementares (auto-destroy após lifespan)
+    const particles = this.scene.add.particles(x, y, 'fire-particle', {
       speed: { min: 40, max: 120 },
       lifespan: 300,
       quantity: 10,
       scale: { start: 2, end: 0 },
       tint: [0xff2200, 0xff6600, 0xffaa00],
       emitting: false,
-    }).explode();
+    });
+    particles.explode();
+    this.scene.time.delayedCall(400, () => particles.destroy());
 
     // Dano AoE
-    const enemies = this.enemyGroup.getChildren();
-    for (const child of enemies) {
-      const enemy = child as Enemy;
-      if (!enemy.active) continue;
-      const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
-      if (dist <= this.explosionRadius) {
-        setDamageSource(this.type);
-        const killed = enemy.takeDamage(Math.floor(this.damage * 0.6));
-        if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-        }
+    const enemies = getSpatialGrid().queryRadius(x, y, this.explosionRadius);
+    for (const enemy of enemies) {
+      setDamageSource(this.type);
+      const killed = enemy.takeDamage(Math.floor(this.damage * 0.6));
+      if (killed) {
+        this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
       }
     }
   }
@@ -146,7 +148,19 @@ export class Inferno implements Attack {
   getDamage(): number { return this.damage; }
   getBullets(): ArcadeGroup { return this.bullets; }
 
-  update(_time: number, _delta: number): void {}
+  update(_time: number, _delta: number): void {
+    // Limpar trail emitters de bullets mortas (killed by collision)
+    const children = this.bullets.getChildren();
+    for (let i = 0; i < children.length; i++) {
+      const bullet = children[i] as Phaser.Physics.Arcade.Sprite;
+      if (bullet.active) continue;
+      const trail = bullet.getData('trail') as Phaser.GameObjects.Particles.ParticleEmitter | null;
+      if (trail) {
+        trail.destroy();
+        bullet.setData('trail', null);
+      }
+    }
+  }
 
   upgrade(): void {
     this.level++;

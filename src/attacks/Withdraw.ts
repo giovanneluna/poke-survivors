@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { Attack, ArcadeGroup } from '../types';
 import type { Player } from '../entities/Player';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Withdraw: aura defensiva de carapaca ao redor do jogador.
@@ -14,7 +15,6 @@ export class Withdraw implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private damageReduction = 0.15;
   private slowRadius = 45;
   private slowAmount = 0.7;
@@ -26,10 +26,9 @@ export class Withdraw implements Attack {
   private readonly deflectZone: Phaser.Physics.Arcade.Sprite;
   private readonly deflectGroup: ArcadeGroup;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
 
     // Visual: circulo translucido azul
     this.shellVisual = scene.add.circle(player.x, player.y, this.slowRadius, 0x3388ff, 0.12);
@@ -59,22 +58,15 @@ export class Withdraw implements Attack {
   }
 
   private tick(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.slowRadius);
 
-    for (const enemySprite of enemies) {
-      const dist = Phaser.Math.Distance.Between(
-        this.player.x, this.player.y, enemySprite.x, enemySprite.y
-      );
-      if (dist > this.slowRadius) continue;
-
-      enemySprite.setTint(0x3388ff);
-      const body = enemySprite.body as Phaser.Physics.Arcade.Body;
+    for (const enemy of enemies) {
+      enemy.setTint(0x3388ff);
+      const body = enemy.body as Phaser.Physics.Arcade.Body;
       body.velocity.scale(this.slowAmount);
 
       this.scene.time.delayedCall(400, () => {
-        if (enemySprite.active) enemySprite.clearTint();
+        if (enemy.active) enemy.clearTint();
       });
     }
   }

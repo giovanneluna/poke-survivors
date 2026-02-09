@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Hydro Cannon: ultimate devastador do Blastoise.
@@ -16,7 +16,6 @@ export class HydroCannon implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -24,10 +23,9 @@ export class HydroCannon implements Attack {
   private subBlastCount = 5;
   private readonly subBlastRadius = 50;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.hydroCannon.baseDamage;
     this.cooldown = ATTACKS.hydroCannon.baseCooldown;
 
@@ -40,9 +38,7 @@ export class HydroCannon implements Attack {
 
   /** Encontra o cluster de inimigos mais denso */
   private findDensestCluster(): { x: number; y: number } | null {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().getActiveEnemies();
     if (enemies.length === 0) return null;
 
     let bestScore = -1;
@@ -214,21 +210,17 @@ export class HydroCannon implements Attack {
 
   /** Aplica dano a todos os inimigos dentro do raio */
   private damageInRadius(x: number, y: number, radius: number, damage: number): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().queryRadius(x, y, radius);
 
-    for (const enemySprite of enemies) {
-      const dist = Phaser.Math.Distance.Between(x, y, enemySprite.x, enemySprite.y);
-      if (dist > radius) continue;
+    for (const enemy of enemies) {
+      const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
 
-      const enemy = enemySprite as unknown as Enemy;
       if (typeof enemy.takeDamage === 'function') {
         const falloff = 1 - (dist / radius) * 0.4;
         setDamageSource(this.type);
         const killed = enemy.takeDamage(Math.floor(damage * falloff));
         if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
         }
       }
     }

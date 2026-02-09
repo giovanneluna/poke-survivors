@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Leech Seed: dispara sementes que grudam no inimigo e drenam vida.
@@ -18,7 +19,6 @@ export class LeechSeed implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: ArcadeGroup;
   private readonly bullets: ArcadeGroup;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
@@ -33,10 +33,9 @@ export class LeechSeed implements Attack {
 
   private static readonly HIT_RADIUS = 18;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.leechSeed.baseDamage;
     this.cooldown = ATTACKS.leechSeed.baseCooldown;
 
@@ -53,12 +52,10 @@ export class LeechSeed implements Attack {
   }
 
   private fire(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (activeEnemies.length === 0) return;
 
-    const sorted = enemies
+    const sorted = activeEnemies
       .map(enemy => ({
         enemy,
         dist: Phaser.Math.Distance.Between(
@@ -199,20 +196,18 @@ export class LeechSeed implements Attack {
     );
     if (activeBullets.length === 0) return;
 
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().getActiveEnemies();
 
     for (const bullet of activeBullets) {
-      for (const enemySprite of enemies) {
+      for (const enemy of enemies) {
         const dist = Phaser.Math.Distance.Between(
-          bullet.x, bullet.y, enemySprite.x, enemySprite.y
+          bullet.x, bullet.y, enemy.x, enemy.y
         );
         if (dist > LeechSeed.HIT_RADIUS) continue;
 
         // Semente grudou: matar bullet e aplicar drain
         this.killBullet(bullet);
-        this.applySeed(enemySprite);
+        this.applySeed(enemy);
         break;
       }
     }

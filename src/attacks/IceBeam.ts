@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Ice Beam: raio de gelo no inimigo mais proximo.
@@ -16,7 +16,6 @@ export class IceBeam implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: ArcadeGroup;
   private readonly bullets: ArcadeGroup;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
@@ -24,10 +23,9 @@ export class IceBeam implements Attack {
   private projectileCount = 1;
   private fireId = 0;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.iceBeam.baseDamage;
     this.cooldown = ATTACKS.iceBeam.baseCooldown;
 
@@ -44,12 +42,10 @@ export class IceBeam implements Attack {
   }
 
   private fire(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (activeEnemies.length === 0) return;
 
-    const sorted = enemies
+    const sorted = activeEnemies
       .map(enemy => ({
         enemy,
         dist: Phaser.Math.Distance.Between(
@@ -66,12 +62,11 @@ export class IceBeam implements Attack {
 
       // Inimigo muito perto: dano direto
       if (sorted[i].dist < 20) {
-        const enemy = target as unknown as Enemy;
-        if (typeof enemy.takeDamage === 'function') {
+        if (typeof target.takeDamage === 'function') {
           setDamageSource(this.type);
-          const killed = enemy.takeDamage(this.damage);
+          const killed = target.takeDamage(this.damage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', target.x, target.y, enemy.xpValue);
+            this.scene.events.emit('cone-attack-kill', target.x, target.y, target.xpValue);
           }
         }
         continue;
@@ -145,17 +140,12 @@ export class IceBeam implements Attack {
     }).explode();
 
     // Tint azul temporario nos inimigos proximos (visual only)
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    for (const enemySprite of enemies) {
-      const dist = Phaser.Math.Distance.Between(x, y, enemySprite.x, enemySprite.y);
-      if (dist > freezeRadius) continue;
-
-      enemySprite.setTint(0x88bbff);
+    const enemies = getSpatialGrid().queryRadius(x, y, freezeRadius);
+    for (const enemy of enemies) {
+      enemy.setTint(0x88bbff);
       this.scene.time.delayedCall(500, () => {
-        if (enemySprite.active) {
-          enemySprite.clearTint();
+        if (enemy.active) {
+          enemy.clearTint();
         }
       });
     }

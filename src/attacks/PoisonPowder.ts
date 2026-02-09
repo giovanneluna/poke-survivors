@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import type { Attack } from '../types';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Poison Powder: aura tóxica ao redor do jogador com tick damage.
@@ -16,16 +16,14 @@ export class PoisonPowder implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private radius = 55;
   private tickDamage = 3;
   private readonly poisonClouds: Phaser.GameObjects.Sprite[] = [];
   private tickTimer: Phaser.Time.TimerEvent;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
 
     // 4 nuvens de veneno orbitando
     for (let i = 0; i < 4; i++) {
@@ -43,32 +41,24 @@ export class PoisonPowder implements Attack {
   }
 
   private tick(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.radius);
 
-    for (const enemySprite of enemies) {
-      const dist = Phaser.Math.Distance.Between(
-        this.player.x, this.player.y, enemySprite.x, enemySprite.y
-      );
-      if (dist > this.radius) continue;
-
+    for (const enemy of enemies) {
       // Tint roxo de veneno
-      enemySprite.setTint(0x9944cc);
+      enemy.setTint(0x9944cc);
 
       // Tick damage
-      const enemy = enemySprite as unknown as Enemy;
       if (typeof enemy.takeDamage === 'function') {
         setDamageSource(this.type);
         const killed = enemy.takeDamage(this.tickDamage);
         if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
         }
       }
 
       // Limpar tint após curto tempo
       this.scene.time.delayedCall(400, () => {
-        if (enemySprite.active) enemySprite.clearTint();
+        if (enemy.active) enemy.clearTint();
       });
     }
   }

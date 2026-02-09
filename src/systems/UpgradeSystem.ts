@@ -421,9 +421,16 @@ export class UpgradeSystem {
         const attacks = player.getAllAttacks();
         if (attacks.length > 0) {
           const atk = attacks[Phaser.Math.Between(0, attacks.length - 1)];
-          atk.upgrade();
-          atk.upgrade();
-          this.pickupSystem.showPickupNotification(`${atk.type} +2!`, 0xff8800);
+          const maxLvl = ATTACKS[atk.type]?.maxLevel ?? 8;
+          let upgrades = 0;
+          if (atk.level < maxLvl) { atk.upgrade(); upgrades++; }
+          if (atk.level < maxLvl) { atk.upgrade(); upgrades++; }
+          if (upgrades > 0) {
+            this.pickupSystem.showPickupNotification(`${atk.type} +${upgrades}!`, 0xff8800);
+          } else {
+            player.heal(80);
+            this.pickupSystem.showPickupNotification('+80 HP (max skill)', 0xff8800);
+          }
         }
         break;
       }

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { Attack } from '../types';
 import type { Player } from '../entities/Player';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Growl: aura debuff ao redor do jogador.
@@ -15,16 +16,14 @@ export class Growl implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private radius = 70;
   private debuffAmount = 0.85;
   private readonly rings: Phaser.GameObjects.Sprite[] = [];
   private tickTimer: Phaser.Time.TimerEvent;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
 
     // 3 anéis visuais orbitando
     for (let i = 0; i < 3; i++) {
@@ -41,24 +40,17 @@ export class Growl implements Attack {
   }
 
   private tick(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
+    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.radius);
 
-    for (const enemySprite of enemies) {
-      const dist = Phaser.Math.Distance.Between(
-        this.player.x, this.player.y, enemySprite.x, enemySprite.y
-      );
-      if (dist > this.radius) continue;
-
+    for (const enemy of enemies) {
       // Debuff visual: tint cinza
-      enemySprite.setTint(0xaaaaaa);
-      const body = enemySprite.body as Phaser.Physics.Arcade.Body;
+      enemy.setTint(0xaaaaaa);
+      const body = enemy.body as Phaser.Physics.Arcade.Body;
       body.velocity.scale(this.debuffAmount);
 
       // Limpar tint após curto tempo
       this.scene.time.delayedCall(500, () => {
-        if (enemySprite.active) enemySprite.clearTint();
+        if (enemy.active) enemy.clearTint();
       });
     }
   }

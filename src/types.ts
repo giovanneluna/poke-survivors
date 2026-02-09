@@ -245,7 +245,7 @@ export interface BossAttackConfig {
   // ── Zone pattern ──
   readonly zoneDuration?: number;
   readonly zoneTickRate?: number;
-  readonly zoneEffect?: 'damage' | 'slow' | 'pull';
+  readonly zoneEffect?: 'damage' | 'slow' | 'pull' | 'poison';
   readonly zoneEffectValue?: number;
   // ── Traveling pattern ──
   readonly projectileSpeed?: number;

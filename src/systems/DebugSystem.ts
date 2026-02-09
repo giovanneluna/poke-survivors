@@ -8,6 +8,7 @@ import type { AttackFactory } from './AttackFactory';
 import type { UpgradeSystem } from './UpgradeSystem';
 import type { SpawnSystem } from './SpawnSystem';
 import type { PickupSystem } from './PickupSystem';
+import { getSpatialGrid } from './SpatialHashGrid';
 
 export class DebugSystem {
   constructor(
@@ -185,6 +186,7 @@ export class DebugSystem {
           const pos = { x: p.x + 100, y: p.y };
           const boss = new Boss(scene, pos.x, pos.y, config);
           this.ctx.enemyGroup.add(boss);
+          getSpatialGrid().insert(boss);
           boss.takeDamage(config.hp - 1);
           scene.events.emit('boss-spawned', {
             name: config.name, hp: 1, maxHp: config.hp, boss,
@@ -215,6 +217,7 @@ export class DebugSystem {
           const ey = p.y + Math.sin(angleStep * i) * radius;
           const enemy = new Enemy(scene, ex, ey, config);
           this.ctx.enemyGroup.add(enemy);
+          getSpatialGrid().insert(enemy);
         });
 
         const bossTypes: EnemyType[] = [
@@ -230,6 +233,7 @@ export class DebugSystem {
           const by = p.y + Math.sin(bossAngleStep * i) * bossRadius;
           const boss = new Boss(scene, bx, by, config);
           this.ctx.enemyGroup.add(boss);
+          getSpatialGrid().insert(boss);
         });
         break;
       }
@@ -249,6 +253,7 @@ export class DebugSystem {
           const ey = p.y + Math.sin(p2Step * i) * p2Radius;
           const enemy = new Enemy(scene, ex, ey, config);
           this.ctx.enemyGroup.add(enemy);
+          getSpatialGrid().insert(enemy);
         });
         break;
       }
@@ -268,6 +273,7 @@ export class DebugSystem {
           const ey = p.y + Math.sin(p3Step * i) * p3Radius;
           const enemy = new Enemy(scene, ex, ey, config);
           this.ctx.enemyGroup.add(enemy);
+          getSpatialGrid().insert(enemy);
         });
         break;
       }
@@ -288,6 +294,7 @@ export class DebugSystem {
           const ey = p.y;
           const enemy = new Enemy(scene, ex, ey, config);
           this.ctx.enemyGroup.add(enemy);
+          getSpatialGrid().insert(enemy);
         });
 
         scene.time.delayedCall(1000, () => {
@@ -476,7 +483,7 @@ export class DebugSystem {
   private spawnDummies(): void {
     const scene = this.ctx.scene;
     const p = this.ctx.player;
-    const activeCount = this.ctx.enemyGroup.getChildren().filter(c => c.active).length;
+    const activeCount = getSpatialGrid().getActiveCount();
     const desiredCount = 5;
     const toSpawn = desiredCount - activeCount;
 
@@ -489,6 +496,7 @@ export class DebugSystem {
       const ey = p.y + Math.sin(angle) * dist;
       const enemy = new Enemy(scene, ex, ey, config);
       this.ctx.enemyGroup.add(enemy);
+      getSpatialGrid().insert(enemy);
     }
   }
 }

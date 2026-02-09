@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import type { Attack } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
-import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
  * Whirlpool: vórtice de agua que prende e puxa inimigos.
@@ -17,7 +17,6 @@ export class Whirlpool implements Attack {
 
   private readonly scene: Phaser.Scene;
   private readonly player: Player;
-  private readonly enemyGroup: Phaser.Physics.Arcade.Group;
   private timer: Phaser.Time.TimerEvent;
   private damage: number;
   private cooldown: number;
@@ -27,10 +26,9 @@ export class Whirlpool implements Attack {
   private readonly slowMultiplier = 0.4;
   private readonly slowDurationMs = 1000;
 
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
-    this.enemyGroup = enemyGroup;
     this.damage = ATTACKS.whirlpool.baseDamage;
     this.cooldown = ATTACKS.whirlpool.baseCooldown;
 
@@ -40,13 +38,11 @@ export class Whirlpool implements Attack {
   }
 
   private summon(): void {
-    const enemies = this.enemyGroup.getChildren().filter(
-      (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-    );
-    if (enemies.length === 0) return;
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (activeEnemies.length === 0) return;
 
     // Spawna na posicao do inimigo mais proximo
-    const nearest = enemies.reduce((best, e) => {
+    const nearest = activeEnemies.reduce((best, e) => {
       const d = Phaser.Math.Distance.Between(this.player.x, this.player.y, e.x, e.y);
       const bd = Phaser.Math.Distance.Between(this.player.x, this.player.y, best.x, best.y);
       return d < bd ? e : best;
@@ -107,38 +103,31 @@ export class Whirlpool implements Attack {
           return;
         }
 
-        const aliveEnemies = this.enemyGroup.getChildren().filter(
-          (e): e is Phaser.Physics.Arcade.Sprite => (e as Phaser.Physics.Arcade.Sprite).active
-        );
+        const aliveEnemies = getSpatialGrid().queryRadius(tx, ty, this.radius);
 
         // Detecta quem saiu do vortex para aplicar slow
         const currentInside = new Set<Phaser.Physics.Arcade.Sprite>();
 
-        for (const enemySprite of aliveEnemies) {
-          const dist = Phaser.Math.Distance.Between(tx, ty, enemySprite.x, enemySprite.y);
+        for (const enemy of aliveEnemies) {
+          currentInside.add(enemy);
+          enemiesInside.add(enemy);
 
-          if (dist <= this.radius) {
-            currentInside.add(enemySprite);
-            enemiesInside.add(enemySprite);
+          // Pull para o centro
+          const angleToCenter = Math.atan2(ty - enemy.y, tx - enemy.x);
+          const body = enemy.body as Phaser.Physics.Arcade.Body;
+          body.velocity.x += Math.cos(angleToCenter) * this.pullForce;
+          body.velocity.y += Math.sin(angleToCenter) * this.pullForce;
 
-            // Pull para o centro
-            const angleToCenter = Math.atan2(ty - enemySprite.y, tx - enemySprite.x);
-            const body = enemySprite.body as Phaser.Physics.Arcade.Body;
-            body.velocity.x += Math.cos(angleToCenter) * this.pullForce;
-            body.velocity.y += Math.sin(angleToCenter) * this.pullForce;
+          // Tint azul enquanto dentro
+          enemy.setTint(0x4488ff);
 
-            // Tint azul enquanto dentro
-            enemySprite.setTint(0x4488ff);
-
-            // Tick damage
-            const enemy = enemySprite as unknown as Enemy;
-            if (typeof enemy.takeDamage === 'function') {
-              setDamageSource(this.type);
-              const killed = enemy.takeDamage(this.damage);
-              if (killed) {
-                this.scene.events.emit('cone-attack-kill', enemySprite.x, enemySprite.y, enemy.xpValue);
-                enemiesInside.delete(enemySprite);
-              }
+          // Tick damage
+          if (typeof enemy.takeDamage === 'function') {
+            setDamageSource(this.type);
+            const killed = enemy.takeDamage(this.damage);
+            if (killed) {
+              this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
+              enemiesInside.delete(enemy);
             }
           }
         }
