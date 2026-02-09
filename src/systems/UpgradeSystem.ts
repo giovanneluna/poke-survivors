@@ -205,11 +205,14 @@ export class UpgradeSystem {
       newSlots: formConfig.maxAttackSlots,
     });
 
-    scene.time.delayedCall(1500, () => {
+    // NOTE: scene.time is paused during level-up (Fase B fix), so delayedCall
+    // would never fire. Use native setTimeout which is unaffected by scene pause.
+    window.setTimeout(() => {
+      if (!scene.scene.isActive()) return;
       SoundManager.playLevelUp();
       const options = this.generateUpgradeOptions();
       scene.events.emit('level-up', options, player.stats.level, this.getDisplayRerolls());
-    });
+    }, 1500);
   }
 
   // ── Generate upgrade pool ─────────────────────────────────────────
