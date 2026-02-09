@@ -3,6 +3,7 @@ import { ATTACKS, EVOLUTIONS, UPGRADE_DEFS } from '../config';
 import type { UpgradeOption, AttackType, HeldItemType, PokemonForm } from '../types';
 import { isFormUnlocked } from '../types';
 import { SoundManager } from '../audio/SoundManager';
+import { safeExplode } from '../utils/particles';
 import type { GameContext } from './GameContext';
 import type { AttackFactory } from './AttackFactory';
 import type { PickupSystem } from './PickupSystem';
@@ -188,12 +189,11 @@ export class UpgradeSystem {
     const particleTints = this.ctx.starterConfig.key === 'squirtle'
       ? [0xFFFFFF, 0x44AAFF, 0x3388FF]
       : [0xFFFFFF, 0xFFDD44, 0xFF8800];
-    scene.add.particles(player.x, player.y, particleKey, {
+    safeExplode(scene, player.x, player.y, particleKey, {
       speed: { min: 40, max: 120 }, lifespan: 1000, quantity: 30,
       scale: { start: 2.5, end: 0 },
       tint: particleTints,
-      emitting: false,
-    }).explode();
+    });
 
     const name = formConfig.name;
     this.pickupSystem.showPickupNotification(`${prevName} EVOLUIU PARA ${name.toUpperCase()}!`, 0xFFDD44);

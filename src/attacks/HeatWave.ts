@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Heat Wave: onda de calor 360° devastadora.
@@ -54,14 +55,13 @@ export class HeatWave implements Attack {
     for (let i = 0; i < 8; i++) {
       const angle = (i / 8) * Math.PI * 2;
       const angleDeg = Phaser.Math.RadToDeg(angle);
-      this.scene.add.particles(cx, cy, 'fire-particle', {
+      safeExplode(this.scene, cx, cy, 'fire-particle', {
         speed: { min: 150, max: 300 },
         angle: { min: angleDeg - 10, max: angleDeg + 10 },
         lifespan: 400, quantity: 4,
         scale: { start: 2.5, end: 0 },
         tint: [0xff2200, 0xff6600, 0xffaa00],
-        emitting: false,
-      }).explode();
+      });
     }
 
     // Dano em ondas (inner → outer)

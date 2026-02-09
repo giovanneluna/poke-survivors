@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Aerial Ace: lâminas homing que nunca erram.
@@ -95,11 +96,10 @@ export class AerialAce implements Attack {
                 }
               }
               // Impacto visual
-              this.scene.add.particles(blade.x, blade.y, 'wind-particle', {
+              safeExplode(this.scene, blade.x, blade.y, 'wind-particle', {
                 speed: { min: 30, max: 80 }, lifespan: 150, quantity: 6,
                 scale: { start: 1.5, end: 0 }, tint: [0x88ccff, 0xffffff],
-                emitting: false,
-              }).explode();
+              });
               cleanup();
             }
           },

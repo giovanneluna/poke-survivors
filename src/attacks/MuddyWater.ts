@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Muddy Water: evolucao do Water Pulse.
@@ -172,14 +173,13 @@ export class MuddyWater implements Attack {
         this.spawnMissDebuff(enemy.x, enemy.y);
 
         // Flash de impacto (sem destruir projetil)
-        this.scene.add.particles(enemy.x, enemy.y, 'water-particle', {
+        safeExplode(this.scene, enemy.x, enemy.y, 'water-particle', {
           speed: { min: 15, max: 40 },
           lifespan: 150,
           quantity: 3,
           scale: { start: 1, end: 0 },
           tint: [0x664422, 0x886633],
-          emitting: false,
-        }).explode();
+        });
 
         if ((bullet.getData('pierceCount') as number) >= this.maxPierces) {
           this.killBullet(bullet);

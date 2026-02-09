@@ -31,6 +31,10 @@ export class BodySlam2 implements Attack {
   private readonly dashWidth = 30;
   private activeDash: ActiveDash | null = null;
 
+  /** Batch tint cleanup — evita criar delayedCall por inimigo */
+  private readonly tintedEnemies = new Set<Phaser.Physics.Arcade.Sprite>();
+  private tintClearTime = 0;
+
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.player = player;
@@ -104,7 +108,15 @@ export class BodySlam2 implements Attack {
     });
   }
 
-  update(_time: number, _delta: number): void {
+  update(time: number, _delta: number): void {
+    // Batch clear stun tints
+    if (this.tintedEnemies.size > 0 && time > this.tintClearTime) {
+      for (const e of this.tintedEnemies) {
+        if (e.active) e.clearTint();
+      }
+      this.tintedEnemies.clear();
+    }
+
     if (!this.activeDash) return;
     const { sprite, hitEnemies, angle } = this.activeDash;
     if (!sprite.active) { this.activeDash = null; return; }
@@ -142,9 +154,8 @@ export class BodySlam2 implements Attack {
       if (enemyBody) {
         enemyBody.velocity.set(0, 0);
         enemy.setTint(0xffffaa);
-        this.scene.time.delayedCall(this.stunDuration, () => {
-          if (enemy.active) enemy.clearTint();
-        });
+        this.tintedEnemies.add(enemy);
+        this.tintClearTime = this.scene.time.now + this.stunDuration;
       }
     }
   }
@@ -164,5 +175,6 @@ export class BodySlam2 implements Attack {
   destroy(): void {
     this.timer.destroy();
     this.activeDash = null;
+    this.tintedEnemies.clear();
   }
 }

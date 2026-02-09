@@ -7,6 +7,9 @@ import { SoundManager } from '../audio/SoundManager';
 import type { GameContext } from './GameContext';
 import type { PickupSystem } from './PickupSystem';
 import { setDamageSource, clearDamageSource } from './DamageTracker';
+import { unlockPokedexEntry } from './SaveSystem';
+import { ENEMY_TYPES } from '../data/type-chart';
+import type { EnemyType } from '../types';
 
 export class CollisionSystem {
   private readonly attackColliders = new Map<string, Phaser.Physics.Arcade.Collider[]>();
@@ -289,6 +292,10 @@ export class CollisionSystem {
   private onEnemyKilled(enemy: Enemy): void {
     this.ctx.player.stats.kills++;
     this.pickupSystem.spawnXpGem(enemy.x, enemy.y, enemy.xpValue);
+
+    // Pokédex tracking
+    const enemyType = ENEMY_TYPES[enemy.enemyKey as EnemyType];
+    unlockPokedexEntry(enemy.enemyKey, enemy.enemyKey, enemyType ?? 'normal');
 
     if (enemy instanceof Boss) {
       this.pickupSystem.spawnPickup(enemy.x, enemy.y, 'gachaBox');

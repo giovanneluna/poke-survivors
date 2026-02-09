@@ -60,7 +60,7 @@ export interface DifficultyConfig {
 }
 
 // ── Tipos de Elemento ─────────────────────────────────────────────
-export type ElementType = 'fire' | 'water' | 'ice' | 'normal' | 'dragon' | 'flying' | 'grass' | 'poison';
+export type ElementType = 'fire' | 'water' | 'ice' | 'normal' | 'dragon' | 'flying' | 'grass' | 'poison' | 'rock' | 'ground' | 'ghost' | 'psychic' | 'fighting' | 'bug' | 'dark';
 
 // ── Categorias de Ataque ─────────────────────────────────────────
 export type AttackCategory =

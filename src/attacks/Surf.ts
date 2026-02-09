@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Surf: onda 360° que empurra inimigos para fora.
@@ -64,15 +65,14 @@ export class Surf implements Attack {
     for (let i = 0; i < 8; i++) {
       const angle = (i / 8) * Math.PI * 2;
       const angleDeg = Phaser.Math.RadToDeg(angle);
-      this.scene.add.particles(cx, cy, 'water-particle', {
+      safeExplode(this.scene, cx, cy, 'water-particle', {
         speed: { min: 100, max: 250 },
         angle: { min: angleDeg - 15, max: angleDeg + 15 },
         lifespan: this.waveDuration * 0.7,
         quantity: 3,
         scale: { start: 2, end: 0 },
         tint: [0x3388ff, 0x44aaff, 0x66ccff],
-        emitting: false,
-      }).explode();
+      });
     }
 
     // Tick de dano + push a cada 200ms

@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Dragon Pulse: beam dracônico que perfura tudo.
@@ -60,11 +61,10 @@ export class DragonPulse implements Attack {
       const t = i / steps;
       const px = this.player.x + (endX - this.player.x) * t;
       const py = this.player.y + (endY - this.player.y) * t;
-      this.scene.add.particles(px, py, 'dragon-particle', {
+      safeExplode(this.scene, px, py, 'dragon-particle', {
         speed: { min: 20, max: 60 }, lifespan: 250, quantity: 3,
         scale: { start: 1.5, end: 0 }, tint: [0x7744ff, 0x9966ff, 0xcc88ff],
-        emitting: false,
-      }).explode();
+      });
     }
 
     // Dano: todos na linha (pierce infinito)

@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Liquidation: golpe aquatico 360° no cluster de inimigos mais denso.
@@ -98,15 +99,14 @@ export class Liquidation implements Attack {
     });
 
     // Particulas de impacto aquatico
-    this.scene.add.particles(tx, ty, 'water-particle', {
+    safeExplode(this.scene, tx, ty, 'water-particle', {
       speed: { min: 80, max: 200 },
       lifespan: 500,
       quantity: 20,
       scale: { start: 2.5, end: 0 },
       angle: { min: 0, max: 360 },
       tint: [0x3388ff, 0x44aaff, 0x2266dd],
-      emitting: false,
-    }).explode();
+    });
 
     // Dano instantaneo + slow em todos os inimigos no raio
     const enemies = getSpatialGrid().queryRadius(tx, ty, this.radius);

@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Giga Drain: área de drenagem de vida ao redor do jogador.
@@ -86,15 +87,14 @@ export class GigaDrain implements Attack {
           }
 
           // Partículas verdes de cura
-          this.scene.add.particles(this.player.x, this.player.y, 'fire-particle', {
+          safeExplode(this.scene, this.player.x, this.player.y, 'fire-particle', {
             speed: { min: 10, max: 40 },
             lifespan: 400,
             quantity: hitCount * 2,
             scale: { start: 1.5, end: 0 },
             angle: { min: 220, max: 320 },
             tint: [0x44ff44, 0x88ff88, 0x22cc22],
-            emitting: false,
-          }).explode();
+          });
         }
 
         if (elapsed >= this.duration) {

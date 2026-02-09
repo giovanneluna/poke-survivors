@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Sludge Bomb: projétil tóxico que explode em AoE ao atingir um inimigo.
@@ -129,15 +130,14 @@ export class SludgeBomb implements Attack {
     explosion.once('animationcomplete', () => explosion.destroy());
 
     // Partículas roxas de impacto
-    this.scene.add.particles(hx, hy, 'fire-particle', {
+    safeExplode(this.scene, hx, hy, 'fire-particle', {
       speed: { min: 30, max: 80 },
       lifespan: 300,
       quantity: 10,
       scale: { start: 1.5, end: 0 },
       angle: { min: 0, max: 360 },
       tint: [0x9944cc, 0xaa55dd, 0x7733aa],
-      emitting: false,
-    }).explode();
+    });
 
     // Dano AoE: 60% do dano base com distance falloff
     const enemies = getSpatialGrid().queryRadius(hx, hy, this.aoeRadius);

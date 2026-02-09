@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Hyper Beam 2: raio devastador que PERFURA inimigos (nao morre na colisao).
@@ -148,14 +149,13 @@ export class HyperBeam2 implements Attack {
           }
         }
 
-        this.scene.add.particles(enemy.x, enemy.y, 'fire-particle', {
+        safeExplode(this.scene, enemy.x, enemy.y, 'fire-particle', {
           speed: { min: 20, max: 50 },
           lifespan: 200,
           quantity: 4,
           scale: { start: 1.2, end: 0 },
           tint: [0xffdd44, 0xffaa22],
-          emitting: false,
-        }).explode();
+        });
       }
     }
   }

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME, DESTRUCTIBLES } from '../config';
 import type { DestructibleType } from '../types';
 import { Destructible } from '../entities/Destructible';
+import { safeExplode } from '../utils/particles';
 import type { GameContext } from './GameContext';
 
 export class WorldSystem {
@@ -51,11 +52,10 @@ export class WorldSystem {
     const chest = new Destructible(scene, x, y, config);
     this.ctx.destructibles.add(chest);
 
-    scene.add.particles(x, y, 'fire-particle', {
+    safeExplode(scene, x, y, 'fire-particle', {
       speed: { min: 20, max: 50 }, lifespan: 500, quantity: 10,
       scale: { start: 2, end: 0 }, tint: [0xFFD700, 0xFFE44D],
-      emitting: false,
-    }).explode();
+    });
   }
 
   private pickTile(col: number, row: number, maxCols: number, maxRows: number): string {

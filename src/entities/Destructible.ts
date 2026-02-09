@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { DestructibleConfig, DestructibleType } from '../types';
+import { safeExplode } from '../utils/particles';
 
 export class Destructible extends Phaser.Physics.Arcade.Sprite {
   private hp: number;
@@ -49,14 +50,13 @@ export class Destructible extends Phaser.Physics.Arcade.Sprite {
       : this.destructibleType === 'rockSmash' ? 0x888888
       : 0xddaa44;
 
-    this.scene.add.particles(this.x, this.y, 'fire-particle', {
+    safeExplode(this.scene, this.x, this.y, 'fire-particle', {
       speed: { min: 20, max: 60 },
       lifespan: 300,
       quantity: 8,
       scale: { start: 1.5, end: 0 },
       tint: [tint, 0xffffff],
-      emitting: false,
-    }).explode();
+    });
 
     this.destroy();
   }

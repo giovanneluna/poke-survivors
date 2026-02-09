@@ -4,6 +4,7 @@ import type { EnemyConfig, BossConfig, BossAttackConfig, BossSpawnConfig, WaveCo
 import { Enemy } from '../entities/Enemy';
 import { Boss } from '../entities/Boss';
 import { SoundManager } from '../audio/SoundManager';
+import { safeExplode } from '../utils/particles';
 import type { GameContext } from './GameContext';
 import { getSpatialGrid } from './SpatialHashGrid';
 
@@ -18,6 +19,10 @@ export class SpawnSystem {
   private waitingForBossDeath = false;
   private static readonly BOSS_NEXT_DELAY_MS = 180_000; // 3 min entre bosses
   private static readonly BOSS_ENRAGE_MS = 180_000;     // 3 min para enrage
+
+  /** Batch tint cleanup para heal aura — evita delayedCall por enemy curado */
+  private readonly healTintedEnemies = new Set<Phaser.Physics.Arcade.Sprite>();
+  private healTintClearTime = 0;
 
   constructor(private readonly ctx: GameContext) {}
 
@@ -55,20 +60,26 @@ export class SpawnSystem {
     const playerX = player.x;
     const playerY = player.y;
     const playerPos = new Phaser.Math.Vector2(playerX, playerY);
+    const grid = getSpatialGrid();
 
-    this.ctx.enemyGroup.getChildren().forEach(child => {
-      const enemy = child as Enemy;
-      if (!enemy.active) return;
+    // Batch clear heal aura tints
+    if (this.healTintedEnemies.size > 0 && time > this.healTintClearTime) {
+      for (const e of this.healTintedEnemies) {
+        if (e.active) e.clearTint();
+      }
+      this.healTintedEnemies.clear();
+    }
 
+    for (const enemy of grid.getActiveEnemies()) {
       // Teleport (Alakazam) — antes de moveToward
       if (enemy.teleportConfig) {
         enemy.tryTeleport(playerX, playerY, time);
       }
 
       enemy.moveToward(playerPos);
-      getSpatialGrid().updatePosition(enemy);
+      grid.updatePosition(enemy);
       const dist = Phaser.Math.Distance.Between(playerX, playerY, enemy.x, enemy.y);
-      if (dist > SPAWN.despawnDistance && enemy.shouldDespawn()) { enemy.cleanup(); return; }
+      if (dist > SPAWN.despawnDistance && enemy.shouldDespawn()) { enemy.cleanup(); continue; }
 
       // Boss attacks
       if (enemy instanceof Boss) {
@@ -99,7 +110,7 @@ export class SpawnSystem {
       if (enemy.slowAura && dist <= enemy.slowAura.radius) {
         player.applySlow(500, time);
       }
-    });
+    }
 
     // ── Boss enrage & queue ────────────────────────────────────────
     this.updateBossQueue(time);
@@ -218,7 +229,8 @@ export class SpawnSystem {
       if (otherEnemy === healer) continue;
       otherEnemy.heal(cfg.hpPerSecond);
       otherEnemy.setTint(0x44ff44);
-      this.ctx.scene.time.delayedCall(150, () => { if (otherEnemy.active) otherEnemy.clearTint(); });
+      this.healTintedEnemies.add(otherEnemy);
+      this.healTintClearTime = time + 200;
     }
   }
 
@@ -542,14 +554,13 @@ export class SpawnSystem {
       const t = (i + 0.5) / steps;
       const ppx = startX + dx * t;
       const ppy = startY + dy * t;
-      scene.add.particles(ppx, ppy, 'dragon-particle', {
+      safeExplode(scene, ppx, ppy, 'dragon-particle', {
         speed: { min: 10, max: 40 },
         lifespan: 300,
         quantity: 3,
         scale: { start: 1.2, end: 0 },
         tint: [0x9944ff, 0xbb66ff, 0xdd88ff],
-        emitting: false,
-      }).explode();
+      });
     }
 
     // Destruir após animação ou timeout

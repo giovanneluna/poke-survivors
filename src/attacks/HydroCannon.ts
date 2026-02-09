@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Hydro Cannon: ultimate devastador do Blastoise.
@@ -121,15 +122,14 @@ export class HydroCannon implements Attack {
     blastSprite.once('animationcomplete', () => blastSprite.destroy());
 
     // Particulas de explosao aquatica massiva
-    this.scene.add.particles(x, y, 'water-particle', {
+    safeExplode(this.scene, x, y, 'water-particle', {
       speed: { min: 100, max: 280 },
       lifespan: 600,
       quantity: 30,
       scale: { start: 3, end: 0 },
       angle: { min: 0, max: 360 },
       tint: [0x3388ff, 0x44aaff, 0x2266dd, 0x66ccff],
-      emitting: false,
-    }).explode();
+    });
 
     // Shockwave ring
     const ring = this.scene.add.graphics();
@@ -171,15 +171,14 @@ export class HydroCannon implements Attack {
   /** Sub-blast: explosao menor com 50% do dano */
   private createSubBlast(x: number, y: number): void {
     // Particulas menores
-    this.scene.add.particles(x, y, 'water-particle', {
+    safeExplode(this.scene, x, y, 'water-particle', {
       speed: { min: 50, max: 150 },
       lifespan: 400,
       quantity: 12,
       scale: { start: 2, end: 0 },
       angle: { min: 0, max: 360 },
       tint: [0x3388ff, 0x44aaff, 0x66ccff],
-      emitting: false,
-    }).explode();
+    });
 
     // Mini ring
     const miniRing = this.scene.add.graphics();

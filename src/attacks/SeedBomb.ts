@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Seed Bomb: sementes explosivas em posicoes aleatorias perto do jogador.
@@ -49,15 +50,14 @@ export class SeedBomb implements Attack {
 
         bomb.once('animationcomplete', () => {
           // Explosao visual
-          this.scene.add.particles(bx, by, 'fire-particle', {
+          safeExplode(this.scene, bx, by, 'fire-particle', {
             speed: { min: 40, max: 100 },
             lifespan: 300,
             quantity: 10,
             scale: { start: 2, end: 0 },
             tint: [0x44dd66, 0x88ff44, 0xaaff66],
             angle: { min: 0, max: 360 },
-            emitting: false,
-          }).explode();
+          });
 
           // Circulo de impacto
           const ring = this.scene.add.circle(bx, by, this.explosionRadius * 0.6, 0x44dd66, 0.3);

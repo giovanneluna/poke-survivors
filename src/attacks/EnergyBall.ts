@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Energy Ball: esfera de energia que ricocheteia entre inimigos.
@@ -186,14 +187,13 @@ export class EnergyBall implements Attack {
         this.scene.physics.moveToObject(bullet, nextTarget, this.speed);
 
         // Flash visual de ricochet
-        this.scene.add.particles(bullet.x, bullet.y, 'fire-particle', {
+        safeExplode(this.scene, bullet.x, bullet.y, 'fire-particle', {
           speed: { min: 20, max: 50 },
           lifespan: 200,
           quantity: 4,
           scale: { start: 1, end: 0 },
           tint: [0x22cc44, 0x88ff88],
-          emitting: false,
-        }).explode();
+        });
 
         break; // Só um hit por frame por bullet
       }

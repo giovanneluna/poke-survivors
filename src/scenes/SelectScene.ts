@@ -3,6 +3,7 @@ import { STARTERS, DIFFICULTY } from '../config';
 import type { StarterConfig } from '../config';
 import type { DevConfig, Difficulty, PokemonForm } from '../types';
 import { SoundManager } from '../audio/SoundManager';
+import { getCoins, initSaveSystem } from '../systems/SaveSystem';
 
 export class SelectScene extends Phaser.Scene {
   private selectedIndex = 0;
@@ -114,6 +115,49 @@ export class SelectScene extends Phaser.Scene {
     backBtn.on('pointerover', () => { backBtn.setColor('#ffffff'); SoundManager.playHover(); });
     backBtn.on('pointerout', () => backBtn.setColor('#666666'));
     backBtn.on('pointerdown', () => { SoundManager.playClick(); this.scene.start('TitleScene'); });
+
+    // ── Coin counter ────────────────────────────────────────────────
+    initSaveSystem();
+    const coins = getCoins();
+    if (coins > 0) {
+      this.add.text(width - 20, 15, `₽ ${coins}`, {
+        fontSize: '14px', color: '#ffcc00', fontFamily: 'monospace',
+        fontStyle: 'bold', stroke: '#000000', strokeThickness: 3,
+      }).setOrigin(1, 0.5).setDepth(10);
+    }
+
+    // ── Botões secundários (MELHORIAS + POKÉDEX) ─────────────────────
+    const secBtnW = 140;
+    const secBtnH = 32;
+    const secBtnY = btnY + 32;
+    const secGap = 8;
+
+    // Helper para criar botão secundário
+    const createSecBtn = (x: number, label: string, color: number, hoverColor: number, textColor: string, targetScene: string): void => {
+      const gfx = this.add.graphics().setDepth(10);
+      const draw = (hover: boolean): void => {
+        gfx.clear();
+        gfx.fillStyle(0x000000, 0.4);
+        gfx.fillRoundedRect(x - secBtnW / 2 + 2, secBtnY - secBtnH / 2 + 3, secBtnW, secBtnH, 8);
+        gfx.fillStyle(hover ? hoverColor : color, 0.95);
+        gfx.fillRoundedRect(x - secBtnW / 2, secBtnY - secBtnH / 2, secBtnW, secBtnH, 8);
+        gfx.lineStyle(2, hover ? 0x8888aa : 0x555577);
+        gfx.strokeRoundedRect(x - secBtnW / 2, secBtnY - secBtnH / 2, secBtnW, secBtnH, 8);
+      };
+      draw(false);
+      const txt = this.add.text(x, secBtnY, label, {
+        fontSize: '12px', color: textColor, fontFamily: 'monospace',
+        fontStyle: 'bold', stroke: '#000000', strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(11);
+      const hit = this.add.rectangle(x, secBtnY, secBtnW, secBtnH, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true }).setDepth(12);
+      hit.on('pointerover', () => { draw(true); txt.setColor('#ffcc00'); SoundManager.playHover(); });
+      hit.on('pointerout', () => { draw(false); txt.setColor(textColor); });
+      hit.on('pointerdown', () => { SoundManager.playClick(); this.scene.start(targetScene); });
+    };
+
+    createSecBtn(width / 2 - secBtnW / 2 - secGap / 2, 'MELHORIAS', 0x1a1a44, 0x2a2a55, '#aaaaff', 'PowerUpScene');
+    createSecBtn(width / 2 + secBtnW / 2 + secGap / 2, 'POKÉDEX', 0x2a1122, 0x442244, '#ff6688', 'PokedexScene');
 
     // ── Seleção inicial ──────────────────────────────────────────────
     this.selectCard(0);

@@ -16,7 +16,20 @@ import { UpgradeSystem } from "../systems/UpgradeSystem"
 import { DebugSystem } from "../systems/DebugSystem"
 import { PassiveSystem, getPassive } from "../systems/PassiveSystem"
 import { initSpatialGrid, getSpatialGrid } from "../systems/SpatialHashGrid"
-import { resetDamageTotals, getDamageTotals, setDamageBuff } from "../systems/DamageTracker"
+import {
+  resetDamageTotals,
+  getDamageTotals,
+  setDamageBuff,
+} from "../systems/DamageTracker"
+import { safeExplode } from "../utils/particles"
+import { initStatsTracker, getStatsTracker } from "../systems/RunRecorder"
+import { initComboSystem, getComboSystem } from "../systems/ComboSystem"
+import {
+  initSaveSystem,
+  addCoins,
+  updateRecord,
+  getPowerUpLevel,
+} from "../systems/SaveSystem"
 
 export class GameScene extends Phaser.Scene {
   player!: Player
@@ -27,6 +40,7 @@ export class GameScene extends Phaser.Scene {
   private enemyProjectiles!: Phaser.Physics.Arcade.Group
 
   private isPaused = false
+  private statsDirty = false
   private gameTime = 0
   private rerollLocked = false
   private joystick: VirtualJoystick | null = null
@@ -86,8 +100,19 @@ export class GameScene extends Phaser.Scene {
     // ── Difficulty XP multiplier ──────────────────────────────────
     this.player.stats.xpMultiplier = DIFFICULTY[this.difficulty].xpMultiplier
 
+    // ── Meta-progression bonuses ────────────────────────────────────
+    this.player.stats.maxHp += getPowerUpLevel("maxHp") * 5
+    this.player.stats.hp = this.player.stats.maxHp
+    this.player.stats.hpRegen += getPowerUpLevel("hpRegen") * 0.5
+    this.player.stats.speed *= 1 + getPowerUpLevel("speed") * 0.05
+    this.player.stats.baseSpeed = this.player.stats.speed
+    this.player.stats.xpMultiplier *= 1 + getPowerUpLevel("xpGain") * 0.1
+    this.player.stats.magnetRange += getPowerUpLevel("magnetRange") * 10
+    this.player.stats.revives += getPowerUpLevel("revival")
+    this.player.stats.rerolls += getPowerUpLevel("reroll")
+
     // ── Berry damage buff bridge (Liechi Berry → Enemy.takeDamage) ──
-    setDamageBuff(() => this.player.getBuff('damage', this.time.now))
+    setDamageBuff(() => this.player.getBuff("damage", this.time.now))
 
     // ── Joystick (touch devices) ────────────────────────────────────
     if (this.sys.game.device.input.touch) {
@@ -121,6 +146,11 @@ export class GameScene extends Phaser.Scene {
       devConfig: this.devConfig,
       difficulty: this.difficulty,
     }
+
+    // ── Persistent systems ───────────────────────────────────────────
+    initSaveSystem()
+    initStatsTracker()
+    initComboSystem()
 
     // ── Spatial hash grid (deve ser antes dos systems) ──────────────
     initSpatialGrid(128)
@@ -158,9 +188,11 @@ export class GameScene extends Phaser.Scene {
     } else {
       // Normal initial attack
       const initialAttack =
-        this.starterKey === "squirtle" ? "waterGun"
-        : this.starterKey === "bulbasaur" ? "vineWhip"
-        : "ember"
+        this.starterKey === "squirtle"
+          ? "waterGun"
+          : this.starterKey === "bulbasaur"
+            ? "vineWhip"
+            : "ember"
       this.attackFactory.createAttack(initialAttack)
     }
 
@@ -175,7 +207,7 @@ export class GameScene extends Phaser.Scene {
       this.cameras.main.setZoom(zoom)
     }
     applyZoom()
-    this.scale.on('resize', applyZoom)
+    this.scale.on("resize", applyZoom)
 
     // ── UIScene ─────────────────────────────────────────────────────
     if (this.scene.isActive("UIScene")) this.scene.stop("UIScene")
@@ -220,8 +252,12 @@ export class GameScene extends Phaser.Scene {
 
     this.events.on(
       "cone-attack-kill",
-      (x: number, y: number, xpValue: number) => {
+      (x: number, y: number, xpValue: number, enemyKey?: string) => {
         this.upgradeSystem.onConeAttackKill(x, y, xpValue)
+        if (enemyKey) {
+          getStatsTracker().recordKill(enemyKey, xpValue)
+          getComboSystem().recordKill()
+        }
       },
     )
 
@@ -246,7 +282,7 @@ export class GameScene extends Phaser.Scene {
     })
 
     this.events.on("stats-refresh", () => {
-      this.emitStats()
+      this.statsDirty = true
     })
 
     this.events.on("pokeball-bomb", () => {
@@ -255,6 +291,8 @@ export class GameScene extends Phaser.Scene {
         if (killed) {
           this.player.stats.kills++
           this.pickupSystem.spawnXpGem(enemy.x, enemy.y, enemy.xpValue)
+          getStatsTracker().recordKill(enemy.enemyKey, enemy.xpValue)
+          getComboSystem().recordKill()
         }
       }
     })
@@ -293,38 +331,42 @@ export class GameScene extends Phaser.Scene {
         if (data.type === "blaze") {
           const radius = 50
           const aoeDamage = 8
-          this.add
-            .particles(data.x, data.y, "fire-particle", {
-              speed: { min: 40, max: 100 },
-              lifespan: 400,
-              quantity: 8,
-              scale: { start: 2, end: 0 },
-              emitting: false,
-            })
-            .explode()
+          safeExplode(this, data.x, data.y, "fire-particle", {
+            speed: { min: 40, max: 100 },
+            lifespan: 400,
+            quantity: 8,
+            scale: { start: 2, end: 0 },
+          })
 
-          for (const enemy of getSpatialGrid().queryRadius(data.x, data.y, radius)) {
+          for (const enemy of getSpatialGrid().queryRadius(
+            data.x,
+            data.y,
+            radius,
+          )) {
             const killed = enemy.takeDamage(aoeDamage)
             if (killed) {
               this.player.stats.kills++
               this.pickupSystem.spawnXpGem(enemy.x, enemy.y, enemy.xpValue)
+              getStatsTracker().recordKill(enemy.enemyKey, enemy.xpValue)
+              getComboSystem().recordKill()
             }
           }
         } else if (data.type === "torrent") {
           const radius = 60
-          this.add
-            .particles(data.x, data.y, "water-particle", {
-              speed: { min: 30, max: 80 },
-              lifespan: 350,
-              quantity: 6,
-              scale: { start: 1.5, end: 0 },
-              tint: [0x3388ff, 0x44aaff],
-              emitting: false,
-            })
-            .explode()
+          safeExplode(this, data.x, data.y, "water-particle", {
+            speed: { min: 30, max: 80 },
+            lifespan: 350,
+            quantity: 6,
+            scale: { start: 1.5, end: 0 },
+            tint: [0x3388ff, 0x44aaff],
+          })
 
           const now = this.time.now
-          for (const enemy of getSpatialGrid().queryRadius(data.x, data.y, radius)) {
+          for (const enemy of getSpatialGrid().queryRadius(
+            data.x,
+            data.y,
+            radius,
+          )) {
             enemy.applyWet(
               ps.getWetSpeedMultiplier(),
               ps.getStatusDuration(),
@@ -333,24 +375,21 @@ export class GameScene extends Phaser.Scene {
           }
         } else if (data.type === "overgrow") {
           const radius = 55
-          this.add
-            .particles(data.x, data.y, "poison-particle", {
-              speed: { min: 30, max: 70 },
-              lifespan: 400,
-              quantity: 8,
-              scale: { start: 1.5, end: 0 },
-              tint: [0x9944cc, 0x22cc44],
-              emitting: false,
-            })
-            .explode()
+          safeExplode(this, data.x, data.y, "poison-particle", {
+            speed: { min: 30, max: 70 },
+            lifespan: 400,
+            quantity: 8,
+            scale: { start: 1.5, end: 0 },
+            tint: [0x9944cc, 0x22cc44],
+          })
 
           const now = this.time.now
-          for (const enemy of getSpatialGrid().queryRadius(data.x, data.y, radius)) {
-            enemy.applyPoison(
-              ps.getPoisonDps(),
-              ps.getStatusDuration(),
-              now,
-            )
+          for (const enemy of getSpatialGrid().queryRadius(
+            data.x,
+            data.y,
+            radius,
+          )) {
+            enemy.applyPoison(ps.getPoisonDps(), ps.getStatusDuration(), now)
           }
         }
 
@@ -405,6 +444,9 @@ export class GameScene extends Phaser.Scene {
     if (this.isPaused) return
 
     this.gameTime += delta
+    getStatsTracker().addTime(delta)
+    getComboSystem().update(delta)
+
     this.player.handleMovement(time, this.joystick?.direction)
     this.player.updateAttacks(time, delta)
     this.player.updatePoison(time, delta)
@@ -421,24 +463,28 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.player.isDead()) {
-      if (!this.tryRevive()) { this.gameOver(); return }
+      if (!this.tryRevive()) {
+        this.gameOver()
+        return
+      }
     }
 
     // Enemy movement + attacks
     this.spawnSystem.update(time)
 
     // XP magnetism (gems persist forever — disable body when far for perf)
-    this.xpGems.getChildren().forEach((child) => {
-      const gem = child as Phaser.Physics.Arcade.Sprite
-      if (!gem.active) return
+    const gemChildren = this.xpGems.getChildren()
+    const px = this.player.x
+    const py = this.player.y
+    const magRange = this.player.stats.magnetRange
+    for (let gi = 0, glen = gemChildren.length; gi < glen; gi++) {
+      const gem = gemChildren[gi] as Phaser.Physics.Arcade.Sprite
+      if (!gem.active) continue
       const body = gem.body as Phaser.Physics.Arcade.Body
-      const dist = Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        gem.x,
-        gem.y,
-      )
-      if (dist < this.player.stats.magnetRange) {
+      const dx = px - gem.x
+      const dy = py - gem.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (dist < magRange) {
         if (!body.enable) body.enable = true
         this.physics.moveToObject(gem, this.player, XP_GEM.magnetSpeed)
       } else if (dist < SPAWN.despawnDistance) {
@@ -450,7 +496,7 @@ export class GameScene extends Phaser.Scene {
           body.enable = false
         }
       }
-    })
+    }
 
     // Torrent aura: destroy enemy projectiles within radius
     const ps = getPassive()
@@ -473,18 +519,65 @@ export class GameScene extends Phaser.Scene {
       })
     }
 
-    if (Math.floor(time / 500) !== Math.floor((time - delta) / 500))
+    if (
+      this.statsDirty ||
+      Math.floor(time / 500) !== Math.floor((time - delta) / 500)
+    ) {
+      this.statsDirty = false
       this.emitStats()
+    }
   }
 
   private gameOver(): void {
     this.isPaused = true
     this.physics.pause()
     SoundManager.playGameOver()
+
+    // ── Finalize run stats ─────────────────────────────────────────
+    const tracker = getStatsTracker()
+    tracker.setLevel(this.player.stats.level)
+    tracker.setForm(this.player.stats.form)
+    tracker.setAttacks(
+      this.player
+        .getAllAttacks()
+        .map((a) => ({ type: a.type, level: a.level })),
+    )
+    tracker.setItems(this.player.getHeldItems())
+
+    const runStats = tracker.getRunStats()
+    const timeSeconds = Math.floor(this.gameTime / 1000)
+
+    // ── Calculate PokéDollars ──────────────────────────────────────
+    const coinsEarned = Math.floor(
+      runStats.totalKills * 1 +
+        runStats.bossesDefeated.length * 50 +
+        timeSeconds * 0.5 +
+        runStats.levelReached * 10,
+    )
+
+    // ── Save to persistent storage ─────────────────────────────────
+    addCoins(coinsEarned)
+    const newRecords = {
+      time: updateRecord("bestTime", timeSeconds),
+      kills: updateRecord("bestKills", runStats.totalKills),
+      level: updateRecord("bestLevel", runStats.levelReached),
+    }
+
+    // ── Combo stats ────────────────────────────────────────────────
+    const bestCombo = getComboSystem().getBestCombo()
+
     this.events.emit("game-over", {
       level: this.player.stats.level,
       kills: this.player.stats.kills,
-      time: Math.floor(this.gameTime / 1000),
+      time: timeSeconds,
+      runStats,
+      coinsEarned,
+      newRecords,
+      bestCombo,
+      starterKey: this.starterKey,
+      formName:
+        this.starterConfig.forms.find((f) => f.form === this.player.stats.form)
+          ?.name ?? this.starterConfig.name,
     })
   }
 
@@ -505,7 +598,9 @@ export class GameScene extends Phaser.Scene {
       duration: 200,
       repeat: 7,
       yoyo: true,
-      onComplete: () => { this.player.setAlpha(1); },
+      onComplete: () => {
+        this.player.setAlpha(1)
+      },
     })
 
     // Shockwave — empurra inimigos
@@ -520,17 +615,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Particles
-    this.add.particles(px, py, 'fire-particle', {
+    safeExplode(this, px, py, "fire-particle", {
       speed: { min: 50, max: 120 },
       lifespan: 500,
       quantity: 16,
       scale: { start: 2, end: 0 },
       tint: [0xffdd44, 0xffaa00, 0xffffff],
-      emitting: false,
-    }).explode()
+    })
 
     // Notification
-    this.events.emit('revive-used', this.player.stats.revives)
+    this.events.emit("revive-used", this.player.stats.revives)
     this.emitStats()
     return true
   }
@@ -565,9 +659,11 @@ export class GameScene extends Phaser.Scene {
     // Se nenhum ataque especificado, dá o básico
     if (config.attacks.length === 0) {
       const initialAttack =
-        this.starterKey === "squirtle" ? "waterGun"
-        : this.starterKey === "bulbasaur" ? "vineWhip"
-        : "ember"
+        this.starterKey === "squirtle"
+          ? "waterGun"
+          : this.starterKey === "bulbasaur"
+            ? "vineWhip"
+            : "ember"
       this.attackFactory.createAttack(initialAttack)
     }
   }
@@ -614,6 +710,11 @@ export class GameScene extends Phaser.Scene {
     const currentForm = this.starterConfig.forms.find(
       (f) => f.form === this.player.stats.form,
     )
+    // Keep StatsTracker in sync
+    const tracker = getStatsTracker()
+    tracker.setLevel(this.player.stats.level)
+    tracker.setForm(this.player.stats.form)
+
     this.events.emit("stats-update", {
       ...this.player.stats,
       starterKey: this.starterKey,
@@ -624,6 +725,8 @@ export class GameScene extends Phaser.Scene {
         .getAllAttacks()
         .map((a) => ({ type: a.type, level: a.level })),
       damageTotals: Object.fromEntries(getDamageTotals()),
+      combo: getComboSystem().getCurrentCombo(),
+      comboActive: getComboSystem().isActive(),
     })
   }
 }

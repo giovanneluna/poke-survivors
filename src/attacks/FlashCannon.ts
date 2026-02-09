@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Flash Cannon: tiro piercing dos canhoes do Blastoise.
@@ -132,14 +133,13 @@ export class FlashCannon implements Attack {
       this.scene.time.delayedCall(2500, () => {
         if (bullet.active && bullet.getData('fireId') === currentFireId) {
           // Flash de impacto ao expirar
-          this.scene.add.particles(bullet.x, bullet.y, 'water-particle', {
+          safeExplode(this.scene, bullet.x, bullet.y, 'water-particle', {
             speed: { min: 30, max: 60 },
             lifespan: 200,
             quantity: 5,
             scale: { start: 1, end: 0 },
             tint: [0xffffff, 0xdddddd],
-            emitting: false,
-          }).explode();
+          });
 
           this.bullets.killAndHide(bullet);
           body.checkCollision.none = true;

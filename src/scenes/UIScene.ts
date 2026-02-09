@@ -4,6 +4,10 @@ import { ATTACKS } from '../config';
 import { SoundManager } from '../audio/SoundManager';
 import { Boss } from '../entities/Boss';
 import { GameScene } from './GameScene';
+import type { RunStats } from '../systems/RunRecorder';
+import { getCoins } from '../systems/SaveSystem';
+import { MiniMap } from '../ui/MiniMap';
+import { getComboSystem } from '../systems/ComboSystem';
 
 interface StatsData extends PlayerState {
   time: number;
@@ -12,12 +16,20 @@ interface StatsData extends PlayerState {
   heldItems: HeldItemType[];
   attacks: Array<{ type: AttackType; level: number }>;
   damageTotals: Record<string, number>;
+  combo: number;
+  comboActive: boolean;
 }
 
 interface GameOverData {
   readonly level: number;
   readonly kills: number;
   readonly time: number;
+  readonly runStats?: RunStats;
+  readonly coinsEarned?: number;
+  readonly newRecords?: { time: boolean; kills: boolean; level: boolean };
+  readonly bestCombo?: number;
+  readonly starterKey?: string;
+  readonly formName?: string;
 }
 
 export class UIScene extends Phaser.Scene {
@@ -31,6 +43,8 @@ export class UIScene extends Phaser.Scene {
   private reviveText!: Phaser.GameObjects.Text;
   private itemsContainer!: Phaser.GameObjects.Container;
   private attacksContainer!: Phaser.GameObjects.Container;
+  private lastItemsHash = '';
+  private lastAttacksHash = '';
   private levelUpContainer!: Phaser.GameObjects.Container;
   private gameOverContainer!: Phaser.GameObjects.Container;
   private evolutionContainer!: Phaser.GameObjects.Container;
@@ -43,6 +57,9 @@ export class UIScene extends Phaser.Scene {
   private devPanelKeyHandler: ((event: KeyboardEvent) => void) | null = null;
   private pauseContainer!: Phaser.GameObjects.Container;
   private damageContainer!: Phaser.GameObjects.Container;
+  private comboText!: Phaser.GameObjects.Text;
+  private comboLabelText!: Phaser.GameObjects.Text;
+  private miniMap: MiniMap | null = null;
   private userPaused = false;
 
   private readonly textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
@@ -58,7 +75,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   create(): void {
-    const { width } = this.cameras.main;
+    const { width, height } = this.cameras.main;
 
     this.hpBar = this.add.graphics().setDepth(100);
     this.add.text(10, 8, 'HP', { ...this.textStyle, fontSize: '12px' }).setDepth(100);
@@ -154,6 +171,19 @@ export class UIScene extends Phaser.Scene {
       debugYOffset = 22;
     }
 
+    // ── Combo Display ─────────────────────────────────────────────────
+    this.comboText = this.add.text(width / 2, 32, '', {
+      fontSize: '16px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(100).setAlpha(0);
+    this.comboLabelText = this.add.text(width / 2, 50, '', {
+      fontSize: '12px', color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(100).setAlpha(0);
+
+    // ── Mini-Map ──────────────────────────────────────────────────────
+    this.miniMap = new MiniMap(this, width - 130, height - 140, 120, 3000, 3000);
+
     // ── Damage Tracker (abaixo de kills/mute/pause/debug) ──────────────
     this.damageContainer = this.add.container(width - 10, 72 + debugYOffset).setDepth(100);
 
@@ -175,6 +205,23 @@ export class UIScene extends Phaser.Scene {
         stroke: '#000000', strokeThickness: 3,
       }).setOrigin(0.5).setDepth(999);
       this.tweens.add({ targets: [msg, sub], alpha: 0, y: '-=40', duration: 2000, delay: 800, onComplete: () => { msg.destroy(); sub.destroy(); } });
+    });
+
+    // ── Type effectiveness floating text ──────────────────────────────
+    gameScene.events.on('type-effectiveness', (data: { x: number; y: number; label: string; color: string; multiplier: number }) => {
+      const cam = this.scene.get('GameScene').cameras.main;
+      const screenX = data.x - cam.scrollX;
+      const screenY = data.y - cam.scrollY;
+      if (screenX < -50 || screenX > cam.width + 50 || screenY < -50 || screenY > cam.height + 50) return;
+      const txt = this.add.text(screenX, screenY, data.label, {
+        fontSize: data.multiplier >= 1.5 ? '11px' : '9px',
+        color: data.color,
+        fontFamily: 'monospace',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(200);
+      this.tweens.add({ targets: txt, y: screenY - 25, alpha: 0, duration: 800, ease: 'Power2', onComplete: () => txt.destroy() });
     });
 
     // ── Boss events ──────────────────────────────────────────────────
@@ -255,64 +302,108 @@ export class UIScene extends Phaser.Scene {
     const seconds = stats.time % 60;
     this.timerText.setText(`${minutes}:${seconds.toString().padStart(2, '0')}`);
 
-    // Held Items (bottom-left)
-    this.itemsContainer.removeAll(true);
-    const itemY = height - 35;
-    this.itemsContainer.setPosition(10, itemY);
+    // Held Items (bottom-left) — skip rebuild if unchanged
+    const itemsHash = stats.heldItems?.join(',') ?? '';
+    if (itemsHash !== this.lastItemsHash) {
+      this.lastItemsHash = itemsHash;
+      this.itemsContainer.removeAll(true);
+      const itemY = height - 35;
+      this.itemsContainer.setPosition(10, itemY);
 
-    if (stats.heldItems && stats.heldItems.length > 0) {
-      const label = this.add.text(0, 0, 'Items:', {
-        fontSize: '10px', color: '#aaaaaa', fontFamily: 'monospace',
-        stroke: '#000000', strokeThickness: 2,
-      });
-      this.itemsContainer.add(label);
-
-      const textureMap: Partial<Record<HeldItemType, string>> = {
-        charcoal: 'held-charcoal',
-        wideLens: 'held-wide-lens',
-        choiceSpecs: 'held-choice-specs',
-        quickClaw: 'held-quick-claw',
-        leftovers: 'held-leftovers',
-        dragonFang: 'held-dragon-fang',
-        sharpBeak: 'held-sharp-beak',
-        silkScarf: 'held-silk-scarf',
-        shellBell: 'held-shell-bell',
-        scopeLens: 'held-scope-lens',
-        razorClaw: 'held-razor-claw',
-        focusBand: 'held-focus-band',
-        metronome: 'held-metronome',
-        magnet: 'held-magnet',
-        mysticWater: 'held-mystic-water',
-        neverMeltIce: 'held-never-melt-ice',
-        miracleSeed: 'held-miracle-seed',
-        blackSludge: 'held-black-sludge',
-        bigRoot: 'held-big-root',
-        leafStone: 'held-leaf-stone',
-      };
-
-      stats.heldItems.forEach((item, i) => {
-        const icon = this.add.image(45 + i * 18, 5, textureMap[item] ?? 'held-charcoal').setScale(1.2);
-        this.itemsContainer.add(icon);
-      });
-    }
-
-    // Attacks display (top-left, below slots)
-    this.attacksContainer.removeAll(true);
-    this.attacksContainer.setPosition(10, 62);
-
-    if (stats.attacks) {
-      stats.attacks.forEach((atk, i) => {
-        const name = atk.type.charAt(0).toUpperCase() + atk.type.slice(1);
-        const atkText = this.add.text(0, i * 14, `${name} Lv${atk.level}`, {
-          fontSize: '10px', color: '#ff8844', fontFamily: 'monospace',
+      if (stats.heldItems && stats.heldItems.length > 0) {
+        const label = this.add.text(0, 0, 'Items:', {
+          fontSize: '10px', color: '#aaaaaa', fontFamily: 'monospace',
           stroke: '#000000', strokeThickness: 2,
         });
-        this.attacksContainer.add(atkText);
-      });
+        this.itemsContainer.add(label);
+
+        const textureMap: Partial<Record<HeldItemType, string>> = {
+          charcoal: 'held-charcoal',
+          wideLens: 'held-wide-lens',
+          choiceSpecs: 'held-choice-specs',
+          quickClaw: 'held-quick-claw',
+          leftovers: 'held-leftovers',
+          dragonFang: 'held-dragon-fang',
+          sharpBeak: 'held-sharp-beak',
+          silkScarf: 'held-silk-scarf',
+          shellBell: 'held-shell-bell',
+          scopeLens: 'held-scope-lens',
+          razorClaw: 'held-razor-claw',
+          focusBand: 'held-focus-band',
+          metronome: 'held-metronome',
+          magnet: 'held-magnet',
+          mysticWater: 'held-mystic-water',
+          neverMeltIce: 'held-never-melt-ice',
+          miracleSeed: 'held-miracle-seed',
+          blackSludge: 'held-black-sludge',
+          bigRoot: 'held-big-root',
+          leafStone: 'held-leaf-stone',
+        };
+
+        stats.heldItems.forEach((item, i) => {
+          const icon = this.add.image(45 + i * 18, 5, textureMap[item] ?? 'held-charcoal').setScale(1.2);
+          this.itemsContainer.add(icon);
+        });
+      }
+    }
+
+    // Attacks display (top-left, below slots) — skip rebuild if unchanged
+    const attacksHash = stats.attacks?.map(a => `${a.type}:${a.level}`).join(',') ?? '';
+    if (attacksHash !== this.lastAttacksHash) {
+      this.lastAttacksHash = attacksHash;
+      this.attacksContainer.removeAll(true);
+      this.attacksContainer.setPosition(10, 62);
+
+      if (stats.attacks) {
+        stats.attacks.forEach((atk, i) => {
+          const name = atk.type.charAt(0).toUpperCase() + atk.type.slice(1);
+          const atkText = this.add.text(0, i * 14, `${name} Lv${atk.level}`, {
+            fontSize: '10px', color: '#ff8844', fontFamily: 'monospace',
+            stroke: '#000000', strokeThickness: 2,
+          });
+          this.attacksContainer.add(atkText);
+        });
+      }
     }
 
     // Damage tracker (top-right, below pause button)
     this.updateDamageDisplay(stats.damageTotals);
+
+    // Combo display
+    if (stats.comboActive && stats.combo >= 10) {
+      const tier = getComboSystem().getCurrentTier();
+      if (tier) {
+        this.comboText.setText(`${stats.combo}x COMBO!`);
+        this.comboText.setFontSize(tier.fontSize);
+        this.comboText.setColor(`#${tier.color.toString(16).padStart(6, '0')}`);
+        this.comboText.setAlpha(1);
+        if (tier.label) {
+          this.comboLabelText.setText(tier.label);
+          this.comboLabelText.setAlpha(1);
+        } else {
+          this.comboLabelText.setAlpha(0);
+        }
+      }
+    } else {
+      this.comboText.setAlpha(0);
+      this.comboLabelText.setAlpha(0);
+    }
+
+    // Mini-map update
+    if (this.miniMap) {
+      const gs = this.scene.get('GameScene') as GameScene;
+      const enemies = gs.enemyGroup?.getChildren().map(c => {
+        const s = c as Phaser.Physics.Arcade.Sprite;
+        return { x: s.x, y: s.y, active: s.active };
+      }) ?? [];
+      this.miniMap.update({
+        playerX: gs.player?.x ?? 0,
+        playerY: gs.player?.y ?? 0,
+        enemies,
+        boss: null,
+        pickups: [],
+      });
+    }
   }
 
   // ── Damage Display ───────────────────────────────────────────────
@@ -1201,48 +1292,219 @@ export class UIScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     this.gameOverContainer.removeAll(true);
 
-    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85);
+    // ── Background ────────────────────────────────────────────────
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.9);
     this.gameOverContainer.add(bg);
 
-    const title = this.add.text(width / 2, height / 2 - 80, 'GAME OVER', {
-      fontSize: '40px', color: '#ff4444', fontFamily: 'monospace',
-      stroke: '#000000', strokeThickness: 5,
-    }).setOrigin(0.5);
+    // ── Camera shake ──────────────────────────────────────────────
+    this.cameras.main.shake(400, 0.008);
+
+    // ── Title ─────────────────────────────────────────────────────
+    const title = this.add.text(width / 2, 30, 'GAME OVER', {
+      fontSize: '36px', color: '#ff4444', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 6,
+    }).setOrigin(0.5).setAlpha(0);
     this.gameOverContainer.add(title);
+    this.tweens.add({ targets: title, alpha: 1, scaleX: { from: 1.5, to: 1 }, scaleY: { from: 1.5, to: 1 }, duration: 400, ease: 'Back.Out' });
+
+    // ── Form name ─────────────────────────────────────────────────
+    const nameColor = data.starterKey === 'squirtle' ? '#44aaff' : data.starterKey === 'bulbasaur' ? '#22cc44' : '#ff8844';
+    const formText = this.add.text(width / 2, 62, data.formName ?? 'Pokémon', {
+      fontSize: '14px', color: nameColor, fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setAlpha(0);
+    this.gameOverContainer.add(formText);
 
     const minutes = Math.floor(data.time / 60);
     const seconds = data.time % 60;
-    const statsText = [
-      `Level: ${data.level}`,
-      `Kills: ${data.kills}`,
-      `Tempo: ${minutes}:${seconds.toString().padStart(2, '0')}`,
-    ].join('\n');
+    const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const rs = data.runStats;
 
-    const stats = this.add.text(width / 2, height / 2, statsText, {
-      fontSize: '18px', color: '#ffffff', fontFamily: 'monospace',
-      align: 'center', lineSpacing: 8,
-    }).setOrigin(0.5);
-    this.gameOverContainer.add(stats);
+    // ── Stats grid (staggered fade-in) ────────────────────────────
+    const colLeftX = width / 2 - 100;
+    const colRightX = width / 2 + 100;
+    let yPos = 90;
+    const rowH = 22;
+    let animDelay = 200;
 
-    const restartBtn = this.add.text(width / 2, height / 2 + 70, '[ TENTAR DE NOVO ]', {
-      fontSize: '20px', color: '#ffcc00', fontFamily: 'monospace',
+    const addStatRow = (x: number, label: string, value: string, color = '#ffffff', isRecord = false): void => {
+      const labelText = this.add.text(x - 5, yPos, label, {
+        fontSize: '11px', color: '#888888', fontFamily: 'monospace',
+        stroke: '#000000', strokeThickness: 2,
+      }).setOrigin(1, 0).setAlpha(0);
+      this.gameOverContainer.add(labelText);
+
+      const valueText = this.add.text(x + 5, yPos, value, {
+        fontSize: '12px', color, fontFamily: 'monospace', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 2,
+      }).setOrigin(0, 0).setAlpha(0);
+      this.gameOverContainer.add(valueText);
+
+      this.tweens.add({ targets: [labelText, valueText], alpha: 1, y: yPos - 3, duration: 300, delay: animDelay, ease: 'Power2' });
+
+      if (isRecord) {
+        const recordBadge = this.add.text(x + 5 + value.length * 8 + 8, yPos, 'NOVO RECORDE!', {
+          fontSize: '9px', color: '#ffd700', fontFamily: 'monospace', fontStyle: 'bold',
+          stroke: '#000000', strokeThickness: 2,
+        }).setOrigin(0, 0).setAlpha(0);
+        this.gameOverContainer.add(recordBadge);
+        this.tweens.add({
+          targets: recordBadge, alpha: 1, duration: 300, delay: animDelay + 200,
+          onComplete: () => {
+            this.tweens.add({ targets: recordBadge, scaleX: { from: 1, to: 1.2 }, scaleY: { from: 1, to: 1.2 }, duration: 400, yoyo: true, repeat: 2 });
+          },
+        });
+      }
+
+      animDelay += 80;
+    };
+
+    // Left column
+    addStatRow(colLeftX, 'Tempo:', timeStr, '#ffffff', data.newRecords?.time);
+    yPos += rowH;
+    addStatRow(colLeftX, 'Level:', `${data.level}`, '#ffcc00', data.newRecords?.level);
+    yPos += rowH;
+    addStatRow(colLeftX, 'Kills:', `${data.kills}`, '#ff6666', data.newRecords?.kills);
+    yPos += rowH;
+    addStatRow(colLeftX, 'Best Combo:', `${data.bestCombo ?? 0}x`, data.bestCombo && data.bestCombo >= 50 ? '#ffd700' : '#ffffff');
+
+    // Right column
+    yPos = 90;
+    if (rs) {
+      addStatRow(colRightX, 'Dano Total:', rs.totalDamageDealt >= 1000 ? `${(rs.totalDamageDealt / 1000).toFixed(1)}k` : `${Math.floor(rs.totalDamageDealt)}`, '#ff8844');
+      yPos += rowH;
+      addStatRow(colRightX, 'Bosses:', `${rs.bossesDefeated.length}`, '#ffdd44');
+      yPos += rowH;
+      addStatRow(colRightX, 'Berries:', `${rs.berriesCollected}`, '#44ff44');
+      yPos += rowH;
+      addStatRow(colRightX, 'XP Coletado:', `${rs.xpCollected}`, '#44bbff');
+    }
+
+    // ── Kill breakdown (top 5) ────────────────────────────────────
+    yPos = 182;
+    if (rs && Object.keys(rs.killsByType).length > 0) {
+      const killLabel = this.add.text(width / 2, yPos, '── KILLS POR TIPO ──', {
+        fontSize: '10px', color: '#666666', fontFamily: 'monospace',
+      }).setOrigin(0.5).setAlpha(0);
+      this.gameOverContainer.add(killLabel);
+      this.tweens.add({ targets: killLabel, alpha: 1, duration: 300, delay: animDelay });
+      animDelay += 60;
+      yPos += 16;
+
+      const sortedKills = Object.entries(rs.killsByType)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+
+      const totalW = sortedKills.length * 65;
+      const startKillX = (width - totalW) / 2 + 32;
+
+      sortedKills.forEach(([type, count], i) => {
+        const kx = startKillX + i * 65;
+        const name = type.charAt(0).toUpperCase() + type.slice(1);
+        const nameT = this.add.text(kx, yPos, name, {
+          fontSize: '9px', color: '#aaaaaa', fontFamily: 'monospace',
+        }).setOrigin(0.5, 0).setAlpha(0);
+        const countT = this.add.text(kx, yPos + 12, `×${count}`, {
+          fontSize: '11px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+          stroke: '#000000', strokeThickness: 2,
+        }).setOrigin(0.5, 0).setAlpha(0);
+        this.gameOverContainer.add(nameT);
+        this.gameOverContainer.add(countT);
+        this.tweens.add({ targets: [nameT, countT], alpha: 1, duration: 200, delay: animDelay + i * 50 });
+      });
+      animDelay += sortedKills.length * 50 + 100;
+      yPos += 30;
+    }
+
+    // ── Attacks used ──────────────────────────────────────────────
+    yPos += 5;
+    if (rs && rs.attacksUsed.length > 0) {
+      const atkLabel = this.add.text(width / 2, yPos, '── ATAQUES USADOS ──', {
+        fontSize: '10px', color: '#666666', fontFamily: 'monospace',
+      }).setOrigin(0.5).setAlpha(0);
+      this.gameOverContainer.add(atkLabel);
+      this.tweens.add({ targets: atkLabel, alpha: 1, duration: 300, delay: animDelay });
+      animDelay += 60;
+      yPos += 16;
+
+      const totalAtkW = rs.attacksUsed.length * 55;
+      const startAtkX = (width - totalAtkW) / 2 + 27;
+
+      rs.attacksUsed.forEach((atk, i) => {
+        const ax = startAtkX + i * 55;
+        const name = atk.type.charAt(0).toUpperCase() + atk.type.slice(1);
+        const atkT = this.add.text(ax, yPos, `${name}\nLv${atk.level}`, {
+          fontSize: '8px', color: '#ff8844', fontFamily: 'monospace', align: 'center',
+        }).setOrigin(0.5, 0).setAlpha(0);
+        this.gameOverContainer.add(atkT);
+        this.tweens.add({ targets: atkT, alpha: 1, duration: 200, delay: animDelay + i * 40 });
+      });
+      animDelay += rs.attacksUsed.length * 40 + 100;
+      yPos += 28;
+    }
+
+    // ── PokéDollars earned (animated counter) ────────────────────
+    yPos += 8;
+    const coinsEarned = data.coinsEarned ?? 0;
+    const coinLabel = this.add.text(width / 2, yPos, 'POKÉDOLLARS GANHOS', {
+      fontSize: '10px', color: '#666666', fontFamily: 'monospace',
+    }).setOrigin(0.5).setAlpha(0);
+    this.gameOverContainer.add(coinLabel);
+
+    const coinValueText = this.add.text(width / 2, yPos + 16, '₽ 0', {
+      fontSize: '22px', color: '#ffd700', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 4,
+    }).setOrigin(0.5).setAlpha(0);
+    this.gameOverContainer.add(coinValueText);
+
+    const totalCoins = getCoins();
+    const totalCoinText = this.add.text(width / 2, yPos + 40, `Total: ₽ ${totalCoins}`, {
+      fontSize: '10px', color: '#aa8833', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5).setAlpha(0);
+    this.gameOverContainer.add(totalCoinText);
+
+    // Animate coin counter
+    this.tweens.add({
+      targets: [coinLabel, coinValueText, totalCoinText], alpha: 1, duration: 300, delay: animDelay,
+      onComplete: () => {
+        const counter = { value: 0 };
+        this.tweens.add({
+          targets: counter,
+          value: coinsEarned,
+          duration: Math.min(1500, coinsEarned * 5),
+          ease: 'Power2',
+          onUpdate: () => {
+            coinValueText.setText(`₽ ${Math.floor(counter.value)}`);
+          },
+        });
+      },
+    });
+    animDelay += 200;
+    yPos += 60;
+
+    // ── Buttons ───────────────────────────────────────────────────
+    const btnY = Math.min(yPos + 10, height - 60);
+
+    const restartBtn = this.add.text(width / 2, btnY, '[ TENTAR DE NOVO ]', {
+      fontSize: '18px', color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 3,
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setAlpha(0);
+    this.gameOverContainer.add(restartBtn);
 
     restartBtn.on('pointerover', () => { restartBtn.setColor('#ffffff'); SoundManager.playHover(); });
     restartBtn.on('pointerout', () => restartBtn.setColor('#ffcc00'));
     restartBtn.on('pointerdown', () => {
       SoundManager.playClick();
-      // GameScene.create() relança UIScene automaticamente
-      this.scene.start('GameScene');
+      this.scene.stop();
+      this.scene.get('GameScene').scene.restart();
     });
 
-    this.gameOverContainer.add(restartBtn);
-
-    const menuBtn = this.add.text(width / 2, height / 2 + 120, '[ VOLTAR AO MENU ]', {
-      fontSize: '16px', color: '#888888', fontFamily: 'monospace',
-      stroke: '#000000', strokeThickness: 3,
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    const menuBtn = this.add.text(width / 2, btnY + 30, '[ MENU PRINCIPAL ]', {
+      fontSize: '12px', color: '#888888', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setAlpha(0);
+    this.gameOverContainer.add(menuBtn);
 
     menuBtn.on('pointerover', () => { menuBtn.setColor('#ffffff'); SoundManager.playHover(); });
     menuBtn.on('pointerout', () => menuBtn.setColor('#888888'));
@@ -1252,7 +1514,8 @@ export class UIScene extends Phaser.Scene {
       this.scene.start('TitleScene');
     });
 
-    this.gameOverContainer.add(menuBtn);
+    this.tweens.add({ targets: [restartBtn, menuBtn], alpha: 1, duration: 400, delay: animDelay + 300 });
+
     this.gameOverContainer.setVisible(true);
   }
 }

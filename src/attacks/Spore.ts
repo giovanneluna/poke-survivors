@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Spore: esporos perfeitos com 100% stun em area.
@@ -60,15 +61,14 @@ export class Spore implements Attack {
     });
 
     // Particulas verdes de esporos
-    this.scene.add.particles(cx, cy, 'fire-particle', {
+    safeExplode(this.scene, cx, cy, 'fire-particle', {
       speed: { min: 20, max: 60 },
       lifespan: 500,
       quantity: 15,
       scale: { start: 1.5, end: 0 },
       tint: [0x66bb66, 0x88dd88, 0xaaffaa],
       angle: { min: 0, max: 360 },
-      emitting: false,
-    }).explode();
+    });
 
     // Stun todos inimigos no raio
     const enemies = getSpatialGrid().queryRadius(cx, cy, this.radius);

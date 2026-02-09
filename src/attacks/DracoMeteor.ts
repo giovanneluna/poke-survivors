@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Draco Meteor: chuva de meteoros apocalíptica.
@@ -74,19 +75,17 @@ export class DracoMeteor implements Attack {
             shadow.destroy();
 
             // Explosão de impacto
-            this.scene.add.particles(targetX, targetY, 'dragon-particle', {
+            safeExplode(this.scene, targetX, targetY, 'dragon-particle', {
               speed: { min: 80, max: 200 }, lifespan: 500, quantity: 20,
               scale: { start: 3, end: 0 }, angle: { min: 0, max: 360 },
               tint: [0x7744ff, 0x9966ff, 0xcc88ff, 0xff4400],
-              emitting: false,
-            }).explode();
+            });
 
-            this.scene.add.particles(targetX, targetY, 'fire-particle', {
+            safeExplode(this.scene, targetX, targetY, 'fire-particle', {
               speed: { min: 40, max: 120 }, lifespan: 350, quantity: 10,
               scale: { start: 2, end: 0 },
               tint: [0xff4400, 0xff6600],
-              emitting: false,
-            }).explode();
+            });
 
             // Crater visual
             const crater = this.scene.add.circle(targetX, targetY, this.impactRadius, 0x332244, 0.3);

@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Frenzy Plant: raízes gigantes irrompem do chão no cluster de inimigos mais denso.
@@ -95,15 +96,14 @@ export class FrenzyPlant implements Attack {
     this.scene.cameras.main.shake(300, 0.008);
 
     // Partículas de terra/raízes
-    this.scene.add.particles(tx, ty, 'fire-particle', {
+    safeExplode(this.scene, tx, ty, 'fire-particle', {
       speed: { min: 60, max: 150 },
       lifespan: 500,
       quantity: 15,
       scale: { start: 2, end: 0 },
       angle: { min: 0, max: 360 },
       tint: [0x228822, 0x44aa44, 0x886633],
-      emitting: false,
-    }).explode();
+    });
 
     // Dano + stun em TODOS os inimigos no raio
     const stunDur = this.stunDuration;

@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Solar Beam: raio solar devastador que perfura TODOS os inimigos na linha.
@@ -144,14 +145,13 @@ export class SolarBeam implements Attack {
         }
 
         // Flash verde de hit
-        this.scene.add.particles(enemy.x, enemy.y, 'fire-particle', {
+        safeExplode(this.scene, enemy.x, enemy.y, 'fire-particle', {
           speed: { min: 20, max: 50 },
           lifespan: 200,
           quantity: 4,
           scale: { start: 1, end: 0 },
           tint: [0x66dd44, 0xaaff66],
-          emitting: false,
-        }).explode();
+        });
       }
     }
   }

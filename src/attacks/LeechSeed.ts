@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Leech Seed: dispara sementes que grudam no inimigo e drenam vida.
@@ -131,14 +132,13 @@ export class LeechSeed implements Attack {
     }
 
     // Partículas visuais de "seed grudou"
-    this.scene.add.particles(enemySprite.x, enemySprite.y, 'poison-particle', {
+    safeExplode(this.scene, enemySprite.x, enemySprite.y, 'poison-particle', {
       speed: { min: 15, max: 40 },
       lifespan: 300,
       quantity: 6,
       scale: { start: 1, end: 0 },
       tint: [0x22cc44, 0x66dd22],
-      emitting: false,
-    }).explode();
+    });
 
     let ticksRemaining = Math.floor(this.drainDuration / this.tickInterval);
     const drainTimer = this.scene.time.addEvent({
@@ -166,15 +166,14 @@ export class LeechSeed implements Attack {
         this.scene.events.emit('leech-seed-heal', this.healPerTick);
 
         // Partícula de drain (verde subindo do inimigo)
-        this.scene.add.particles(enemySprite.x, enemySprite.y - 10, 'poison-particle', {
+        safeExplode(this.scene, enemySprite.x, enemySprite.y - 10, 'poison-particle', {
           speed: { min: 10, max: 25 },
           angle: { min: 250, max: 290 },
           lifespan: 400,
           quantity: 2,
           scale: { start: 0.7, end: 0 },
           tint: [0x44ff44],
-          emitting: false,
-        }).explode();
+        });
       },
     });
 

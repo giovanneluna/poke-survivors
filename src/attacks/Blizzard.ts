@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Blizzard: evolucao do Ice Beam.
@@ -178,14 +179,13 @@ export class Blizzard implements Attack {
         }
 
         // Impacto visual
-        this.scene.add.particles(bullet.x, bullet.y, 'ice-particle', {
+        safeExplode(this.scene, bullet.x, bullet.y, 'ice-particle', {
           speed: { min: 30, max: 80 },
           lifespan: 200,
           quantity: 8,
           scale: { start: 1.5, end: 0 },
           tint: Blizzard.ICE_TINTS as unknown as number[],
-          emitting: false,
-        }).explode();
+        });
 
         // Freeze burst AoE no ponto de impacto
         this.freezeBurst(bullet.x, bullet.y);
@@ -210,14 +210,13 @@ export class Blizzard implements Attack {
     });
 
     // Particulas de gelo explosivas
-    this.scene.add.particles(x, y, 'ice-particle', {
+    safeExplode(this.scene, x, y, 'ice-particle', {
       speed: { min: 50, max: 120 },
       lifespan: 300,
       quantity: 10,
       scale: { start: 1.5, end: 0 },
       tint: Blizzard.ICE_TINTS as unknown as number[],
-      emitting: false,
-    }).explode();
+    });
 
     // Slow em inimigos no raio
     const nearbyEnemies = getSpatialGrid().queryRadius(x, y, Blizzard.FREEZE_RADIUS);

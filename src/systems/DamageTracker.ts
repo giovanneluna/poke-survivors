@@ -23,6 +23,10 @@ export function setDamageSource(source: string): void {
   _source = source;
 }
 
+export function getDamageSource(): string {
+  return _source;
+}
+
 export function clearDamageSource(): void {
   _source = '';
 }

@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Ice Beam: raio de gelo no inimigo mais proximo.
@@ -129,15 +130,14 @@ export class IceBeam implements Attack {
     const freezeRadius = 40;
 
     // Flash de gelo no ponto de impacto
-    this.scene.add.particles(x, y, 'ice-particle', {
+    safeExplode(this.scene, x, y, 'ice-particle', {
       speed: { min: 30, max: 80 },
       lifespan: 300,
       quantity: 8,
       scale: { start: 1.5, end: 0 },
       angle: { min: 0, max: 360 },
       tint: [0x88ddff, 0xaaeeff, 0xffffff],
-      emitting: false,
-    }).explode();
+    });
 
     // Tint azul temporario nos inimigos proximos (visual only)
     const enemies = getSpatialGrid().queryRadius(x, y, freezeRadius);

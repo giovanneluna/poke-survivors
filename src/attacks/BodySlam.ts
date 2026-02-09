@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Body Slam: evolucao do Tackle.
@@ -28,6 +29,10 @@ export class BodySlam implements Attack {
 
   /** Duracao do stun em ms */
   private readonly stunDurationMs = 300;
+
+  /** Batch tint cleanup — evita criar delayedCall por inimigo */
+  private readonly tintedEnemies = new Set<Phaser.Physics.Arcade.Sprite>();
+  private tintClearTime = 0;
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -82,14 +87,13 @@ export class BodySlam implements Attack {
         });
 
         // Particulas de impacto
-        this.scene.add.particles(slamX, slamY, 'water-particle', {
+        safeExplode(this.scene, slamX, slamY, 'water-particle', {
           speed: { min: 15, max: 40 },
           lifespan: 200,
           quantity: 3,
           scale: { start: 1, end: 0 },
           tint: [0xccddff, 0xffffff, 0x88bbff],
-          emitting: false,
-        }).explode();
+        });
 
         // Dano em arco (80 graus por slam)
         const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);
@@ -119,16 +123,22 @@ export class BodySlam implements Attack {
           if (enemyBody) {
             enemyBody.velocity.set(0, 0);
             enemy.setTint(0xffffaa);
-            this.scene.time.delayedCall(this.stunDurationMs, () => {
-              if (enemy.active) enemy.clearTint();
-            });
+            this.tintedEnemies.add(enemy);
+            this.tintClearTime = this.scene.time.now + this.slamCount * 60 + this.stunDurationMs;
           }
         }
       });
     }
   }
 
-  update(_time: number, _delta: number): void {}
+  update(time: number, _delta: number): void {
+    if (this.tintedEnemies.size > 0 && time > this.tintClearTime) {
+      for (const e of this.tintedEnemies) {
+        if (e.active) e.clearTint();
+      }
+      this.tintedEnemies.clear();
+    }
+  }
 
   upgrade(): void {
     this.level++;
@@ -142,5 +152,8 @@ export class BodySlam implements Attack {
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.timer.destroy();
+    this.tintedEnemies.clear();
+  }
 }

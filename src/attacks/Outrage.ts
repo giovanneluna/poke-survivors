@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Outrage: modo berserk 360° por duração, confusão ao final.
@@ -70,12 +71,11 @@ export class Outrage implements Attack {
         aura.setPosition(this.player.x, this.player.y);
 
         // Partículas de rage
-        this.scene.add.particles(this.player.x, this.player.y, 'dragon-particle', {
+        safeExplode(this.scene, this.player.x, this.player.y, 'dragon-particle', {
           speed: { min: 50, max: 120 }, lifespan: 200, quantity: 4,
           scale: { start: 1.5, end: 0 }, angle: { min: 0, max: 360 },
           tint: [0x7744ff, 0x9966ff, 0xcc88ff],
-          emitting: false,
-        }).explode();
+        });
 
         // Dano 360°
         const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.radius);

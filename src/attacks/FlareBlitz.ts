@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Flare Blitz: dash devastador em chamas com recoil.
@@ -50,11 +51,10 @@ export class FlareBlitz implements Attack {
       const px = startX + (endX - startX) * t;
       const py = startY + (endY - startY) * t;
       this.scene.time.delayedCall(i * 20, () => {
-        this.scene.add.particles(px, py, 'fire-particle', {
+        safeExplode(this.scene, px, py, 'fire-particle', {
           speed: { min: 40, max: 100 }, lifespan: 400, quantity: 6,
           scale: { start: 2, end: 0 }, tint: [0xff0000, 0xff4400, 0xff8800],
-          emitting: false,
-        }).explode();
+        });
       });
     }
 
@@ -70,11 +70,10 @@ export class FlareBlitz implements Attack {
 
     // Explosão no ponto final
     this.scene.time.delayedCall(steps * 20, () => {
-      this.scene.add.particles(endX, endY, 'fire-particle', {
+      safeExplode(this.scene, endX, endY, 'fire-particle', {
         speed: { min: 60, max: 150 }, lifespan: 500, quantity: 20,
         scale: { start: 3, end: 0 }, tint: [0xff0000, 0xff2200, 0xffaa00],
-        emitting: false,
-      }).explode();
+      });
     });
 
     // Dano: inimigos na linha + raio de explosão

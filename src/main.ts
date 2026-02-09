@@ -6,6 +6,8 @@ import { SelectScene } from './scenes/SelectScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { ShowcaseScene } from './scenes/ShowcaseScene';
+import { PowerUpScene } from './scenes/PowerUpScene';
+import { PokedexScene } from './scenes/PokedexScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.WEBGL,
@@ -28,7 +30,7 @@ const config: Phaser.Types.Core.GameConfig = {
     width: '100%',
     height: '100%',
   },
-  scene: [BootScene, TitleScene, SelectScene, GameScene, UIScene, ShowcaseScene],
+  scene: [BootScene, TitleScene, SelectScene, PowerUpScene, PokedexScene, GameScene, UIScene, ShowcaseScene],
 };
 
 const game = new Phaser.Game(config);

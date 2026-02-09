@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Fire Fang: mordida flamejante no inimigo mais próximo.
@@ -44,11 +45,10 @@ export class FireFang implements Attack {
     fang.once('animationcomplete', () => fang.destroy());
 
     // Partículas de fogo
-    this.scene.add.particles(closest.x, closest.y, 'fire-particle', {
+    safeExplode(this.scene, closest.x, closest.y, 'fire-particle', {
       speed: { min: 20, max: 60 }, lifespan: 200, quantity: 5,
       scale: { start: 1.2, end: 0 }, tint: [0xff6600, 0xff4400],
-      emitting: false,
-    }).explode();
+    });
 
     // Dano
     if (typeof closest.takeDamage === 'function') {

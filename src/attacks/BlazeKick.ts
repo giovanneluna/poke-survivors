@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { safeExplode } from '../utils/particles';
 
 /**
  * Blaze Kick: chute flamejante com AoE de fogo.
@@ -47,12 +48,11 @@ export class BlazeKick implements Attack {
     kick.once('animationcomplete', () => kick.destroy());
 
     // Explosão AoE
-    this.scene.add.particles(tx, ty, 'fire-particle', {
+    safeExplode(this.scene, tx, ty, 'fire-particle', {
       speed: { min: 40, max: 100 }, lifespan: 300, quantity: 12,
       scale: { start: 2, end: 0 }, tint: [0xff4400, 0xff6600, 0xffaa00],
       angle: { min: 0, max: 360 },
-      emitting: false,
-    }).explode();
+    });
 
     // Anel visual
     const ring = this.scene.add.circle(tx, ty, this.splashRadius, 0xff6600, 0.25);
