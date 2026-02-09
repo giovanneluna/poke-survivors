@@ -5,10 +5,17 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
+interface ActiveCone {
+  sprite: Phaser.GameObjects.Sprite;
+  hitEnemies: Set<number>;
+  dirAngleRad: number;
+}
+
 /**
- * Blast Burn: evolução do Flamethrower.
- * Explosão nuclear massiva na direção do movimento.
+ * Blast Burn: evolucao do Flamethrower.
+ * Explosao nuclear massiva na direcao do movimento.
  * Raio enorme, dano devastador, visual espetacular.
+ * Dano aplicado continuamente durante a animacao (segue o jogador).
  */
 export class BlastBurn implements Attack {
   readonly type = 'blastBurn' as const;
@@ -21,6 +28,7 @@ export class BlastBurn implements Attack {
   private range = 180;
   private cooldown: number;
   private readonly coneAngleDeg = 70;
+  private activeCone: ActiveCone | null = null;
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -40,7 +48,7 @@ export class BlastBurn implements Attack {
     const dirAngleDeg = Phaser.Math.RadToDeg(Math.atan2(dir.y, dir.x));
     const dirAngleRad = Math.atan2(dir.y, dir.x);
 
-    // Sprite animado Blast Burn na direção do ataque
+    // Sprite animado Blast Burn na direcao do ataque
     const offsetX = Math.cos(dirAngleRad) * 60;
     const offsetY = Math.sin(dirAngleRad) * 60;
     const burn = this.scene.add.sprite(
@@ -52,6 +60,14 @@ export class BlastBurn implements Attack {
       if (burn.active) burn.setPosition(this.player.x + offsetX, this.player.y + offsetY);
     };
     this.scene.events.on('update', followBurn);
+
+    // Ativar hit detection continua ANTES do tween
+    this.activeCone = {
+      sprite: burn,
+      hitEnemies: new Set(),
+      dirAngleRad,
+    };
+
     this.scene.tweens.add({
       targets: burn,
       scale: 3,
@@ -59,12 +75,13 @@ export class BlastBurn implements Attack {
       duration: 800,
       onComplete: () => {
         this.scene.events.off('update', followBurn);
+        this.activeCone = null;
         burn.destroy();
       },
     });
 
-    // Partículas complementares
-    this.scene.add.particles(this.player.x, this.player.y, 'fire-particle', {
+    // Particulas complementares
+    const particles1 = this.scene.add.particles(this.player.x, this.player.y, 'fire-particle', {
       speed: { min: 200, max: 400 },
       angle: { min: dirAngleDeg - this.coneAngleDeg / 2, max: dirAngleDeg + this.coneAngleDeg / 2 },
       lifespan: 400,
@@ -72,42 +89,52 @@ export class BlastBurn implements Attack {
       scale: { start: 3, end: 0.3 },
       tint: [0xff0000, 0xff2200, 0xff6600, 0xffaa00],
       emitting: false,
-    }).explode();
+    });
+    particles1.explode();
+    this.scene.time.delayedCall(500, () => particles1.destroy());
 
-    // Shake da câmera
+    // Shake da camera
     this.scene.cameras.main.shake(200, 0.005);
+  }
 
-    // Dano em cone expandido
-    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);
+  update(_time: number, _delta: number): void {
+    if (!this.activeCone) return;
+    const { sprite, hitEnemies, dirAngleRad } = this.activeCone;
+    if (!sprite.active) { this.activeCone = null; return; }
+
+    const px = this.player.x;
+    const py = this.player.y;
+    const enemies = getSpatialGrid().queryRadius(px, py, this.range);
+    const halfCone = this.coneAngleDeg / 2;
 
     for (const enemy of enemies) {
-      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemy.x, enemy.y);
+      const uid = (enemy.getData('uid') as number) ?? 0;
+      if (hitEnemies.has(uid)) continue;
 
+      const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
+
+      // Inimigos muito perto sempre sao atingidos (evita bug de angulo a dist ~0)
       let inCone = dist < 25;
       if (!inCone) {
-        const angleToEnemy = Math.atan2(enemy.y - this.player.y, enemy.x - this.player.x);
+        const angleToEnemy = Math.atan2(enemy.y - py, enemy.x - px);
         const angleDiff = Math.abs(
           Phaser.Math.Angle.ShortestBetween(
             Phaser.Math.RadToDeg(dirAngleRad),
             Phaser.Math.RadToDeg(angleToEnemy)
           )
         );
-        inCone = angleDiff <= this.coneAngleDeg / 2;
+        inCone = angleDiff <= halfCone;
       }
+      if (!inCone) continue;
 
-      if (inCone) {
-        if (typeof enemy.takeDamage === 'function') {
-          setDamageSource(this.type);
-          const killed = enemy.takeDamage(this.damage);
-          if (killed) {
-            this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-          }
-        }
+      hitEnemies.add(uid);
+      setDamageSource(this.type);
+      const killed = enemy.takeDamage(this.damage);
+      if (killed) {
+        this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
       }
     }
   }
-
-  update(_time: number, _delta: number): void {}
 
   upgrade(): void {
     this.level++;
@@ -122,5 +149,6 @@ export class BlastBurn implements Attack {
 
   destroy(): void {
     this.timer.destroy();
+    this.activeCone = null;
   }
 }

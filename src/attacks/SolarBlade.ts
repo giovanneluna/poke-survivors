@@ -5,6 +5,13 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
+interface ActiveCone {
+  readonly sprite: Phaser.GameObjects.Sprite;
+  readonly hitEnemies: Set<number>;
+  readonly dirAngleRad: number;
+  readonly finalDamage: number;
+}
+
 /**
  * Solar Blade: lamina solar com brilho dourado e alta chance de critico.
  * Evolucao de leafBlade. Padrao cone com setRotation.
@@ -23,6 +30,7 @@ export class SolarBlade implements Attack {
   private critChance = 0.4;
   private readonly critMultiplier = 2.0;
   private readonly arcAngleDeg = 80;
+  private activeCone: ActiveCone | null = null;
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -60,20 +68,25 @@ export class SolarBlade implements Attack {
     this.scene.events.on('update', followBlade);
     blade.once('animationcomplete', () => {
       this.scene.events.off('update', followBlade);
+      this.activeCone = null;
       blade.destroy();
     });
 
     // Particulas douradas ao longo do arco
     const angleDeg = Phaser.Math.RadToDeg(dirAngleRad);
-    this.scene.add.particles(this.player.x + offsetX, this.player.y + offsetY, 'fire-particle', {
-      speed: { min: 60, max: 120 },
-      angle: { min: angleDeg - this.arcAngleDeg / 2, max: angleDeg + this.arcAngleDeg / 2 },
-      lifespan: 250,
-      quantity: 8,
-      scale: { start: 1.5, end: 0 },
-      tint: [0xffdd44, 0xffaa22, 0xffee66],
-      emitting: false,
-    }).explode();
+    const emitter = this.scene.add.particles(
+      this.player.x + offsetX, this.player.y + offsetY, 'fire-particle', {
+        speed: { min: 60, max: 120 },
+        angle: { min: angleDeg - this.arcAngleDeg / 2, max: angleDeg + this.arcAngleDeg / 2 },
+        lifespan: 250,
+        quantity: 8,
+        scale: { start: 1.5, end: 0 },
+        tint: [0xffdd44, 0xffaa22, 0xffee66],
+        emitting: false,
+      },
+    );
+    emitter.explode();
+    this.scene.time.delayedCall(350, () => emitter.destroy());
 
     // Texto de crit
     if (isCrit) {
@@ -87,32 +100,45 @@ export class SolarBlade implements Attack {
       });
     }
 
-    // Dano em arco
-    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);
+    // Dano contínuo via activeCone (update detecta inimigos a cada frame)
+    this.activeCone = {
+      sprite: blade,
+      hitEnemies: new Set<number>(),
+      dirAngleRad,
+      finalDamage,
+    };
+  }
+
+  update(_time: number, _delta: number): void {
+    if (!this.activeCone) return;
+    const { sprite, hitEnemies, dirAngleRad, finalDamage } = this.activeCone;
+    if (!sprite.active) { this.activeCone = null; return; }
+
+    const px = this.player.x;
+    const py = this.player.y;
+    const enemies = getSpatialGrid().queryRadius(px, py, this.range);
 
     for (const enemy of enemies) {
-      const angleToEnemy = Math.atan2(
-        enemy.y - this.player.y, enemy.x - this.player.x
-      );
+      const uid = (enemy.getData('uid') as number) ?? 0;
+      if (hitEnemies.has(uid)) continue;
+
+      const angleToEnemy = Math.atan2(enemy.y - py, enemy.x - px);
       const angleDiff = Math.abs(
         Phaser.Math.Angle.ShortestBetween(
           Phaser.Math.RadToDeg(dirAngleRad),
-          Phaser.Math.RadToDeg(angleToEnemy)
-        )
+          Phaser.Math.RadToDeg(angleToEnemy),
+        ),
       );
       if (angleDiff > this.arcAngleDeg / 2) continue;
 
-      if (typeof enemy.takeDamage === 'function') {
-        setDamageSource(this.type);
-        const killed = enemy.takeDamage(finalDamage);
-        if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-        }
+      hitEnemies.add(uid);
+      setDamageSource(this.type);
+      const killed = enemy.takeDamage(finalDamage);
+      if (killed) {
+        this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
       }
     }
   }
-
-  update(_time: number, _delta: number): void {}
 
   upgrade(): void {
     this.level++;
@@ -126,5 +152,8 @@ export class SolarBlade implements Attack {
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.activeCone = null;
+    this.timer.destroy();
+  }
 }

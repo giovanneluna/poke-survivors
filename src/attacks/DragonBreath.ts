@@ -5,9 +5,16 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
+interface ActiveCone {
+  readonly sprite: Phaser.GameObjects.Sprite;
+  readonly hitEnemies: Set<number>;
+  readonly dirAngleRad: number;
+  readonly dirAngleDeg: number;
+}
+
 /**
- * Dragon Breath: sopro dracônico frontal com chance de stun.
- * Cone de dano na direção do movimento, similar ao Flamethrower mas menor e com stun.
+ * Dragon Breath: sopro draconico frontal com chance de stun.
+ * Cone de dano na direcao do movimento, similar ao Flamethrower mas menor e com stun.
  */
 export class DragonBreath implements Attack {
   readonly type = 'dragonBreath' as const;
@@ -21,6 +28,7 @@ export class DragonBreath implements Attack {
   private range = 90;
   private stunChance = 0.15;
   private readonly coneAngleDeg = 45;
+  private activeCone: ActiveCone | null = null;
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -38,7 +46,7 @@ export class DragonBreath implements Attack {
     const dirAngleRad = Math.atan2(dir.y, dir.x);
     const dirAngleDeg = Phaser.Math.RadToDeg(dirAngleRad);
 
-    // Visual: sopro dracônico segue o jogador
+    // Visual: sopro draconico segue o jogador
     const offsetX = Math.cos(dirAngleRad) * 55;
     const offsetY = Math.sin(dirAngleRad) * 55;
     const breath = this.scene.add.sprite(
@@ -53,63 +61,81 @@ export class DragonBreath implements Attack {
     this.scene.events.on('update', followBreath);
     breath.once('animationcomplete', () => {
       this.scene.events.off('update', followBreath);
+      this.activeCone = null;
       breath.destroy();
     });
 
-    // Partículas dracônicas
-    this.scene.add.particles(this.player.x + offsetX, this.player.y + offsetY, 'dragon-particle', {
-      speed: { min: 120, max: 220 },
-      angle: { min: dirAngleDeg - this.coneAngleDeg / 2, max: dirAngleDeg + this.coneAngleDeg / 2 },
-      lifespan: 300, quantity: 10,
-      scale: { start: 1.5, end: 0 },
-      tint: [0x7744ff, 0x9966ff, 0xcc88ff],
-      emitting: false,
-    }).explode();
+    // Particulas draconicas
+    const emitter = this.scene.add.particles(
+      this.player.x + offsetX, this.player.y + offsetY, 'dragon-particle', {
+        speed: { min: 120, max: 220 },
+        angle: { min: dirAngleDeg - this.coneAngleDeg / 2, max: dirAngleDeg + this.coneAngleDeg / 2 },
+        lifespan: 300, quantity: 10,
+        scale: { start: 1.5, end: 0 },
+        tint: [0x7744ff, 0x9966ff, 0xcc88ff],
+        emitting: false,
+      },
+    );
+    emitter.explode();
+    this.scene.time.delayedCall(400, () => emitter.destroy());
 
-    // Dano em cone
-    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);
+    // Dano contínuo via activeCone (update detecta inimigos a cada frame)
+    this.activeCone = {
+      sprite: breath,
+      hitEnemies: new Set<number>(),
+      dirAngleRad,
+      dirAngleDeg,
+    };
+  }
+
+  update(_time: number, _delta: number): void {
+    if (!this.activeCone) return;
+    const { sprite, hitEnemies, dirAngleDeg } = this.activeCone;
+    if (!sprite.active) { this.activeCone = null; return; }
+
+    const px = this.player.x;
+    const py = this.player.y;
+    const enemies = getSpatialGrid().queryRadius(px, py, this.range);
 
     for (const enemy of enemies) {
-      const dist = Phaser.Math.Distance.Between(
-        this.player.x, this.player.y, enemy.x, enemy.y
-      );
+      const uid = (enemy.getData('uid') as number) ?? 0;
+      if (hitEnemies.has(uid)) continue;
+
+      const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
 
       let inCone = dist < 25;
       if (!inCone) {
-        const angleToEnemy = Math.atan2(
-          enemy.y - this.player.y, enemy.x - this.player.x
-        );
+        const angleToEnemy = Math.atan2(enemy.y - py, enemy.x - px);
         const angleDiff = Math.abs(
-          Phaser.Math.Angle.ShortestBetween(dirAngleDeg, Phaser.Math.RadToDeg(angleToEnemy))
+          Phaser.Math.Angle.ShortestBetween(dirAngleDeg, Phaser.Math.RadToDeg(angleToEnemy)),
         );
         inCone = angleDiff <= this.coneAngleDeg / 2;
       }
 
-      if (inCone) {
-        if (typeof enemy.takeDamage === 'function') {
-          setDamageSource(this.type);
-          const killed = enemy.takeDamage(this.damage);
-          if (killed) {
-            this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
+      if (!inCone) continue;
+
+      hitEnemies.add(uid);
+      setDamageSource(this.type);
+      const killed = enemy.takeDamage(this.damage);
+      if (killed) {
+        this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
+        continue;
+      }
+
+      // Stun: paralisa o inimigo brevemente
+      if (Math.random() < this.stunChance) {
+        enemy.setTint(0x7744ff);
+        const body = enemy.body as Phaser.Physics.Arcade.Body;
+        body.setVelocity(0, 0);
+        this.scene.time.delayedCall(800, () => {
+          if (enemy.active) {
+            enemy.clearTint();
+            // Velocidade sera restaurada no proximo moveToward()
           }
-          // Stun: paralisa o inimigo brevemente
-          if (!killed && Math.random() < this.stunChance) {
-            enemy.setTint(0x7744ff);
-            const body = enemy.body as Phaser.Physics.Arcade.Body;
-            body.setVelocity(0, 0);
-            this.scene.time.delayedCall(800, () => {
-              if (enemy.active) {
-                enemy.clearTint();
-                // Velocidade será restaurada no próximo moveToward()
-              }
-            });
-          }
-        }
+        });
       }
     }
   }
-
-  update(_time: number, _delta: number): void {}
 
   upgrade(): void {
     this.level++;
@@ -123,5 +149,8 @@ export class DragonBreath implements Attack {
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.activeCone = null;
+    this.timer.destroy();
+  }
 }

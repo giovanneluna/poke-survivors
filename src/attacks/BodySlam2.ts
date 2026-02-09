@@ -5,6 +5,12 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
+interface ActiveDash {
+  sprite: Phaser.GameObjects.Sprite;
+  hitEnemies: Set<number>;
+  angle: number;
+}
+
 /**
  * Body Slam 2: dash pesado na direcao do movimento (Bulbasaur line).
  * Evolucao de tackle. Usa sprite unico com setRotation (sem variantes direcionais).
@@ -23,6 +29,7 @@ export class BodySlam2 implements Attack {
   private dashDistance = 100;
   private stunDuration = 500;
   private readonly dashWidth = 30;
+  private activeDash: ActiveDash | null = null;
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -39,11 +46,6 @@ export class BodySlam2 implements Attack {
     const dir = this.player.getLastDirection();
     const angle = Math.atan2(dir.y, dir.x);
 
-    const startX = this.player.x;
-    const startY = this.player.y;
-    const endX = startX + Math.cos(angle) * this.dashDistance;
-    const endY = startY + Math.sin(angle) * this.dashDistance;
-
     // Sprite com rotacao (sem variantes direcionais)
     const slamSprite = this.scene.add.sprite(this.player.x, this.player.y, 'atk-wood-hammer');
     slamSprite.setRotation(angle);
@@ -59,10 +61,15 @@ export class BodySlam2 implements Attack {
     this.scene.events.on('update', followSlam);
     slamSprite.once('animationcomplete', () => {
       this.scene.events.off('update', followSlam);
+      this.activeDash = null;
       slamSprite.destroy();
     });
 
-    // Trail de impacto ao longo do caminho
+    // Trail de impacto ao longo do caminho (fix leak: destroy after explode)
+    const startX = this.player.x;
+    const startY = this.player.y;
+    const endX = startX + Math.cos(angle) * this.dashDistance;
+    const endY = startY + Math.sin(angle) * this.dashDistance;
     const steps = 5;
     for (let i = 0; i < steps; i++) {
       const t = i / steps;
@@ -70,44 +77,64 @@ export class BodySlam2 implements Attack {
       const py = startY + (endY - startY) * t;
 
       this.scene.time.delayedCall(i * 30, () => {
-        this.scene.add.particles(px, py, 'fire-particle', {
+        const trailParticles = this.scene.add.particles(px, py, 'fire-particle', {
           speed: { min: 15, max: 40 },
           lifespan: 250,
           quantity: 3,
           scale: { start: 1.2, end: 0 },
           tint: [0xccddff, 0xffffff, 0x88bbff],
           emitting: false,
-        }).explode();
+        });
+        trailParticles.explode();
+        this.scene.time.delayedCall(350, () => trailParticles.destroy());
       });
     }
 
-    // Dano a inimigos no caminho (perpendicular distance check)
-    const enemies = getSpatialGrid().getActiveEnemies();
+    // Registra dash ativo — dano aplicado em update()
+    this.activeDash = {
+      sprite: slamSprite,
+      hitEnemies: new Set<number>(),
+      angle,
+    };
 
-    const dx = endX - startX;
-    const dy = endY - startY;
+    // Speed boost temporario
+    this.player.stats.speed = Math.floor(this.player.stats.baseSpeed * 1.3);
+    this.scene.time.delayedCall(500, () => {
+      this.player.stats.speed = this.player.stats.baseSpeed;
+    });
+  }
+
+  update(_time: number, _delta: number): void {
+    if (!this.activeDash) return;
+    const { sprite, hitEnemies, angle } = this.activeDash;
+    if (!sprite.active) { this.activeDash = null; return; }
+
+    const px = this.player.x;
+    const py = this.player.y;
+    const endX = px + Math.cos(angle) * this.dashDistance;
+    const endY = py + Math.sin(angle) * this.dashDistance;
+    const dx = endX - px;
+    const dy = endY - py;
     const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) return;
+
+    const enemies = getSpatialGrid().queryRadius(px, py, this.dashDistance + 20);
 
     for (const enemy of enemies) {
-      // Verificar se esta perto da linha de dash
-      const distToMid = Phaser.Math.Distance.Between(
-        enemy.x, enemy.y,
-        (startX + endX) / 2, (startY + endY) / 2
-      );
-      if (distToMid > this.dashDistance * 0.7) continue;
+      const uid = (enemy.getData('uid') as number) ?? 0;
+      if (hitEnemies.has(uid)) continue;
 
-      if (len === 0) continue;
-      const perpDist = Math.abs(
-        (dy * (enemy.x - startX) - dx * (enemy.y - startY)) / len
-      );
+      const perpDist = Math.abs((dy * (enemy.x - px) - dx * (enemy.y - py)) / len);
       if (perpDist > this.dashWidth) continue;
 
-      if (typeof enemy.takeDamage === 'function') {
-        setDamageSource(this.type);
-        const killed = enemy.takeDamage(this.damage);
-        if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-        }
+      const projT = ((enemy.x - px) * dx + (enemy.y - py) * dy) / (len * len);
+      if (projT < -0.1 || projT > 1.1) continue;
+
+      hitEnemies.add(uid);
+      setDamageSource(this.type);
+      const killed = enemy.takeDamage(this.damage);
+      if (killed) {
+        this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
       }
 
       // Stun: zera velocidade e aplica tint amarelo
@@ -120,15 +147,7 @@ export class BodySlam2 implements Attack {
         });
       }
     }
-
-    // Speed boost temporario
-    this.player.stats.speed = Math.floor(this.player.stats.baseSpeed * 1.3);
-    this.scene.time.delayedCall(500, () => {
-      this.player.stats.speed = this.player.stats.baseSpeed;
-    });
   }
-
-  update(_time: number, _delta: number): void {}
 
   upgrade(): void {
     this.level++;
@@ -142,5 +161,8 @@ export class BodySlam2 implements Attack {
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.timer.destroy();
+    this.activeDash = null;
+  }
 }

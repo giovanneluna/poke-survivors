@@ -31,6 +31,14 @@ const DIR_ORIGIN: Record<CardinalDir, { x: number; y: number }> = {
   right: { x: 0, y: 0.5 },
 };
 
+interface ActiveCone {
+  readonly sprite: Phaser.GameObjects.Sprite;
+  readonly hitEnemies: Set<number>;
+  readonly dirAngleRad: number;
+  readonly finalDamage: number;
+  readonly isCrit: boolean;
+}
+
 /**
  * Crabhammer: evolucao do Aqua Tail.
  * Cone melee com 50% de chance de critico (2.5x dano).
@@ -51,6 +59,7 @@ export class Crabhammer implements Attack {
   private critChance = 0.5;
   private readonly critMultiplier = 2.5;
   private readonly arcAngleDeg = 100;
+  private activeCone: ActiveCone | null = null;
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -94,6 +103,7 @@ export class Crabhammer implements Attack {
     this.scene.events.on('update', followClaw);
     claw.once('animationcomplete', () => {
       this.scene.events.off('update', followClaw);
+      this.activeCone = null;
       claw.destroy();
     });
 
@@ -102,7 +112,7 @@ export class Crabhammer implements Attack {
       ? [0xffffff, 0x88ddff, 0x44aaff, 0x66ccff]
       : [0x3388ff, 0x44aaff, 0x66ccff];
 
-    this.scene.add.particles(
+    const emitter = this.scene.add.particles(
       this.player.x + offset.x, this.player.y + offset.y, 'water-particle', {
         speed: { min: 30, max: 80 },
         lifespan: 200,
@@ -110,8 +120,10 @@ export class Crabhammer implements Attack {
         scale: { start: isCrit ? 2 : 1.2, end: 0 },
         tint: particleTints,
         emitting: false,
-      }
-    ).explode();
+      },
+    );
+    emitter.explode();
+    this.scene.time.delayedCall(300, () => emitter.destroy());
 
     // Efeitos de crit: texto + screen shake
     if (isCrit) {
@@ -127,40 +139,55 @@ export class Crabhammer implements Attack {
       this.scene.cameras.main.shake(50, 0.002);
     }
 
-    // Dano em arco
-    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);
+    // Dano contínuo via activeCone (update detecta inimigos a cada frame)
+    this.activeCone = {
+      sprite: claw,
+      hitEnemies: new Set<number>(),
+      dirAngleRad,
+      finalDamage,
+      isCrit,
+    };
+  }
+
+  update(_time: number, _delta: number): void {
+    if (!this.activeCone) return;
+    const { sprite, hitEnemies, dirAngleRad, finalDamage, isCrit } = this.activeCone;
+    if (!sprite.active) { this.activeCone = null; return; }
+
+    const px = this.player.x;
+    const py = this.player.y;
+    const enemies = getSpatialGrid().queryRadius(px, py, this.range);
 
     for (const enemy of enemies) {
-      const angleToEnemy = Math.atan2(
-        enemy.y - this.player.y, enemy.x - this.player.x
-      );
+      const uid = (enemy.getData('uid') as number) ?? 0;
+      if (hitEnemies.has(uid)) continue;
+
+      const angleToEnemy = Math.atan2(enemy.y - py, enemy.x - px);
       const angleDiff = Math.abs(
         Phaser.Math.Angle.ShortestBetween(
           Phaser.Math.RadToDeg(dirAngleRad),
-          Phaser.Math.RadToDeg(angleToEnemy)
-        )
+          Phaser.Math.RadToDeg(angleToEnemy),
+        ),
       );
       if (angleDiff > this.arcAngleDeg / 2) continue;
 
-      if (typeof enemy.takeDamage === 'function') {
-        // Flash branco no crit
-        if (isCrit) {
-          enemy.setTint(0xffffff);
-          this.scene.time.delayedCall(120, () => {
-            if (enemy.active) enemy.clearTint();
-          });
-        }
+      hitEnemies.add(uid);
 
-        setDamageSource(this.type);
-        const killed = enemy.takeDamage(finalDamage);
-        if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-        }
+      // Flash branco no crit
+      if (isCrit) {
+        enemy.setTint(0xffffff);
+        this.scene.time.delayedCall(120, () => {
+          if (enemy.active) enemy.clearTint();
+        });
+      }
+
+      setDamageSource(this.type);
+      const killed = enemy.takeDamage(finalDamage);
+      if (killed) {
+        this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
       }
     }
   }
-
-  update(_time: number, _delta: number): void {}
 
   upgrade(): void {
     this.level++;
@@ -174,5 +201,8 @@ export class Crabhammer implements Attack {
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.activeCone = null;
+    this.timer.destroy();
+  }
 }

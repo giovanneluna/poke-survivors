@@ -5,9 +5,15 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
+interface ActiveCone {
+  readonly sprite: Phaser.GameObjects.Sprite;
+  readonly hitEnemies: Set<number>;
+  readonly dirAngleRad: number;
+}
+
 /**
- * Leaf Blade: lâmina vegetal direcional com alta chance de crítico.
- * Padrão cone (Scratch-like) — arco estreito, dano alto, 30% crit.
+ * Leaf Blade: lamina vegetal direcional com alta chance de critico.
+ * Padrao cone (Scratch-like) — arco estreito, dano alto, 30% crit.
  * Crit aplica 1.5x dano + flash amarelo visual.
  * Ivysaur (stage1).
  */
@@ -23,6 +29,7 @@ export class LeafBlade implements Attack {
   private range = 60;
   private readonly arcAngleDeg = 70;
   private critChance = 0.3;
+  private activeCone: ActiveCone | null = null;
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -39,7 +46,7 @@ export class LeafBlade implements Attack {
     const dir = this.player.getLastDirection();
     const dirAngleRad = Math.atan2(dir.y, dir.x);
 
-    // Visual: sprite de lâmina na direção
+    // Visual: sprite de lamina na direcao
     const offsetX = Math.cos(dirAngleRad) * 30;
     const offsetY = Math.sin(dirAngleRad) * 30;
     const blade = this.scene.add.sprite(
@@ -55,34 +62,50 @@ export class LeafBlade implements Attack {
     this.scene.events.on('update', followBlade);
     blade.once('animationcomplete', () => {
       this.scene.events.off('update', followBlade);
+      this.activeCone = null;
       blade.destroy();
     });
 
-    // Dano em arco estreito
-    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);
+    // Dano contínuo via activeCone (update detecta inimigos a cada frame)
+    this.activeCone = {
+      sprite: blade,
+      hitEnemies: new Set<number>(),
+      dirAngleRad,
+    };
+  }
+
+  update(_time: number, _delta: number): void {
+    if (!this.activeCone) return;
+    const { sprite, hitEnemies, dirAngleRad } = this.activeCone;
+    if (!sprite.active) { this.activeCone = null; return; }
+
+    const px = this.player.x;
+    const py = this.player.y;
+    const enemies = getSpatialGrid().queryRadius(px, py, this.range);
 
     for (const enemy of enemies) {
-      const angleToEnemy = Math.atan2(
-        enemy.y - this.player.y, enemy.x - this.player.x
-      );
+      const uid = (enemy.getData('uid') as number) ?? 0;
+      if (hitEnemies.has(uid)) continue;
+
+      const angleToEnemy = Math.atan2(enemy.y - py, enemy.x - px);
       const angleDiff = Math.abs(
         Phaser.Math.Angle.ShortestBetween(
           Phaser.Math.RadToDeg(dirAngleRad),
-          Phaser.Math.RadToDeg(angleToEnemy)
-        )
+          Phaser.Math.RadToDeg(angleToEnemy),
+        ),
       );
       if (angleDiff > this.arcAngleDeg / 2) continue;
 
-      // Crit check
+      hitEnemies.add(uid);
+
+      // Crit check per-enemy
       const isCrit = Math.random() < this.critChance;
       const finalDmg = isCrit ? Math.floor(this.damage * 1.5) : this.damage;
 
-      if (typeof enemy.takeDamage === 'function') {
-        setDamageSource(this.type);
-        const killed = enemy.takeDamage(finalDmg);
-        if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-        }
+      setDamageSource(this.type);
+      const killed = enemy.takeDamage(finalDmg);
+      if (killed) {
+        this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
       }
 
       // Visual flash on crit
@@ -94,8 +117,6 @@ export class LeafBlade implements Attack {
       }
     }
   }
-
-  update(_time: number, _delta: number): void {}
 
   upgrade(): void {
     this.level++;
@@ -109,5 +130,8 @@ export class LeafBlade implements Attack {
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.activeCone = null;
+    this.timer.destroy();
+  }
 }

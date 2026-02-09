@@ -5,10 +5,16 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
+interface ActiveCone {
+  sprite: Phaser.GameObjects.Sprite;
+  hitEnemies: Set<number>;
+  dirAngleRad: number;
+}
+
 /**
  * Hydro Pump: jato direcional devastador.
- * Cone de dano focado (arco estreito, alcance longo) na direção do movimento.
- * Equivalente ao Flamethrower para a linha Water.
+ * Cone de dano focado (arco estreito, alcance longo) na direcao do movimento.
+ * Dano aplicado continuamente durante a animacao (segue o jogador).
  * Wartortle tier (minForm: stage1).
  */
 export class HydroPump implements Attack {
@@ -22,6 +28,7 @@ export class HydroPump implements Attack {
   private cooldown: number;
   private range = 80;
   private coneAngleDeg = 60;
+  private activeCone: ActiveCone | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -45,7 +52,7 @@ export class HydroPump implements Attack {
     const dirAngleRad = Math.atan2(dir.y, dir.x);
     const dirAngleDeg = Phaser.Math.RadToDeg(dirAngleRad);
 
-    // Sprite animado de Hydro Pump na direção do ataque
+    // Sprite animado de Hydro Pump na direcao do ataque
     const offsetX = Math.cos(dirAngleRad) * 40;
     const offsetY = Math.sin(dirAngleRad) * 40;
     const beam = this.scene.add.sprite(
@@ -58,13 +65,22 @@ export class HydroPump implements Attack {
       if (beam.active) beam.setPosition(this.player.x + offsetX, this.player.y + offsetY);
     };
     this.scene.events.on('update', followBeam);
+
+    // Ativar hit detection continua
+    this.activeCone = {
+      sprite: beam,
+      hitEnemies: new Set(),
+      dirAngleRad,
+    };
+
     beam.once('animationcomplete', () => {
       this.scene.events.off('update', followBeam);
+      this.activeCone = null;
       beam.destroy();
     });
 
-    // Partículas ao longo do jato
-    this.scene.add.particles(this.player.x, this.player.y, 'water-particle', {
+    // Particulas ao longo do jato
+    const particles = this.scene.add.particles(this.player.x, this.player.y, 'water-particle', {
       speed: { min: 150, max: 250 },
       angle: { min: dirAngleDeg - this.coneAngleDeg / 2, max: dirAngleDeg + this.coneAngleDeg / 2 },
       lifespan: 300,
@@ -72,47 +88,48 @@ export class HydroPump implements Attack {
       scale: { start: 2, end: 0.3 },
       tint: [0x3388ff, 0x44aaff, 0x66ccff],
       emitting: false,
-    }).explode();
-
-    // Dano em cone: atinge TODOS os inimigos na area
-    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);
-
-    for (const enemy of enemies) {
-      const dist = Phaser.Math.Distance.Between(
-        this.player.x, this.player.y,
-        enemy.x, enemy.y
-      );
-
-      // Inimigos muito perto sempre são atingidos (evita bug de ângulo a dist ~0)
-      let inCone = dist < 25;
-      if (!inCone) {
-        const angleToEnemy = Math.atan2(
-          enemy.y - this.player.y,
-          enemy.x - this.player.x
-        );
-        const angleDiff = Math.abs(
-          Phaser.Math.Angle.ShortestBetween(
-            dirAngleDeg,
-            Phaser.Math.RadToDeg(angleToEnemy)
-          )
-        );
-        inCone = angleDiff <= this.coneAngleDeg / 2;
-      }
-
-      if (inCone) {
-        if (typeof enemy.takeDamage === 'function') {
-          setDamageSource(this.type);
-          const killed = enemy.takeDamage(this.damage);
-          if (killed) {
-            this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-          }
-        }
-      }
-    }
+    });
+    particles.explode();
+    this.scene.time.delayedCall(400, () => particles.destroy());
   }
 
   update(_time: number, _delta: number): void {
-    // Timer-based, sem update por frame
+    if (!this.activeCone) return;
+    const { sprite, hitEnemies, dirAngleRad } = this.activeCone;
+    if (!sprite.active) { this.activeCone = null; return; }
+
+    const px = this.player.x;
+    const py = this.player.y;
+    const enemies = getSpatialGrid().queryRadius(px, py, this.range);
+    const halfCone = this.coneAngleDeg / 2;
+
+    for (const enemy of enemies) {
+      const uid = (enemy.getData('uid') as number) ?? 0;
+      if (hitEnemies.has(uid)) continue;
+
+      const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
+
+      // Inimigos muito perto sempre sao atingidos (evita bug de angulo a dist ~0)
+      let inCone = dist < 25;
+      if (!inCone) {
+        const angleToEnemy = Math.atan2(enemy.y - py, enemy.x - px);
+        const angleDiff = Math.abs(
+          Phaser.Math.Angle.ShortestBetween(
+            Phaser.Math.RadToDeg(dirAngleRad),
+            Phaser.Math.RadToDeg(angleToEnemy)
+          )
+        );
+        inCone = angleDiff <= halfCone;
+      }
+      if (!inCone) continue;
+
+      hitEnemies.add(uid);
+      setDamageSource(this.type);
+      const killed = enemy.takeDamage(this.damage);
+      if (killed) {
+        this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
+      }
+    }
   }
 
   upgrade(): void {
@@ -131,5 +148,6 @@ export class HydroPump implements Attack {
 
   destroy(): void {
     this.timer.destroy();
+    this.activeCone = null;
   }
 }

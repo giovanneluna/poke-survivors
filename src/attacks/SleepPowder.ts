@@ -5,6 +5,12 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
+interface ActiveCone {
+  sprite: Phaser.GameObjects.Sprite;
+  hitEnemies: Set<number>;
+  dirAngleRad: number;
+}
+
 /**
  * Sleep Powder: cone de esporos soporíferos que aplica slow pesado.
  * Padrão cone (Scratch-like) mas sem dano significativo — foco em
@@ -23,6 +29,7 @@ export class SleepPowder implements Attack {
   private readonly arcAngleDeg = 120;
   private slowDuration = 2000;
   private readonly slowScale = 0.2; // 80% slow (velocity * 0.2)
+  private activeCone: ActiveCone | null = null;
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -54,16 +61,32 @@ export class SleepPowder implements Attack {
     this.scene.events.on('update', followSpore);
     spore.once('animationcomplete', () => {
       this.scene.events.off('update', followSpore);
+      this.activeCone = null;
       spore.destroy();
     });
 
-    // Aplica slow em arco
-    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);
+    // Registra cone ativo para update() aplicar slow continuamente
+    this.activeCone = {
+      sprite: spore,
+      hitEnemies: new Set<number>(),
+      dirAngleRad,
+    };
+  }
+
+  update(_time: number, _delta: number): void {
+    if (!this.activeCone) return;
+    const { sprite, hitEnemies, dirAngleRad } = this.activeCone;
+    if (!sprite.active) { this.activeCone = null; return; }
+
+    const px = this.player.x;
+    const py = this.player.y;
+    const enemies = getSpatialGrid().queryRadius(px, py, this.range);
 
     for (const enemy of enemies) {
-      const angleToEnemy = Math.atan2(
-        enemy.y - this.player.y, enemy.x - this.player.x
-      );
+      const uid = (enemy.getData('uid') as number) ?? 0;
+      if (hitEnemies.has(uid)) continue;
+
+      const angleToEnemy = Math.atan2(enemy.y - py, enemy.x - px);
       const angleDiff = Math.abs(
         Phaser.Math.Angle.ShortestBetween(
           Phaser.Math.RadToDeg(dirAngleRad),
@@ -72,28 +95,22 @@ export class SleepPowder implements Attack {
       );
       if (angleDiff > this.arcAngleDeg / 2) continue;
 
+      hitEnemies.add(uid);
+
       // Aplica slow visual + mecânico
       enemy.setTint(0x66cc44);
       const body = enemy.body as Phaser.Physics.Arcade.Body;
       body.velocity.scale(this.slowScale);
 
-      // Emite evento de kill para qualquer ataque que cause dano 0 (se a spec mudar)
-      if (typeof enemy.takeDamage === 'function') {
-        setDamageSource(this.type);
-        const killed = enemy.takeDamage(0);
-        if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-        }
-      }
+      setDamageSource(this.type);
+      enemy.takeDamage(0);
 
-      // Remove tint e slow após duração
+      // Remove tint após duração
       this.scene.time.delayedCall(this.slowDuration, () => {
         if (enemy.active) enemy.clearTint();
       });
     }
   }
-
-  update(_time: number, _delta: number): void {}
 
   upgrade(): void {
     this.level++;
@@ -106,5 +123,8 @@ export class SleepPowder implements Attack {
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.timer.destroy();
+    this.activeCone = null;
+  }
 }

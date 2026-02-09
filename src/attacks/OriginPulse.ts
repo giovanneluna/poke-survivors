@@ -5,6 +5,12 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
+interface ActiveCone {
+  sprite: Phaser.GameObjects.Sprite;
+  hitEnemies: Set<number>;
+  dirAngleRad: number;
+}
+
 /**
  * Origin Pulse: evolucao do Hydro Pump.
  * Cone beam massivo que perfura TODOS os inimigos na direcao.
@@ -24,6 +30,7 @@ export class OriginPulse implements Attack {
   private readonly coneAngleDeg = 50;
   private readonly lingerDurationMs = 1500;
   private readonly lingerTickMs = 300;
+  private activeCone: ActiveCone | null = null;
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -63,12 +70,13 @@ export class OriginPulse implements Attack {
       duration: 900,
       onComplete: () => {
         this.scene.events.off('update', followBeam);
+        this.activeCone = null;
         beam.destroy();
       },
     });
 
-    // Particulas de agua ao longo do cone
-    this.scene.add.particles(this.player.x, this.player.y, 'water-particle', {
+    // Particulas de agua ao longo do cone (fix leak: destroy after explode)
+    const coneParticles = this.scene.add.particles(this.player.x, this.player.y, 'water-particle', {
       speed: { min: 200, max: 400 },
       angle: { min: dirAngleDeg - this.coneAngleDeg / 2, max: dirAngleDeg + this.coneAngleDeg / 2 },
       lifespan: 400,
@@ -76,45 +84,21 @@ export class OriginPulse implements Attack {
       scale: { start: 3, end: 0.3 },
       tint: [0x3388ff, 0x44aaff, 0x0044ff, 0x66ccff],
       emitting: false,
-    }).explode();
+    });
+    coneParticles.explode();
+    this.scene.time.delayedCall(500, () => coneParticles.destroy());
 
     // Shake da camera
     this.scene.cameras.main.shake(200, 0.004);
 
-    // Dano em cone: perfura TODOS os inimigos
-    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);
+    // Registra cone ativo — dano aplicado em update()
+    this.activeCone = {
+      sprite: beam,
+      hitEnemies: new Set<number>(),
+      dirAngleRad,
+    };
 
-    for (const enemy of enemies) {
-      const dist = Phaser.Math.Distance.Between(
-        this.player.x, this.player.y, enemy.x, enemy.y
-      );
-
-      let inCone = dist < 25;
-      if (!inCone) {
-        const angleToEnemy = Math.atan2(
-          enemy.y - this.player.y, enemy.x - this.player.x
-        );
-        const angleDiff = Math.abs(
-          Phaser.Math.Angle.ShortestBetween(
-            Phaser.Math.RadToDeg(dirAngleRad),
-            Phaser.Math.RadToDeg(angleToEnemy)
-          )
-        );
-        inCone = angleDiff <= this.coneAngleDeg / 2;
-      }
-
-      if (inCone) {
-        if (typeof enemy.takeDamage === 'function') {
-          setDamageSource(this.type);
-          const killed = enemy.takeDamage(this.damage);
-          if (killed) {
-            this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-          }
-        }
-      }
-    }
-
-    // Campo de agua residual ao longo do beam (lingering water field)
+    // Campo de agua residual ao longo do beam (posicoes fixas — correto)
     this.spawnLingerField(dirAngleRad);
   }
 
@@ -142,26 +126,26 @@ export class OriginPulse implements Attack {
         callback: () => {
           tickCount++;
 
-          // Particulas de tick
-          this.scene.add.particles(px, py, 'water-particle', {
+          // Particulas de tick (fix leak: destroy after explode)
+          const tickParticles = this.scene.add.particles(px, py, 'water-particle', {
             speed: { min: 10, max: 30 },
             lifespan: 200,
             quantity: 2,
             scale: { start: 1, end: 0 },
             tint: [0x3388ff, 0x44aaff],
             emitting: false,
-          }).explode();
+          });
+          tickParticles.explode();
+          this.scene.time.delayedCall(300, () => tickParticles.destroy());
 
           // Dano AoE na zona
           const nearbyEnemies = getSpatialGrid().queryRadius(px, py, 30);
 
           for (const enemy of nearbyEnemies) {
-            if (typeof enemy.takeDamage === 'function') {
-              setDamageSource(this.type);
-              const killed = enemy.takeDamage(tickDamage);
-              if (killed) {
-                this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-              }
+            setDamageSource(this.type);
+            const killed = enemy.takeDamage(tickDamage);
+            if (killed) {
+              this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
             }
           }
 
@@ -181,7 +165,43 @@ export class OriginPulse implements Attack {
     }
   }
 
-  update(_time: number, _delta: number): void {}
+  update(_time: number, _delta: number): void {
+    if (!this.activeCone) return;
+    const { sprite, hitEnemies, dirAngleRad } = this.activeCone;
+    if (!sprite.active) { this.activeCone = null; return; }
+
+    const px = this.player.x;
+    const py = this.player.y;
+    const enemies = getSpatialGrid().queryRadius(px, py, this.range);
+
+    for (const enemy of enemies) {
+      const uid = (enemy.getData('uid') as number) ?? 0;
+      if (hitEnemies.has(uid)) continue;
+
+      const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
+
+      let inCone = dist < 25;
+      if (!inCone) {
+        const angleToEnemy = Math.atan2(enemy.y - py, enemy.x - px);
+        const angleDiff = Math.abs(
+          Phaser.Math.Angle.ShortestBetween(
+            Phaser.Math.RadToDeg(dirAngleRad),
+            Phaser.Math.RadToDeg(angleToEnemy)
+          )
+        );
+        inCone = angleDiff <= this.coneAngleDeg / 2;
+      }
+
+      if (inCone) {
+        hitEnemies.add(uid);
+        setDamageSource(this.type);
+        const killed = enemy.takeDamage(this.damage);
+        if (killed) {
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
+        }
+      }
+    }
+  }
 
   upgrade(): void {
     this.level++;
@@ -196,5 +216,6 @@ export class OriginPulse implements Attack {
 
   destroy(): void {
     this.timer.destroy();
+    this.activeCone = null;
   }
 }

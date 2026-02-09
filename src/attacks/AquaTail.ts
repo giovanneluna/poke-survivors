@@ -36,6 +36,14 @@ const OPPOSITE: Record<CardinalDir, CardinalDir> = {
   up: 'down', down: 'up', left: 'right', right: 'left',
 };
 
+interface ActiveCone {
+  readonly sprite: Phaser.GameObjects.Sprite;
+  readonly hitEnemies: Set<number>;
+  readonly dirAngleRad: number;
+  readonly tailAngleRad: number;
+  readonly finalDamage: number;
+}
+
 /**
  * Aqua Tail: cauda aquática com alta chance de crítico.
  * Arco de dano amplo (120°) e curto alcance, com sprite water-wave direcional.
@@ -56,6 +64,7 @@ export class AquaTail implements Attack {
   private critChance = 0.15;
   private readonly critMultiplier = 2;
   private readonly arcAngleDeg = 120;
+  private activeCone: ActiveCone | null = null;
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -99,6 +108,7 @@ export class AquaTail implements Attack {
     this.scene.events.on('update', followTail);
     tail.once('animationcomplete', () => {
       this.scene.events.off('update', followTail);
+      this.activeCone = null;
       tail.destroy();
     });
 
@@ -114,33 +124,47 @@ export class AquaTail implements Attack {
       });
     }
 
-    // Dano em arco ATRÁS do jogador (180° oposto à direção de movimento)
+    // Dano contínuo via activeCone (update detecta inimigos a cada frame)
     const tailAngleRad = dirAngleRad + Math.PI;
-    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);
+    this.activeCone = {
+      sprite: tail,
+      hitEnemies: new Set<number>(),
+      dirAngleRad,
+      tailAngleRad,
+      finalDamage,
+    };
+  }
+
+  update(_time: number, _delta: number): void {
+    if (!this.activeCone) return;
+    const { sprite, hitEnemies, tailAngleRad, finalDamage } = this.activeCone;
+    if (!sprite.active) { this.activeCone = null; return; }
+
+    const px = this.player.x;
+    const py = this.player.y;
+    const enemies = getSpatialGrid().queryRadius(px, py, this.range);
 
     for (const enemy of enemies) {
-      const angleToEnemy = Math.atan2(
-        enemy.y - this.player.y, enemy.x - this.player.x
-      );
+      const uid = (enemy.getData('uid') as number) ?? 0;
+      if (hitEnemies.has(uid)) continue;
+
+      const angleToEnemy = Math.atan2(enemy.y - py, enemy.x - px);
       const angleDiff = Math.abs(
         Phaser.Math.Angle.ShortestBetween(
           Phaser.Math.RadToDeg(tailAngleRad),
-          Phaser.Math.RadToDeg(angleToEnemy)
-        )
+          Phaser.Math.RadToDeg(angleToEnemy),
+        ),
       );
       if (angleDiff > this.arcAngleDeg / 2) continue;
 
-      if (typeof enemy.takeDamage === 'function') {
-        setDamageSource(this.type);
-        const killed = enemy.takeDamage(finalDamage);
-        if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-        }
+      hitEnemies.add(uid);
+      setDamageSource(this.type);
+      const killed = enemy.takeDamage(finalDamage);
+      if (killed) {
+        this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
       }
     }
   }
-
-  update(_time: number, _delta: number): void {}
 
   upgrade(): void {
     this.level++;
@@ -154,5 +178,8 @@ export class AquaTail implements Attack {
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.activeCone = null;
+    this.timer.destroy();
+  }
 }

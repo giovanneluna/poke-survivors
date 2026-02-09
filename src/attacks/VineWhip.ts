@@ -5,9 +5,15 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
+interface ActiveCone {
+  sprite: Phaser.GameObjects.Sprite;
+  hitEnemies: Set<number>;
+  dirAngleRad: number;
+}
+
 /**
- * Vine Whip: chicotada de vinha na direção do movimento.
- * Padrão cone (Scratch-like) — dano instantâneo em arco frontal.
+ * Vine Whip: chicotada de vinha na direcao do movimento.
+ * Padrao cone (Scratch-like) — dano continuo em arco frontal (segue o jogador).
  * Bulbasaur base.
  */
 export class VineWhip implements Attack {
@@ -21,6 +27,7 @@ export class VineWhip implements Attack {
   private cooldown: number;
   private range = 65;
   private readonly arcAngleDeg = 90;
+  private activeCone: ActiveCone | null = null;
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -37,7 +44,7 @@ export class VineWhip implements Attack {
     const dir = this.player.getLastDirection();
     const dirAngleRad = Math.atan2(dir.y, dir.x);
 
-    // Visual: sprite de vinha na direção
+    // Visual: sprite de vinha na direcao
     const offsetX = Math.cos(dirAngleRad) * 30;
     const offsetY = Math.sin(dirAngleRad) * 30;
     const vine = this.scene.add.sprite(
@@ -51,18 +58,35 @@ export class VineWhip implements Attack {
       if (vine.active) vine.setPosition(this.player.x + offsetX, this.player.y + offsetY);
     };
     this.scene.events.on('update', followVine);
+
+    // Ativar hit detection continua
+    this.activeCone = {
+      sprite: vine,
+      hitEnemies: new Set(),
+      dirAngleRad,
+    };
+
     vine.once('animationcomplete', () => {
       this.scene.events.off('update', followVine);
+      this.activeCone = null;
       vine.destroy();
     });
+  }
 
-    // Dano em arco
-    const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);
+  update(_time: number, _delta: number): void {
+    if (!this.activeCone) return;
+    const { sprite, hitEnemies, dirAngleRad } = this.activeCone;
+    if (!sprite.active) { this.activeCone = null; return; }
+
+    const px = this.player.x;
+    const py = this.player.y;
+    const enemies = getSpatialGrid().queryRadius(px, py, this.range);
 
     for (const enemy of enemies) {
-      const angleToEnemy = Math.atan2(
-        enemy.y - this.player.y, enemy.x - this.player.x
-      );
+      const uid = (enemy.getData('uid') as number) ?? 0;
+      if (hitEnemies.has(uid)) continue;
+
+      const angleToEnemy = Math.atan2(enemy.y - py, enemy.x - px);
       const angleDiff = Math.abs(
         Phaser.Math.Angle.ShortestBetween(
           Phaser.Math.RadToDeg(dirAngleRad),
@@ -71,17 +95,14 @@ export class VineWhip implements Attack {
       );
       if (angleDiff > this.arcAngleDeg / 2) continue;
 
-      if (typeof enemy.takeDamage === 'function') {
-        setDamageSource(this.type);
-        const killed = enemy.takeDamage(this.damage);
-        if (killed) {
-          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-        }
+      hitEnemies.add(uid);
+      setDamageSource(this.type);
+      const killed = enemy.takeDamage(this.damage);
+      if (killed) {
+        this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
       }
     }
   }
-
-  update(_time: number, _delta: number): void {}
 
   upgrade(): void {
     this.level++;
@@ -94,5 +115,8 @@ export class VineWhip implements Attack {
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.timer.destroy();
+    this.activeCone = null;
+  }
 }

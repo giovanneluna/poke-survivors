@@ -5,6 +5,12 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
+interface ActiveCone {
+  sprite: Phaser.GameObjects.Sprite;
+  hitEnemies: Set<number>;
+  dirAngleRad: number;
+}
+
 /**
  * Fury Swipes: multi-slash 360° ultra rápido.
  * Evolução de Scratch + Razor Claw.
@@ -21,6 +27,7 @@ export class FurySwipes implements Attack {
   private cooldown: number;
   private range = 65;
   private swipeCount = 5;
+  private activeHits: ActiveCone[] = [];
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -53,39 +60,56 @@ export class FurySwipes implements Attack {
           if (arc.active) arc.setPosition(this.player.x + offsetX, this.player.y + offsetY);
         };
         this.scene.events.on('update', followArc);
+
+        // Registra swipe ativo para update()
+        const activeCone: ActiveCone = {
+          sprite: arc,
+          hitEnemies: new Set<number>(),
+          dirAngleRad: angle,
+        };
+        this.activeHits.push(activeCone);
+
         arc.once('animationcomplete', () => {
           this.scene.events.off('update', followArc);
+          const idx = this.activeHits.indexOf(activeCone);
+          if (idx !== -1) this.activeHits.splice(idx, 1);
           arc.destroy();
         });
-
-        // Dano 360° (cada swipe cobre um setor)
-        const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);
-
-        for (const enemy of enemies) {
-          const angleToEnemy = Math.atan2(
-            enemy.y - this.player.y, enemy.x - this.player.x
-          );
-          const angleDiff = Math.abs(
-            Phaser.Math.Angle.ShortestBetween(
-              Phaser.Math.RadToDeg(angle),
-              Phaser.Math.RadToDeg(angleToEnemy)
-            )
-          );
-          if (angleDiff > 45) continue;
-
-          if (typeof enemy.takeDamage === 'function') {
-            setDamageSource(this.type);
-            const killed = enemy.takeDamage(this.damage);
-            if (killed) {
-              this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
-            }
-          }
-        }
       });
     }
   }
 
-  update(_time: number, _delta: number): void {}
+  update(_time: number, _delta: number): void {
+    for (let i = this.activeHits.length - 1; i >= 0; i--) {
+      const { sprite, hitEnemies, dirAngleRad } = this.activeHits[i];
+      if (!sprite.active) { this.activeHits.splice(i, 1); continue; }
+
+      const px = this.player.x;
+      const py = this.player.y;
+      const enemies = getSpatialGrid().queryRadius(px, py, this.range);
+
+      for (const enemy of enemies) {
+        const uid = (enemy.getData('uid') as number) ?? 0;
+        if (hitEnemies.has(uid)) continue;
+
+        const angleToEnemy = Math.atan2(enemy.y - py, enemy.x - px);
+        const angleDiff = Math.abs(
+          Phaser.Math.Angle.ShortestBetween(
+            Phaser.Math.RadToDeg(dirAngleRad),
+            Phaser.Math.RadToDeg(angleToEnemy)
+          )
+        );
+        if (angleDiff > 45) continue;
+
+        hitEnemies.add(uid);
+        setDamageSource(this.type);
+        const killed = enemy.takeDamage(this.damage);
+        if (killed) {
+          this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
+        }
+      }
+    }
+  }
 
   upgrade(): void {
     this.level++;
@@ -99,5 +123,8 @@ export class FurySwipes implements Attack {
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.timer.destroy();
+    this.activeHits.length = 0;
+  }
 }
