@@ -480,8 +480,9 @@ export class UIScene extends Phaser.Scene {
       ? `Reroll (${rerolls} restante${rerolls > 1 ? 's' : ''})`
       : 'Sem rerolls';
 
-    const rerollBtn = this.add.text(width / 2, rerollY, rerollText, {
-      fontSize: '13px',
+    const diceIcon = hasRerolls ? '\uD83C\uDFB2 ' : '';
+    const rerollBtn = this.add.text(width / 2, rerollY, `${diceIcon}${rerollText}`, {
+      fontSize: '15px',
       color: hasRerolls ? '#aaaaaa' : '#444444',
       fontFamily: 'monospace',
       stroke: '#000000',

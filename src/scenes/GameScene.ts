@@ -513,6 +513,7 @@ export class GameScene extends Phaser.Scene {
       duration: 200,
       repeat: 7,
       yoyo: true,
+      onComplete: () => { this.player.setAlpha(1); },
     })
 
     // Shockwave — empurra inimigos
