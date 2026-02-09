@@ -35,6 +35,9 @@ export class SpawnSystem {
       delay: SPAWN.difficultyIntervalMs, loop: true, callback: () => this.increaseDifficulty(),
     });
 
+    // Rattata circle event @ 2:00
+    scene.time.delayedCall(120_000, () => this.spawnRattataCircle());
+
     // Boss queue: primeiro boss no tempo original, depois sequencial
     this.bossQueueIndex = 0;
     if (BOSS_SCHEDULE.length > 0) {
@@ -139,7 +142,24 @@ export class SpawnSystem {
   }
 
   getSpawnPosition(): Phaser.Math.Vector2 {
-    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    const enemies = getSpatialGrid().getActiveEnemies();
+    let angle: number;
+
+    if (enemies.length >= 5) {
+      // Anti-clustering: spawnar no lado oposto à maioria dos inimigos
+      let sumX = 0;
+      let sumY = 0;
+      const sample = enemies.length <= 20 ? enemies : enemies.slice(0, 20);
+      for (const e of sample) {
+        sumX += e.x - this.ctx.player.x;
+        sumY += e.y - this.ctx.player.y;
+      }
+      const avgAngle = Math.atan2(sumY, sumX);
+      angle = avgAngle + Math.PI + Phaser.Math.FloatBetween(-Math.PI / 2, Math.PI / 2);
+    } else {
+      angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    }
+
     return new Phaser.Math.Vector2(
       this.ctx.player.x + Math.cos(angle) * SPAWN.distanceFromPlayer,
       this.ctx.player.y + Math.sin(angle) * SPAWN.distanceFromPlayer
@@ -153,6 +173,37 @@ export class SpawnSystem {
     this.spawnTimer.destroy();
     this.spawnTimer = this.ctx.scene.time.addEvent({
       delay: Math.round(wave.spawnRate * spawnMult), loop: true, callback: () => this.spawnEnemy(),
+    });
+  }
+
+  // ── Rattata circle event ─────────────────────────────────────────
+  private spawnRattataCircle(): void {
+    const scene = this.ctx.scene;
+    const player = this.ctx.player;
+
+    // Warning flash + text
+    scene.cameras.main.flash(500, 255, 50, 50, false);
+    const warning = scene.add.text(player.x, player.y - 80, 'RATTATA HORDE!', {
+      fontSize: '20px', color: '#ff4444', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(100);
+    scene.tweens.add({
+      targets: warning, alpha: 0, y: warning.y - 40,
+      duration: 2000, onComplete: () => warning.destroy(),
+    });
+
+    // Spawn circle after brief delay
+    scene.time.delayedCall(500, () => {
+      const count = 25;
+      const radius = 250;
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        const x = player.x + Math.cos(angle) * radius;
+        const y = player.y + Math.sin(angle) * radius;
+        const enemy = new Enemy(scene, x, y, ENEMIES.rattata);
+        this.ctx.enemyGroup.add(enemy);
+        getSpatialGrid().insert(enemy);
+      }
     });
   }
 

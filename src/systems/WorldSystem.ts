@@ -24,7 +24,7 @@ export class WorldSystem {
     const max = GAME.worldWidth - margin;
     const types: { key: DestructibleType; count: number }[] = [
       { key: 'tallGrass', count: 40 },
-      { key: 'berryBush', count: 15 },
+      { key: 'berryBush', count: 30 },
       { key: 'rockSmash', count: 8 },
     ];
 

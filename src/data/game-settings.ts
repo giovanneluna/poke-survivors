@@ -10,7 +10,7 @@ export const GAME = {
 } as const;
 
 export const PLAYER = {
-  startHp: 100,
+  startHp: 130,
   startSpeed: 160,
   startMagnetRange: 60,
   invincibilityMs: 500,

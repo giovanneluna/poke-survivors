@@ -8,6 +8,17 @@
 let _source = '';
 const _totals = new Map<string, number>();
 
+// ── Berry damage buff (Liechi Berry) ──────────────────────────────
+let _damageBuff: (() => number) | null = null;
+
+export function setDamageBuff(fn: () => number): void {
+  _damageBuff = fn;
+}
+
+export function getDamageBuff(): number {
+  return _damageBuff?.() ?? 1;
+}
+
 export function setDamageSource(source: string): void {
   _source = source;
 }

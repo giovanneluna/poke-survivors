@@ -155,10 +155,7 @@ const REGISTRY: Partial<Record<AttackType, AttackEntry>> = {
   // ── Squirtle line ─────────────────────────────────────────────────
   waterGun: {
     create: (ctx) => new WaterGun(ctx.scene, ctx.player, ctx.enemyGroup),
-    collision: 'projectile',
-    hitElement: 'water',
-    getGroup: (a) => (a as WaterGun).getBullets(),
-    getDamage: (a) => () => (a as WaterGun).getDamage(),
+    collision: 'none',
   },
   waterPulse: { create: (ctx) => new WaterPulse(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
   iceBeam: {
@@ -202,11 +199,7 @@ const REGISTRY: Partial<Record<AttackType, AttackEntry>> = {
   },
   bubble: {
     create: (ctx) => new Bubble(ctx.scene, ctx.player, ctx.enemyGroup),
-    collision: 'projectile',
-    hitElement: 'water',
-    getGroup: (a) => (a as Bubble).getBullets(),
-    getDamage: (a) => () => (a as Bubble).getDamage(),
-    getOnHit: (a) => (x, y) => (a as Bubble).spawnPopEffect(x, y),
+    collision: 'none',
   },
   tackle: { create: (ctx) => new Tackle(ctx.scene, ctx.player, ctx.enemyGroup), collision: 'none' },
   withdraw: {

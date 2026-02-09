@@ -987,11 +987,29 @@ export class BootScene extends Phaser.Scene {
     g.generateTexture('dest-chest', 20, 18);
 
     // ── Pickups ──────────────────────────────────────────────────
-    // Oran Berry - bolinha azul
+    // Oran Berry - bolinha azul (heal 25)
     g.clear(); g.fillStyle(0x4488ff); g.fillCircle(5, 5, 5);
     g.fillStyle(0x66aaff, 0.7); g.fillCircle(4, 3, 2);
     g.fillStyle(0x338833); g.fillRect(4, 0, 2, 2);
     g.generateTexture('pickup-oran', 10, 10);
+
+    // Sitrus Berry - bolinha amarela (heal 50)
+    g.clear(); g.fillStyle(0xddcc22); g.fillCircle(5, 5, 5);
+    g.fillStyle(0xffee66, 0.7); g.fillCircle(4, 3, 2);
+    g.fillStyle(0x338833); g.fillRect(4, 0, 2, 2);
+    g.generateTexture('pickup-sitrus', 10, 10);
+
+    // Liechi Berry - bolinha vermelha (2x damage 30s)
+    g.clear(); g.fillStyle(0xdd3333); g.fillCircle(5, 5, 5);
+    g.fillStyle(0xff6666, 0.7); g.fillCircle(4, 3, 2);
+    g.fillStyle(0x338833); g.fillRect(4, 0, 2, 2);
+    g.generateTexture('pickup-liechi', 10, 10);
+
+    // Salac Berry - bolinha verde (1.5x speed 30s)
+    g.clear(); g.fillStyle(0x33bb55); g.fillCircle(5, 5, 5);
+    g.fillStyle(0x66dd88, 0.7); g.fillCircle(4, 3, 2);
+    g.fillStyle(0x226622); g.fillRect(4, 0, 2, 2);
+    g.generateTexture('pickup-salac', 10, 10);
 
     // Magnet Burst - ímã
     g.clear(); g.fillStyle(0xcc0000); g.fillRect(1, 1, 4, 8);
@@ -1128,6 +1146,31 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xaaeeff, 0.6); g.fillTriangle(6, 2, 9, 9, 3, 9);
     g.fillStyle(0xffffff, 0.4); g.fillTriangle(6, 3, 8, 8, 4, 8);
     g.generateTexture('held-never-melt-ice', 12, 12);
+
+    // Miracle Seed (held) — green seed with gold sparkle
+    g.clear(); g.fillStyle(0x44bb44); g.fillCircle(6, 7, 5);
+    g.fillStyle(0x66dd66); g.fillCircle(5, 6, 3);
+    g.fillStyle(0xffdd44); g.fillRect(5, 2, 2, 3);
+    g.generateTexture('held-miracle-seed', 12, 12);
+
+    // Big Root (held) — brown root shape
+    g.clear(); g.fillStyle(0x8B5E3C); g.fillRect(4, 1, 4, 10);
+    g.fillStyle(0x6B3E1C); g.fillRect(2, 6, 3, 4);
+    g.fillStyle(0x6B3E1C); g.fillRect(7, 4, 3, 5);
+    g.fillStyle(0xAA7744); g.fillRect(5, 2, 2, 4);
+    g.generateTexture('held-big-root', 12, 12);
+
+    // Black Sludge (held) — dark purple blob
+    g.clear(); g.fillStyle(0x442266); g.fillCircle(6, 7, 5);
+    g.fillStyle(0x553388); g.fillCircle(5, 6, 3);
+    g.fillStyle(0x332244); g.fillCircle(7, 8, 2);
+    g.generateTexture('held-black-sludge', 12, 12);
+
+    // Leaf Stone (held) — green gem
+    g.clear(); g.fillStyle(0x44aa44); g.fillTriangle(6, 1, 11, 8, 1, 8);
+    g.fillStyle(0x66cc66); g.fillRect(3, 8, 6, 3);
+    g.fillStyle(0x88ee88, 0.5); g.fillTriangle(6, 3, 9, 7, 3, 7);
+    g.generateTexture('held-leaf-stone', 12, 12);
 
     // ── Texturas de ataques (procedurais) ──────────────────────────
     // Slash arc (arco branco para Scratch/Slash/FurySwipes/NightSlash)

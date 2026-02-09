@@ -13,7 +13,7 @@ export const VENONAT: EnemyConfig = {
   rangedAttack: {
     projectileKey: 'atk-psybeam',
     damage: 8,
-    speed: 100,
+    speed: 65,
     cooldownMs: 3500,
     range: 200,
     homing: false,

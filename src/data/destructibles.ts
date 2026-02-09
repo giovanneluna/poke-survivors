@@ -19,7 +19,10 @@ export const DESTRUCTIBLES: Readonly<Record<string, DestructibleConfig>> = {
     textureKey: "dest-berry-bush",
     scale: 1.3,
     drops: [
-      { type: "oranBerry", chance: 0.6 },
+      { type: "oranBerry", chance: 0.30 },
+      { type: "sitrusBerry", chance: 0.15 },
+      { type: "liechiBerry", chance: 0.09 },
+      { type: "salacBerry", chance: 0.06 },
       { type: "xpGem", chance: 0.3, count: 5 },
       { type: "magnetBurst", chance: 0.1 },
     ],
@@ -61,6 +64,24 @@ export const PICKUPS: Readonly<Record<string, PickupConfig>> = {
     name: "Oran Berry",
     textureKey: "pickup-oran",
     description: "Cura 25 HP",
+  },
+  sitrusBerry: {
+    key: "sitrusBerry",
+    name: "Sitrus Berry",
+    textureKey: "pickup-sitrus",
+    description: "Cura 50 HP",
+  },
+  liechiBerry: {
+    key: "liechiBerry",
+    name: "Liechi Berry",
+    textureKey: "pickup-liechi",
+    description: "2x Dano por 30s!",
+  },
+  salacBerry: {
+    key: "salacBerry",
+    name: "Salac Berry",
+    textureKey: "pickup-salac",
+    description: "1.5x Velocidade por 30s!",
   },
   magnetBurst: {
     key: "magnetBurst",

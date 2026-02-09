@@ -287,6 +287,7 @@ export class UIScene extends Phaser.Scene {
         miracleSeed: 'held-miracle-seed',
         blackSludge: 'held-black-sludge',
         bigRoot: 'held-big-root',
+        leafStone: 'held-leaf-stone',
       };
 
       stats.heldItems.forEach((item, i) => {

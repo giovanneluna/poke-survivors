@@ -16,7 +16,7 @@ import { UpgradeSystem } from "../systems/UpgradeSystem"
 import { DebugSystem } from "../systems/DebugSystem"
 import { PassiveSystem, getPassive } from "../systems/PassiveSystem"
 import { initSpatialGrid, getSpatialGrid } from "../systems/SpatialHashGrid"
-import { resetDamageTotals, getDamageTotals } from "../systems/DamageTracker"
+import { resetDamageTotals, getDamageTotals, setDamageBuff } from "../systems/DamageTracker"
 
 export class GameScene extends Phaser.Scene {
   player!: Player
@@ -85,6 +85,9 @@ export class GameScene extends Phaser.Scene {
 
     // ── Difficulty XP multiplier ──────────────────────────────────
     this.player.stats.xpMultiplier = DIFFICULTY[this.difficulty].xpMultiplier
+
+    // ── Berry damage buff bridge (Liechi Berry → Enemy.takeDamage) ──
+    setDamageBuff(() => this.player.getBuff('damage', this.time.now))
 
     // ── Joystick (touch devices) ────────────────────────────────────
     if (this.sys.game.device.input.touch) {
@@ -165,6 +168,15 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08)
     this.cameras.main.setBounds(0, 0, GAME.worldWidth, GAME.worldHeight)
 
+    // Zoom adaptativo: telas menores veem mais do mapa
+    const applyZoom = (): void => {
+      const baseWidth = 800
+      const zoom = Math.max(0.6, Math.min(1, this.scale.width / baseWidth))
+      this.cameras.main.setZoom(zoom)
+    }
+    applyZoom()
+    this.scale.on('resize', applyZoom)
+
     // ── UIScene ─────────────────────────────────────────────────────
     if (this.scene.isActive("UIScene")) this.scene.stop("UIScene")
     this.scene.launch("UIScene")
@@ -220,11 +232,13 @@ export class GameScene extends Phaser.Scene {
     this.events.on("pause-game", () => {
       this.isPaused = true
       this.physics.pause()
+      this.time.paused = true
     })
 
     this.events.on("resume-game", () => {
       this.isPaused = false
       this.physics.resume()
+      this.time.paused = false
     })
 
     this.events.on("player-died", () => {

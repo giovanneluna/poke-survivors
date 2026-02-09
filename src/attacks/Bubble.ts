@@ -1,112 +1,106 @@
-import Phaser from "phaser"
-import type { Attack, ArcadeGroup } from "../types"
-import { ATTACKS } from "../config"
-import type { Player } from "../entities/Player"
+import Phaser from 'phaser';
+import type { Attack, ArcadeGroup } from '../types';
+import { ATTACKS } from '../config';
+import type { Player } from '../entities/Player';
+import { setDamageSource } from '../systems/DamageTracker';
+import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
- * Bubble: bolhas lentas multi-shot que aplicam slow ao impactar.
- * Variacao do Ember com foco em controle de grupo (crowd control).
+ * Bubble: bolhas lentas com ricochete + slow AoE no pop final.
+ * Usa colisão manual no update() (padrão EnergyBall/WaterGun).
+ * collision: 'none' no AttackFactory.
  */
 export class Bubble implements Attack {
-  readonly type = "bubble" as const
-  level = 1
+  readonly type = 'bubble' as const;
+  level = 1;
 
-  private readonly scene: Phaser.Scene
-  private readonly player: Player
-  private readonly enemyGroup: ArcadeGroup
-  private readonly bullets: ArcadeGroup
-  private timer: Phaser.Time.TimerEvent
-  private damage: number
-  private cooldown: number
-  private bubblesPerBurst = 1
-  private fireId = 0
+  private readonly scene: Phaser.Scene;
+  private readonly player: Player;
+  private readonly bullets: ArcadeGroup;
+  private timer: Phaser.Time.TimerEvent;
+  private damage: number;
+  private cooldown: number;
+  private bubblesPerBurst = 1;
+  private fireId = 0;
+  private maxChains = 2;
 
-  /** Raio de slow AoE ao estourar a bolha */
-  private readonly slowRadius = 60
+  private readonly slowRadius = 60;
+  private readonly slowVelocityScale = 0.6;
+  private readonly slowDurationMs = 1500;
+  private readonly speed = 100;
 
-  /** Fator de reducao de velocidade aplicado aos inimigos */
-  private readonly slowVelocityScale = 0.6
+  private static readonly HIT_RADIUS = 22;
 
-  /** Duracao do slow em ms */
-  private readonly slowDurationMs = 1500
-
-  constructor(scene: Phaser.Scene, player: Player, enemyGroup: ArcadeGroup) {
-    this.scene = scene
-    this.player = player
-    this.enemyGroup = enemyGroup
-    this.damage = ATTACKS.bubble.baseDamage
-    this.cooldown = ATTACKS.bubble.baseCooldown
+  constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
+    this.scene = scene;
+    this.player = player;
+    this.damage = ATTACKS.bubble.baseDamage;
+    this.cooldown = ATTACKS.bubble.baseCooldown;
 
     this.bullets = scene.physics.add.group({
-      defaultKey: "atk-bubble-shot",
+      defaultKey: 'atk-bubble-shot',
       maxSize: 120,
-    })
+    });
 
     this.timer = scene.time.addEvent({
       delay: this.cooldown,
       loop: true,
       callback: () => this.fire(),
-    })
+    });
   }
 
   private fire(): void {
-    const enemies = this.enemyGroup
-      .getChildren()
-      .filter(
-        (e): e is Phaser.Physics.Arcade.Sprite =>
-          (e as Phaser.Physics.Arcade.Sprite).active,
-      )
-    if (enemies.length === 0) return
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (activeEnemies.length === 0) return;
 
-    // Alvo mais proximo
-    const closest = enemies
-      .map((enemy) => ({
+    const closest = activeEnemies
+      .map(enemy => ({
         enemy,
         dist: Phaser.Math.Distance.Between(
-          this.player.x,
-          this.player.y,
-          enemy.x,
-          enemy.y,
+          this.player.x, this.player.y,
+          enemy.x, enemy.y,
         ),
       }))
-      .sort((a, b) => a.dist - b.dist)[0]
+      .sort((a, b) => a.dist - b.dist)[0];
 
-    const target = closest.enemy
+    const target = closest.enemy;
     const baseAngle = Math.atan2(
       target.y - this.player.y,
       target.x - this.player.x,
-    )
+    );
 
-    // Dispara N bolhas com spread aleatorio
     for (let i = 0; i < this.bubblesPerBurst; i++) {
       const bubble = this.bullets.get(
         this.player.x,
         this.player.y,
-        "atk-bubble-shot",
-      ) as Phaser.Physics.Arcade.Sprite | null
+        'atk-bubble-shot',
+      ) as Phaser.Physics.Arcade.Sprite | null;
 
-      if (!bubble) continue
+      if (!bubble) continue;
 
-      const currentFireId = ++this.fireId
-      bubble.setData("fireId", currentFireId)
-      bubble.setActive(true).setVisible(true).setScale(1.0).setAlpha(0.85)
-      bubble.setDepth(8)
-      bubble.play("anim-bubble-shot")
+      const currentFireId = ++this.fireId;
+      bubble.setData('fireId', currentFireId);
+      bubble.setData('chainsLeft', this.maxChains);
+      bubble.setData('lastHitUid', -1);
+      bubble.setActive(true).setVisible(true).setScale(1.0).setAlpha(0.85);
+      bubble.setDepth(8);
+      bubble.play('anim-bubble-shot');
 
-      const body = bubble.body as Phaser.Physics.Arcade.Body
-      body.enable = true
-      body.reset(this.player.x, this.player.y)
-      body.checkCollision.none = false
-      body.setCircle(12, -8, -8)
+      const body = bubble.body as Phaser.Physics.Arcade.Body;
+      body.enable = true;
+      body.reset(this.player.x, this.player.y);
+      body.checkCollision.none = false;
+      body.setCircle(12, -8, -8);
 
-      // Spread aleatorio de +/-15 graus
-      const spreadDeg = Phaser.Math.FloatBetween(-15, 15)
-      const finalAngle = baseAngle + Phaser.Math.DegToRad(spreadDeg)
+      const spreadDeg = Phaser.Math.FloatBetween(-15, 15);
+      const finalAngle = baseAngle + Phaser.Math.DegToRad(spreadDeg);
 
-      body.setVelocity(Math.cos(finalAngle) * 100, Math.sin(finalAngle) * 100)
+      body.setVelocity(
+        Math.cos(finalAngle) * this.speed,
+        Math.sin(finalAngle) * this.speed,
+      );
 
-      // Trail de particulas (bolhas)
-      const trail = this.scene.add.particles(0, 0, "water-particle", {
+      const trail = this.scene.add.particles(0, 0, 'water-particle', {
         follow: bubble,
         speed: { min: 3, max: 12 },
         lifespan: 250,
@@ -114,105 +108,152 @@ export class Bubble implements Attack {
         quantity: 1,
         frequency: 60,
         tint: [0x44aaff, 0x88ccff, 0xaaddff],
-      })
+      });
 
-      // Auto-destruir apos 1.8s (so se ainda for o mesmo disparo)
-      this.scene.time.delayedCall(1800, () => {
-        if (bubble.active && bubble.getData("fireId") === currentFireId) {
-          this.popBubble(bubble)
+      this.scene.time.delayedCall(2500, () => {
+        if (bubble.active && bubble.getData('fireId') === currentFireId) {
+          this.popBubble(bubble);
         }
-        trail.destroy()
-      })
+        trail.destroy();
+      });
     }
   }
 
-  /**
-   * Estoura a bolha: desativa + spawna efeito visual + slow AoE.
-   */
-  private popBubble(bubble: Phaser.Physics.Arcade.Sprite): void {
-    const px = bubble.x
-    const py = bubble.y
+  /** Colisão manual com chain ricochet */
+  update(_time: number, _delta: number): void {
+    const activeBullets = this.bullets.getChildren().filter(
+      (b): b is Phaser.Physics.Arcade.Sprite => (b as Phaser.Physics.Arcade.Sprite).active
+    );
 
-    // Desativar a bolha
-    this.bullets.killAndHide(bubble)
-    const body = bubble.body as Phaser.Physics.Arcade.Body
-    body.checkCollision.none = true
-    body.enable = false
+    const enemies = getSpatialGrid().getActiveEnemies();
 
-    this.spawnPopEffect(px, py)
+    for (const bullet of activeBullets) {
+      const lastHitUid = bullet.getData('lastHitUid') as number;
+
+      for (const enemy of enemies) {
+        const uid = (enemy.getData('uid') as number) ?? 0;
+        if (uid === lastHitUid) continue;
+
+        const dist = Phaser.Math.Distance.Between(
+          bullet.x, bullet.y, enemy.x, enemy.y
+        );
+        if (dist > Bubble.HIT_RADIUS) continue;
+
+        if (typeof enemy.takeDamage === 'function') {
+          setDamageSource(this.type);
+          const killed = enemy.takeDamage(this.damage);
+          if (killed) {
+            this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
+          }
+        }
+
+        const chainsLeft = ((bullet.getData('chainsLeft') as number) ?? 0) - 1;
+        bullet.setData('chainsLeft', chainsLeft);
+        bullet.setData('lastHitUid', uid);
+
+        if (chainsLeft <= 0) {
+          this.popBubble(bullet);
+          break;
+        }
+
+        // Encontrar próximo alvo
+        const nextTargets = enemies.filter(e => {
+          const eUid = (e.getData('uid') as number) ?? 0;
+          return e.active && eUid !== uid;
+        });
+
+        if (nextTargets.length === 0) {
+          this.popBubble(bullet);
+          break;
+        }
+
+        const nextTarget = nextTargets.reduce((best, e) => {
+          const d = Phaser.Math.Distance.Between(bullet.x, bullet.y, e.x, e.y);
+          const bd = Phaser.Math.Distance.Between(bullet.x, bullet.y, best.x, best.y);
+          return d < bd ? e : best;
+        });
+
+        this.scene.physics.moveToObject(bullet, nextTarget, this.speed);
+
+        // Flash visual de bounce
+        const p = this.scene.add.particles(bullet.x, bullet.y, 'water-particle', {
+          speed: { min: 15, max: 40 },
+          lifespan: 200,
+          quantity: 3,
+          scale: { start: 0.8, end: 0 },
+          tint: [0x44aaff, 0x88ccff],
+          emitting: false,
+        });
+        p.explode();
+        this.scene.time.delayedCall(300, () => p.destroy());
+
+        break;
+      }
+    }
   }
 
-  /**
-   * Efeito visual de estouro + slow AoE no ponto de impacto.
-   * Chamado por popBubble (timeout) e pelo CollisionSystem via onHit.
-   */
+  /** Estoura a bolha: desativa + slow AoE (só no pop final) */
+  private popBubble(bubble: Phaser.Physics.Arcade.Sprite): void {
+    const px = bubble.x;
+    const py = bubble.y;
+
+    this.bullets.killAndHide(bubble);
+    const body = bubble.body as Phaser.Physics.Arcade.Body;
+    body.checkCollision.none = true;
+    body.enable = false;
+
+    this.spawnPopEffect(px, py);
+  }
+
+  /** Efeito visual de estouro + slow AoE no ponto de impacto */
   spawnPopEffect(x: number, y: number): void {
-    // Sprite animada de estouro (frames 1-4)
-    const impact = this.scene.add.sprite(x, y, "atk-bubble-shot")
-    impact.setScale(1.2).setDepth(11).setAlpha(0.9)
-    impact.play("anim-bubble-shot-hit")
-    impact.once("animationcomplete", () => impact.destroy())
+    const impact = this.scene.add.sprite(x, y, 'atk-bubble-shot');
+    impact.setScale(1.2).setDepth(11).setAlpha(0.9);
+    impact.play('anim-bubble-shot-hit');
+    impact.once('animationcomplete', () => impact.destroy());
 
-    // Aplica slow em inimigos no raio
-    const nearbyEnemies = this.enemyGroup
-      .getChildren()
-      .filter(
-        (e): e is Phaser.Physics.Arcade.Sprite =>
-          (e as Phaser.Physics.Arcade.Sprite).active,
-      )
-
-    for (const enemySprite of nearbyEnemies) {
-      const dist = Phaser.Math.Distance.Between(
-        x,
-        y,
-        enemySprite.x,
-        enemySprite.y,
-      )
-      if (dist > this.slowRadius) continue
-
-      // Tint visual de slow
-      enemySprite.setTint(0x3388ff)
+    const nearby = getSpatialGrid().queryRadius(x, y, this.slowRadius);
+    for (const enemy of nearby) {
+      (enemy as Phaser.Physics.Arcade.Sprite).setTint(0x3388ff);
       this.scene.time.delayedCall(this.slowDurationMs, () => {
-        if (enemySprite.active) enemySprite.clearTint()
-      })
+        if (enemy.active) (enemy as Phaser.Physics.Arcade.Sprite).clearTint();
+      });
 
-      // Reduz velocidade atual
-      const enemyBody = enemySprite.body as Phaser.Physics.Arcade.Body | null
+      const enemyBody = enemy.body as Phaser.Physics.Arcade.Body | null;
       if (enemyBody) {
-        enemyBody.velocity.scale(this.slowVelocityScale)
+        enemyBody.velocity.scale(this.slowVelocityScale);
       }
     }
   }
 
   getDamage(): number {
-    return this.damage
+    return this.damage;
   }
 
   getBullets(): ArcadeGroup {
-    return this.bullets
-  }
-
-  update(_time: number, _delta: number): void {
-    // Bubble e baseado em timer, nao precisa de update por frame
+    return this.bullets;
   }
 
   upgrade(): void {
-    this.level++
-    this.damage += 4
+    this.level++;
+    this.damage += 4;
     if (this.level % 3 === 0) {
-      this.bubblesPerBurst++
+      this.bubblesPerBurst++;
     }
-    this.cooldown = Math.max(400, this.cooldown - 60)
-    this.timer.destroy()
+    if (this.level % 4 === 0) {
+      this.maxChains++;
+    }
+    this.cooldown = Math.max(400, this.cooldown - 60);
+    this.timer.destroy();
     this.timer = this.scene.time.addEvent({
       delay: this.cooldown,
       loop: true,
       callback: () => this.fire(),
-    })
+    });
   }
 
   destroy(): void {
-    this.timer.destroy()
-    this.bullets.destroy(true)
+    this.timer.destroy();
+    this.bullets.destroy(true);
   }
 }

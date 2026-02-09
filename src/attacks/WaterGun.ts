@@ -6,8 +6,10 @@ import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 
 /**
- * Water Gun: dispara jatos de agua no inimigo mais proximo.
- * Equivalente ao Ember para a linha do Squirtle.
+ * Water Gun: jatos de água com ricochete entre inimigos.
+ * Projétil atinge o alvo e bounça para o próximo mais perto (chain).
+ * Usa colisão manual no update() (padrão EnergyBall).
+ * collision: 'none' no AttackFactory.
  */
 export class WaterGun implements Attack {
   readonly type = 'waterGun' as const;
@@ -21,6 +23,10 @@ export class WaterGun implements Attack {
   private cooldown: number;
   private projectileCount = 1;
   private fireId = 0;
+  private maxChains = 2;
+  private readonly speed = 300;
+
+  private static readonly HIT_RADIUS = 20;
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: ArcadeGroup) {
     this.scene = scene;
@@ -44,7 +50,6 @@ export class WaterGun implements Attack {
     const activeEnemies = getSpatialGrid().getActiveEnemies();
     if (activeEnemies.length === 0) return;
 
-    // Ordena por distancia ao player
     const sorted = activeEnemies
       .map(enemy => ({
         enemy,
@@ -60,7 +65,6 @@ export class WaterGun implements Attack {
     for (let i = 0; i < count; i++) {
       const target = sorted[i].enemy;
 
-      // Inimigo muito perto: dano direto (evita bug de projetil sem velocidade)
       if (sorted[i].dist < 20) {
         if (typeof target.takeDamage === 'function') {
           setDamageSource(this.type);
@@ -82,6 +86,8 @@ export class WaterGun implements Attack {
 
       const currentFireId = ++this.fireId;
       bullet.setData('fireId', currentFireId);
+      bullet.setData('chainsLeft', this.maxChains);
+      bullet.setData('lastHitUid', -1);
       bullet.setActive(true).setVisible(true).setScale(0.8);
       bullet.setDepth(8);
       bullet.play('anim-wave-splash');
@@ -92,9 +98,8 @@ export class WaterGun implements Attack {
       body.checkCollision.none = false;
       body.setCircle(12, 4, 4);
 
-      this.scene.physics.moveToObject(bullet, target, 300);
+      this.scene.physics.moveToObject(bullet, target, this.speed);
 
-      // Trail de particulas aquaticas
       const trail = this.scene.add.particles(0, 0, 'water-particle', {
         follow: bullet,
         speed: { min: 5, max: 20 },
@@ -105,16 +110,92 @@ export class WaterGun implements Attack {
         tint: [0x3388ff, 0x44aaff, 0x66ccff],
       });
 
-      // Auto-destruir apos 1.5s (so se ainda for o mesmo disparo)
-      this.scene.time.delayedCall(1500, () => {
+      this.scene.time.delayedCall(2500, () => {
         if (bullet.active && bullet.getData('fireId') === currentFireId) {
-          this.bullets.killAndHide(bullet);
-          body.checkCollision.none = true;
-          body.enable = false;
+          this.killBullet(bullet);
         }
         trail.destroy();
       });
     }
+  }
+
+  /** Colisão manual com chain ricochet */
+  update(_time: number, _delta: number): void {
+    const activeBullets = this.bullets.getChildren().filter(
+      (b): b is Phaser.Physics.Arcade.Sprite => (b as Phaser.Physics.Arcade.Sprite).active
+    );
+
+    const enemies = getSpatialGrid().getActiveEnemies();
+
+    for (const bullet of activeBullets) {
+      const lastHitUid = bullet.getData('lastHitUid') as number;
+
+      for (const enemy of enemies) {
+        const uid = (enemy.getData('uid') as number) ?? 0;
+        if (uid === lastHitUid) continue;
+
+        const dist = Phaser.Math.Distance.Between(
+          bullet.x, bullet.y, enemy.x, enemy.y
+        );
+        if (dist > WaterGun.HIT_RADIUS) continue;
+
+        if (typeof enemy.takeDamage === 'function') {
+          setDamageSource(this.type);
+          const killed = enemy.takeDamage(this.damage);
+          if (killed) {
+            this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
+          }
+        }
+
+        const chainsLeft = ((bullet.getData('chainsLeft') as number) ?? 0) - 1;
+        bullet.setData('chainsLeft', chainsLeft);
+        bullet.setData('lastHitUid', uid);
+
+        if (chainsLeft <= 0) {
+          this.killBullet(bullet);
+          break;
+        }
+
+        // Encontrar próximo alvo
+        const nextTargets = enemies.filter(e => {
+          const eUid = (e.getData('uid') as number) ?? 0;
+          return e.active && eUid !== uid;
+        });
+
+        if (nextTargets.length === 0) {
+          this.killBullet(bullet);
+          break;
+        }
+
+        const nextTarget = nextTargets.reduce((best, e) => {
+          const d = Phaser.Math.Distance.Between(bullet.x, bullet.y, e.x, e.y);
+          const bd = Phaser.Math.Distance.Between(bullet.x, bullet.y, best.x, best.y);
+          return d < bd ? e : best;
+        });
+
+        this.scene.physics.moveToObject(bullet, nextTarget, this.speed);
+
+        // Flash visual de ricochete
+        const p = this.scene.add.particles(bullet.x, bullet.y, 'water-particle', {
+          speed: { min: 20, max: 50 },
+          lifespan: 200,
+          quantity: 4,
+          scale: { start: 1, end: 0 },
+          tint: [0x3388ff, 0x44aaff],
+          emitting: false,
+        });
+        p.explode();
+        this.scene.time.delayedCall(300, () => p.destroy());
+
+        break;
+      }
+    }
+  }
+
+  private killBullet(bullet: Phaser.Physics.Arcade.Sprite): void {
+    this.bullets.killAndHide(bullet);
+    const body = bullet.body as Phaser.Physics.Arcade.Body;
+    body.enable = false;
   }
 
   getDamage(): number {
@@ -125,15 +206,14 @@ export class WaterGun implements Attack {
     return this.bullets;
   }
 
-  update(_time: number, _delta: number): void {
-    // Water Gun e baseado em timer, nao precisa de update por frame
-  }
-
   upgrade(): void {
     this.level++;
     this.damage += 5;
     if (this.level % 2 === 0) {
       this.projectileCount++;
+    }
+    if (this.level % 3 === 0) {
+      this.maxChains++;
     }
     this.cooldown = Math.max(400, this.cooldown - 100);
     this.timer.destroy();

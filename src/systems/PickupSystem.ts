@@ -107,6 +107,12 @@ export class PickupSystem {
       focusBand: 'held-focus-band',
       metronome: 'held-metronome',
       magnet: 'held-magnet',
+      mysticWater: 'held-mystic-water',
+      neverMeltIce: 'held-never-melt-ice',
+      miracleSeed: 'held-miracle-seed',
+      bigRoot: 'held-big-root',
+      blackSludge: 'held-black-sludge',
+      leafStone: 'held-leaf-stone',
     };
 
     const pickup = new Pickup(this.ctx.scene, x, y, 'oranBerry', textureMap[item] ?? 'held-charcoal');
@@ -119,6 +125,9 @@ export class PickupSystem {
   spawnPickup(x: number, y: number, type: PickupType): void {
     const textureMap: Record<PickupType, string> = {
       oranBerry: 'pickup-oran',
+      sitrusBerry: 'pickup-sitrus',
+      liechiBerry: 'pickup-liechi',
+      salacBerry: 'pickup-salac',
       magnetBurst: 'pickup-magnet',
       rareCandy: 'pickup-candy',
       pokeballBomb: 'pickup-bomb',
@@ -150,6 +159,24 @@ export class PickupSystem {
         player.heal(25);
         SoundManager.playPickupItem();
         this.showPickupNotification('+25 HP', 0x44ff44);
+        break;
+
+      case 'sitrusBerry':
+        player.heal(50);
+        SoundManager.playPickupItem();
+        this.showPickupNotification('+50 HP', 0x44ff44);
+        break;
+
+      case 'liechiBerry':
+        player.applyBuff('damage', 2, 30_000, scene.time.now);
+        SoundManager.playPickupItem();
+        this.showPickupNotification('2x DANO por 30s!', 0xff4444);
+        break;
+
+      case 'salacBerry':
+        player.applyBuff('speed', 1.5, 30_000, scene.time.now);
+        SoundManager.playPickupItem();
+        this.showPickupNotification('1.5x SPEED por 30s!', 0x44ddff);
         break;
 
       case 'magnetBurst':

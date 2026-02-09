@@ -35,9 +35,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private poisonUntil = 0
   private poisonDps = 0
   private confusionUntil = 0
+  private lastConfuseApplied = 0
+  private static readonly CONFUSE_COOLDOWN = 3000
   private stunUntil = 0
   private readonly forms: readonly PokemonFormConfig[]
   godMode = false
+
+  // Berry buff system
+  private readonly activeBuffs = new Map<string, { multiplier: number; expiresAt: number }>()
 
   constructor(
     scene: Phaser.Scene,
@@ -72,7 +77,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       speed: PLAYER.startSpeed,
       baseSpeed: PLAYER.startSpeed,
       magnetRange: PLAYER.startMagnetRange,
-      hpRegen: 0,
+      hpRegen: 3,
       xpMultiplier: 1,
       projectileBonus: 0,
       xp: 0,
@@ -141,9 +146,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return time < this.slowUntil
   }
 
-  // ── Confusion effect ──────────────────────────────────────────────
+  // ── Confusion effect (3s cooldown between applications) ──────────
   applyConfusion(durationMs: number, time: number): void {
+    if (time - this.lastConfuseApplied < Player.CONFUSE_COOLDOWN) return
     this.confusionUntil = time + durationMs
+    this.lastConfuseApplied = time
   }
 
   isConfused(time: number): boolean {
@@ -181,6 +188,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (time >= this.poisonUntil) {
       this.clearTint()
     }
+  }
+
+  // ── Berry buff system ────────────────────────────────────────────
+  applyBuff(type: string, multiplier: number, durationMs: number, time: number): void {
+    this.activeBuffs.set(type, { multiplier, expiresAt: time + durationMs });
+  }
+
+  getBuff(type: string, time: number): number {
+    const buff = this.activeBuffs.get(type);
+    if (!buff || time >= buff.expiresAt) {
+      if (buff) this.activeBuffs.delete(type);
+      return 1;
+    }
+    return buff.multiplier;
   }
 
   getLastDirection(): Phaser.Math.Vector2 {
@@ -311,8 +332,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     const isMoving = dir.x !== 0 || dir.y !== 0
 
-    // Calcular velocidade efetiva (com slow)
-    const speedMult = this.isSlowed(time) ? this.slowMultiplier : 1
+    // Calcular velocidade efetiva (com slow + Salac Berry buff)
+    const speedMult = (this.isSlowed(time) ? this.slowMultiplier : 1) * this.getBuff('speed', time)
     const effectiveSpeed = this.stats.speed * speedMult
 
     if (isMoving) {

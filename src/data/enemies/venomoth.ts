@@ -13,7 +13,7 @@ export const VENOMOTH: EnemyConfig = {
   rangedAttack: {
     projectileKey: "atk-psybeam",
     damage: 12,
-    speed: 120,
+    speed: 80,
     cooldownMs: 2800,
     range: 350,
     homing: false,

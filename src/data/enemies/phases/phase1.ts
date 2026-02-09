@@ -36,41 +36,41 @@ export const PHASE1: PhaseConfig = {
     // Wave 9 (4:30): Mankey dominante
     { enemies: [{ type: 'mankey', weight: 2 }, { type: 'oddish', weight: 2 }, { type: 'geodude', weight: 1 }],
       spawnRate: 350, maxEnemies: 80 },
-    // Wave 10 (5:00): Gastly retorna
-    { enemies: [{ type: 'gastly', weight: 1 }, { type: 'mankey', weight: 2 }, { type: 'oddish', weight: 1 }],
+    // Wave 10 (5:00): Gastly retorna (rebalance: +geodude tank)
+    { enemies: [{ type: 'gastly', weight: 1 }, { type: 'mankey', weight: 2 }, { type: 'oddish', weight: 1 }, { type: 'geodude', weight: 2 }],
       spawnRate: 330, maxEnemies: 85 },
-    // Wave 11 (5:30): Gastly + Geodude
-    { enemies: [{ type: 'gastly', weight: 2 }, { type: 'geodude', weight: 1 }, { type: 'mankey', weight: 1 }],
+    // Wave 11 (5:30): Gastly + Geodude (rebalance: gastly 2→1, geodude 1→2)
+    { enemies: [{ type: 'gastly', weight: 1 }, { type: 'geodude', weight: 2 }, { type: 'mankey', weight: 2 }],
       spawnRate: 300, maxEnemies: 85 },
 
     // ── BOSS: Arbok @ 6:00 ──
 
-    // Wave 12 (6:00): Haunter + Machop entram
-    { enemies: [{ type: 'haunter', weight: 2 }, { type: 'machop', weight: 1 }, { type: 'gastly', weight: 1 }],
+    // Wave 12 (6:00): Haunter + Machop entram (rebalance: haunter 2→1, machop 1→3)
+    { enemies: [{ type: 'haunter', weight: 1 }, { type: 'machop', weight: 3 }, { type: 'gastly', weight: 1 }],
       spawnRate: 280, maxEnemies: 90 },
-    // Wave 13 (6:30): Elite dominante
-    { enemies: [{ type: 'haunter', weight: 2 }, { type: 'machop', weight: 2 }, { type: 'mankey', weight: 1 }],
+    // Wave 13 (6:30): Machop dominante (rebalance: haunter 2→1, machop 2→3)
+    { enemies: [{ type: 'haunter', weight: 1 }, { type: 'machop', weight: 3 }, { type: 'mankey', weight: 2 }],
       spawnRate: 260, maxEnemies: 90 },
-    // Wave 14 (7:00): Mix pesado
-    { enemies: [{ type: 'machop', weight: 2 }, { type: 'haunter', weight: 1 }, { type: 'gastly', weight: 1 }, { type: 'geodude', weight: 1 }],
+    // Wave 14 (7:00): Mix pesado (rebalance: machop 2→3, geodude 1→2)
+    { enemies: [{ type: 'machop', weight: 3 }, { type: 'haunter', weight: 1 }, { type: 'geodude', weight: 2 }],
       spawnRate: 250, maxEnemies: 95 },
-    // Wave 15 (7:30): Pre-boss rush
-    { enemies: [{ type: 'haunter', weight: 3 }, { type: 'machop', weight: 2 }],
+    // Wave 15 (7:30): Pre-boss rush (rebalance: haunter 3→1, machop 2→3)
+    { enemies: [{ type: 'haunter', weight: 1 }, { type: 'machop', weight: 3 }, { type: 'geodude', weight: 2 }],
       spawnRate: 230, maxEnemies: 95 },
 
     // ── BOSS: Nidoking @ 8:00 ──
 
-    // Wave 16 (8:00): Golbat entra
-    { enemies: [{ type: 'golbat', weight: 2 }, { type: 'haunter', weight: 2 }, { type: 'machop', weight: 1 }],
+    // Wave 16 (8:00): Golbat entra (rebalance: golbat 2→2, haunter 2→1, machop 1→3)
+    { enemies: [{ type: 'golbat', weight: 2 }, { type: 'haunter', weight: 1 }, { type: 'machop', weight: 3 }],
       spawnRate: 220, maxEnemies: 100 },
-    // Wave 17 (8:30): Golbat + Haunter
-    { enemies: [{ type: 'golbat', weight: 3 }, { type: 'haunter', weight: 2 }, { type: 'geodude', weight: 1 }],
+    // Wave 17 (8:30): Golbat + tanks (rebalance: golbat 3→2, haunter 2→1, machop+geodude)
+    { enemies: [{ type: 'golbat', weight: 2 }, { type: 'haunter', weight: 1 }, { type: 'machop', weight: 3 }, { type: 'geodude', weight: 1 }],
       spawnRate: 200, maxEnemies: 100 },
-    // Wave 18 (9:00): Endgame mix
-    { enemies: [{ type: 'golbat', weight: 2 }, { type: 'machop', weight: 2 }, { type: 'haunter', weight: 2 }],
+    // Wave 18 (9:00): Endgame mix (rebalance: haunter 2→1, machop 2→3)
+    { enemies: [{ type: 'golbat', weight: 2 }, { type: 'machop', weight: 3 }, { type: 'haunter', weight: 1 }],
       spawnRate: 190, maxEnemies: 105 },
-    // Wave 19 (9:30): Final wave — tudo ao máximo
-    { enemies: [{ type: 'golbat', weight: 3 }, { type: 'haunter', weight: 3 }, { type: 'machop', weight: 2 }],
+    // Wave 19 (9:30): Final wave (rebalance: haunter 3→1, machop 2→3, golbat 3→2)
+    { enemies: [{ type: 'golbat', weight: 2 }, { type: 'haunter', weight: 1 }, { type: 'machop', weight: 3 }, { type: 'geodude', weight: 2 }],
       spawnRate: 180, maxEnemies: 110 },
 
     // ── BOSS: Snorlax @ 10:00 ──

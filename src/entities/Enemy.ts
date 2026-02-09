@@ -6,7 +6,7 @@ import type {
 } from '../types';
 import { getPassive } from '../systems/PassiveSystem';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
-import { recordDamage } from '../systems/DamageTracker';
+import { recordDamage, getDamageBuff } from '../systems/DamageTracker';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   private hp: number;
@@ -228,6 +228,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const resist = this.getResistance();
     if (resist > 0) {
       finalAmount = Math.max(1, Math.floor(finalAmount * (1 - resist)));
+    }
+
+    // ── Berry damage buff (Liechi Berry) ─────
+    const damageBuff = getDamageBuff();
+    if (damageBuff > 1) {
+      finalAmount = Math.floor(finalAmount * damageBuff);
     }
 
     if (passive && passive.type !== 'none') {

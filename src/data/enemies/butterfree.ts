@@ -13,7 +13,7 @@ export const BUTTERFREE: EnemyConfig = {
   rangedAttack: {
     projectileKey: "atk-psybeam",
     damage: 10,
-    speed: 110,
+    speed: 75,
     cooldownMs: 3000,
     range: 300,
     homing: false,
