@@ -47,6 +47,18 @@ export type AttackType =
   | 'powerWhip' | 'leafStorm' | 'seedBomb' | 'bodySlam2' | 'toxic'
   | 'spore' | 'solarBlade' | 'sludgeWave2' | 'hyperBeam2' | 'floraBurst';
 
+// ── Dificuldade ─────────────────────────────────────────────────────
+export type Difficulty = 'easy' | 'medium' | 'hard';
+
+export interface DifficultyConfig {
+  readonly label: string;
+  readonly description: string;
+  readonly color: number;
+  readonly spawnRateMultiplier: number;
+  readonly maxEnemiesMultiplier: number;
+  readonly xpMultiplier: number;
+}
+
 // ── Tipos de Elemento ─────────────────────────────────────────────
 export type ElementType = 'fire' | 'water' | 'ice' | 'normal' | 'dragon' | 'flying' | 'grass' | 'poison';
 

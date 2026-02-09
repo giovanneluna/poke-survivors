@@ -2,7 +2,7 @@
 // Todos os dados foram migrados para src/data/.
 // Este arquivo re-exporta tudo para manter imports existentes intactos.
 
-export { GAME, PLAYER, SPAWN, XP_GEM } from "./data/game-settings"
+export { GAME, PLAYER, SPAWN, XP_GEM, DIFFICULTY } from "./data/game-settings"
 export { SPRITES, STARTER_SPRITES, ENEMY_SPRITES } from "./data/sprites/index"
 export { CHARMANDER_FORMS, BLAZE_TIERS, SQUIRTLE_FORMS, TORRENT_TIERS, BULBASAUR_FORMS, OVERGROW_TIERS, STARTERS } from "./data/pokemon"
 export type { StarterConfig } from "./data/pokemon"

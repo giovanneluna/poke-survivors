@@ -1,7 +1,7 @@
 import Phaser from "phaser"
-import { GAME, STARTERS, SPAWN, XP_GEM, ENEMIES } from "../config"
+import { GAME, STARTERS, SPAWN, XP_GEM, ENEMIES, DIFFICULTY } from "../config"
 import type { StarterConfig } from "../config"
-import type { DevConfig, EnemyConfig } from "../types"
+import type { DevConfig, Difficulty, EnemyConfig } from "../types"
 import { Player } from "../entities/Player"
 import { Enemy } from "../entities/Enemy"
 import { SoundManager } from "../audio/SoundManager"
@@ -31,6 +31,7 @@ export class GameScene extends Phaser.Scene {
   private joystick: VirtualJoystick | null = null
   private debugMode = false
   private starterKey = "charmander"
+  private difficulty: Difficulty = "hard"
   private starterConfig!: StarterConfig
   private devConfig?: DevConfig
 
@@ -50,9 +51,11 @@ export class GameScene extends Phaser.Scene {
     debugMode?: boolean
     starterKey?: string
     devConfig?: DevConfig
+    difficulty?: Difficulty
   }): void {
     this.debugMode = data?.debugMode ?? false
     this.devConfig = data?.devConfig
+    this.difficulty = data?.difficulty ?? "hard"
     this.starterKey =
       this.devConfig?.starterKey ?? data?.starterKey ?? "charmander"
   }
@@ -78,6 +81,9 @@ export class GameScene extends Phaser.Scene {
       GAME.worldHeight / 2,
       this.starterConfig,
     )
+
+    // ── Difficulty XP multiplier ──────────────────────────────────
+    this.player.stats.xpMultiplier = DIFFICULTY[this.difficulty].xpMultiplier
 
     // ── Joystick (touch devices) ────────────────────────────────────
     if (this.sys.game.device.input.touch) {
@@ -109,6 +115,7 @@ export class GameScene extends Phaser.Scene {
       starterConfig: this.starterConfig,
       debugMode: this.debugMode,
       devConfig: this.devConfig,
+      difficulty: this.difficulty,
     }
 
     // ── Instantiate systems ─────────────────────────────────────────

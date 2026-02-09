@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ENEMIES, WAVES, SPAWN, BOSS_SCHEDULE } from '../config';
+import { ENEMIES, WAVES, SPAWN, BOSS_SCHEDULE, DIFFICULTY } from '../config';
 import type { EnemyConfig, BossConfig, BossAttackConfig, BossSpawnConfig, WaveConfig, EnemyRangedConfig, EnemyBoomerangConfig, EnemyType } from '../types';
 import { Enemy } from '../entities/Enemy';
 import { Boss } from '../entities/Boss';
@@ -25,8 +25,9 @@ export class SpawnSystem {
     const scene = this.ctx.scene;
     this.difficultyLevel = 0;
 
+    const spawnMult = DIFFICULTY[this.ctx.difficulty].spawnRateMultiplier;
     this.spawnTimer = scene.time.addEvent({
-      delay: WAVES[0].spawnRate, loop: true, callback: () => this.spawnEnemy(),
+      delay: Math.round(WAVES[0].spawnRate * spawnMult), loop: true, callback: () => this.spawnEnemy(),
     });
 
     scene.time.addEvent({
@@ -109,8 +110,10 @@ export class SpawnSystem {
   // ── Spawn individual ──────────────────────────────────────────────
   private spawnEnemy(): void {
     const wave = this.getCurrentWave();
+    const maxMult = DIFFICULTY[this.ctx.difficulty].maxEnemiesMultiplier;
+    const maxEnemies = Math.round(wave.maxEnemies * maxMult);
     const activeCount = this.ctx.enemyGroup.getChildren().filter(c => (c as Phaser.Physics.Arcade.Sprite).active).length;
-    if (activeCount >= wave.maxEnemies) return;
+    if (activeCount >= maxEnemies) return;
 
     const config = this.pickEnemyType(wave);
     const pos = this.getSpawnPosition();
@@ -143,9 +146,10 @@ export class SpawnSystem {
   private increaseDifficulty(): void {
     this.difficultyLevel++;
     const wave = this.getCurrentWave();
+    const spawnMult = DIFFICULTY[this.ctx.difficulty].spawnRateMultiplier;
     this.spawnTimer.destroy();
     this.spawnTimer = this.ctx.scene.time.addEvent({
-      delay: wave.spawnRate, loop: true, callback: () => this.spawnEnemy(),
+      delay: Math.round(wave.spawnRate * spawnMult), loop: true, callback: () => this.spawnEnemy(),
     });
   }
 

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { Player } from '../entities/Player';
 import type { StarterConfig } from '../config';
-import type { DevConfig } from '../types';
+import type { DevConfig, Difficulty } from '../types';
 
 export interface GameContext {
   readonly scene: Phaser.Scene;
@@ -14,4 +14,5 @@ export interface GameContext {
   readonly starterConfig: StarterConfig;
   readonly debugMode: boolean;
   readonly devConfig?: DevConfig;
+  readonly difficulty: Difficulty;
 }

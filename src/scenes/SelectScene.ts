@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
-import { STARTERS } from '../config';
+import { STARTERS, DIFFICULTY } from '../config';
 import type { StarterConfig } from '../config';
-import type { DevConfig, PokemonForm } from '../types';
+import type { DevConfig, Difficulty, PokemonForm } from '../types';
 import { SoundManager } from '../audio/SoundManager';
 
 export class SelectScene extends Phaser.Scene {
@@ -9,6 +9,7 @@ export class SelectScene extends Phaser.Scene {
   private cards: Phaser.GameObjects.Container[] = [];
   private cardGraphics: Phaser.GameObjects.Graphics[] = [];
   private phaseOverlay: Phaser.GameObjects.Container | null = null;
+  private difficultyOverlay: Phaser.GameObjects.Container | null = null;
   private devConfigOverlay: Phaser.GameObjects.Container | null = null;
   private wipOverlay: Phaser.GameObjects.Container | null = null;
   private devKeyHandler: ((event: KeyboardEvent) => void) | null = null;
@@ -246,7 +247,7 @@ export class SelectScene extends Phaser.Scene {
     const card1X = isLocal ? width / 2 - 130 : width / 2;
     this.createPhaseCard(card1X, cardY, 'FASE 1', 'FIRE RED', 0xff4400, 0xff6622,
       'Jogo completo com\ninimigos, bosses\ne evoluções.', () => {
-        this.startGame(false);
+        this.showDifficultySelection();
       });
 
     if (isLocal) {
@@ -343,6 +344,10 @@ export class SelectScene extends Phaser.Scene {
       window.removeEventListener('keydown', this.devKeyHandler);
       this.devKeyHandler = null;
     }
+    if (this.difficultyOverlay) {
+      this.difficultyOverlay.destroy(true);
+      this.difficultyOverlay = null;
+    }
     if (this.devConfigOverlay) {
       this.devConfigOverlay.destroy(true);
       this.devConfigOverlay = null;
@@ -353,11 +358,124 @@ export class SelectScene extends Phaser.Scene {
     }
   }
 
-  private startGame(debugMode: boolean, devConfig?: DevConfig): void {
+  // ── Overlay de seleção de dificuldade ──────────────────────────────
+  private showDifficultySelection(): void {
+    if (this.difficultyOverlay) return;
+
+    const { width, height } = this.cameras.main;
+    this.difficultyOverlay = this.add.container(0, 0).setDepth(300);
+
+    // Fundo escuro
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.9);
+    bg.setInteractive();
+    this.difficultyOverlay.add(bg);
+
+    // Título
+    this.difficultyOverlay.add(this.add.text(width / 2, height / 2 - 130, 'DIFICULDADE', {
+      fontSize: '22px', color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 4,
+    }).setOrigin(0.5));
+
+    this.difficultyOverlay.add(this.add.text(width / 2, height / 2 - 105, 'Escolha o nível de desafio', {
+      fontSize: '10px', color: '#888888', fontFamily: 'monospace',
+    }).setOrigin(0.5));
+
+    // Cards de dificuldade
+    const difficulties: Difficulty[] = ['easy', 'medium', 'hard'];
+    const cardW = 160;
+    const gap = 20;
+    const totalW = difficulties.length * cardW + (difficulties.length - 1) * gap;
+    const startX = (width - totalW) / 2 + cardW / 2;
+    const cardY = height / 2 + 10;
+
+    difficulties.forEach((diff, i) => {
+      const cfg = DIFFICULTY[diff];
+      const cx = startX + i * (cardW + gap);
+      this.createDifficultyCard(cx, cardY, cfg, diff, cardW);
+    });
+
+    // Botão voltar
+    const backBtn = this.add.text(width / 2, height / 2 + 140, '<- Voltar', {
+      fontSize: '12px', color: '#666666', fontFamily: 'monospace',
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    backBtn.on('pointerover', () => { backBtn.setColor('#ffffff'); SoundManager.playHover(); });
+    backBtn.on('pointerout', () => backBtn.setColor('#666666'));
+    backBtn.on('pointerdown', () => {
+      SoundManager.playClick();
+      this.difficultyOverlay?.destroy(true);
+      this.difficultyOverlay = null;
+    });
+    this.difficultyOverlay.add(backBtn);
+  }
+
+  private createDifficultyCard(
+    cx: number, cy: number,
+    cfg: typeof DIFFICULTY[Difficulty],
+    difficulty: Difficulty,
+    cardW: number,
+  ): void {
+    if (!this.difficultyOverlay) return;
+
+    const cardH = 180;
+    const gfx = this.add.graphics();
+
+    const drawCard = (hover: boolean): void => {
+      gfx.clear();
+      // Sombra
+      gfx.fillStyle(0x000000, 0.5);
+      gfx.fillRoundedRect(cx - cardW / 2 + 3, cy - cardH / 2 + 3, cardW, cardH, 12);
+      // Fundo
+      gfx.fillStyle(hover ? 0x1e1e44 : 0x151530, 0.95);
+      gfx.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
+      // Borda
+      gfx.lineStyle(2, cfg.color, hover ? 1 : 0.7);
+      gfx.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
+      // Barra superior colorida
+      gfx.fillStyle(cfg.color, hover ? 0.4 : 0.2);
+      gfx.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, 40, { tl: 12, tr: 12, bl: 0, br: 0 });
+    };
+
+    drawCard(false);
+    this.difficultyOverlay.add(gfx);
+
+    // Label
+    this.difficultyOverlay.add(this.add.text(cx, cy - cardH / 2 + 20, cfg.label, {
+      fontSize: '16px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5));
+
+    // Descrição
+    this.difficultyOverlay.add(this.add.text(cx, cy + 5, cfg.description, {
+      fontSize: '11px', color: '#aaaaaa', fontFamily: 'monospace',
+      align: 'center', lineSpacing: 6,
+    }).setOrigin(0.5));
+
+    // XP badge
+    const xpLabel = cfg.xpMultiplier > 1 ? `XP x${cfg.xpMultiplier}` : 'XP x1';
+    const xpColor = cfg.xpMultiplier >= 2 ? '#44ff44' : cfg.xpMultiplier >= 1.5 ? '#ffcc00' : '#aaaaaa';
+    this.difficultyOverlay.add(this.add.text(cx, cy + cardH / 2 - 25, xpLabel, {
+      fontSize: '13px', color: xpColor, fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5));
+
+    // Hitbox
+    const hitbox = this.add.rectangle(cx, cy, cardW, cardH, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true });
+    hitbox.on('pointerover', () => { drawCard(true); SoundManager.playHover(); });
+    hitbox.on('pointerout', () => drawCard(false));
+    hitbox.on('pointerdown', () => {
+      SoundManager.playStart();
+      this.hidePhaseSelection();
+      this.startGame(false, undefined, difficulty);
+    });
+    this.difficultyOverlay.add(hitbox);
+  }
+
+  private startGame(debugMode: boolean, devConfig?: DevConfig, difficulty: Difficulty = 'hard'): void {
     const starterKey = devConfig?.starterKey ?? STARTERS[this.selectedIndex].key;
     this.cameras.main.fade(500, 0, 0, 0, false, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
       if (progress >= 1) {
-        this.scene.start('GameScene', { debugMode, starterKey, devConfig });
+        this.scene.start('GameScene', { debugMode, starterKey, devConfig, difficulty });
       }
     });
   }
