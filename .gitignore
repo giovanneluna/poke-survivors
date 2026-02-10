@@ -26,3 +26,6 @@ dist-ssr
 
 # TypeScript
 *.tsbuildinfo
+
+# Tauri (Rust build cache ~500MB+)
+src-tauri/target/

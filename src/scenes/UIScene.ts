@@ -8,6 +8,7 @@ import type { RunStats } from '../systems/RunRecorder';
 import { getCoins, getQuality, getVfxIntensity, setQuality, setVfxIntensity } from '../systems/SaveSystem';
 import { MiniMap } from '../ui/MiniMap';
 import { getComboSystem } from '../systems/ComboSystem';
+import { getEventSystem } from '../systems/EventSystem';
 import { HELD_ITEMS } from '../data/items/held-items';
 import { fontSize, scaled } from '../utils/ui-scale';
 
@@ -1465,6 +1466,52 @@ export class UIScene extends Phaser.Scene {
       this.devPanelContainer.add(hit);
     });
     yPos += 28;
+
+    // ── Event trigger buttons ────────────────────────────────────
+    this.devPanelContainer.add(this.add.text(panelX + 10, yPos, 'EVENTOS:', {
+      fontSize: fontSize(9), color: '#888888', fontFamily: 'monospace',
+    }));
+    yPos += 14;
+
+    const eventColors: Record<string, string> = {
+      pokemonCenter: '#44ff44', professorOak: '#ffaa00', swarm: '#ff4444',
+      eclipse: '#aa66ff', legendarySighting: '#ff44ff', treasureRoom: '#ffdd44',
+    };
+    const eventLabels: Record<string, string> = {
+      pokemonCenter: 'PokéCenter', professorOak: 'Prof. Oak', swarm: 'Swarm',
+      eclipse: 'Eclipse', legendarySighting: 'Legendary', treasureRoom: 'Treasure',
+    };
+
+    const eventSystem = getEventSystem();
+    const eventList = eventSystem.getEventList();
+    const evtBtnW = (panelW - 20) / 3 - 4;
+
+    eventList.forEach((evt, i) => {
+      const col = i % 3;
+      const row = Math.floor(i / 3);
+      const bx = panelX + 10 + col * (evtBtnW + 6);
+      const by = yPos + row * 22;
+      const color = eventColors[evt.id] ?? '#aaaaaa';
+      const label = eventLabels[evt.id] ?? evt.name;
+
+      const evtGfx = this.add.graphics();
+      evtGfx.fillStyle(0x1a1a3e, 0.9);
+      evtGfx.fillRoundedRect(bx, by, evtBtnW, 18, 3);
+      this.devPanelContainer.add(evtGfx);
+
+      this.devPanelContainer.add(this.add.text(bx + evtBtnW / 2, by + 9, label, {
+        fontSize: fontSize(8), color, fontFamily: 'monospace', fontStyle: 'bold',
+      }).setOrigin(0.5));
+
+      const evtHit = this.add.rectangle(bx + evtBtnW / 2, by + 9, evtBtnW, 18, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true });
+      evtHit.on('pointerdown', () => {
+        SoundManager.playClick();
+        eventSystem.forceEvent(evt.id);
+      });
+      this.devPanelContainer.add(evtHit);
+    });
+    yPos += Math.ceil(eventList.length / 3) * 22 + 8;
 
     // ── Search bar ───────────────────────────────────────────────
     this.devPanelContainer.add(this.add.text(panelX + 10, yPos, 'ATAQUES:', {

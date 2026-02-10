@@ -410,6 +410,79 @@ export class TitleScene extends Phaser.Scene {
         .setDepth(10)
     }
 
+    // ── Botão Download (só na versão web) ────────────────────────────
+    const isTauri = "__TAURI_INTERNALS__" in window
+    if (!isTauri) {
+      const dlBtnW = scaled(140)
+      const dlBtnH = scaled(30)
+      const dlX = width - dlBtnW / 2 - scaled(10)
+      const dlY = coins > 0 ? scaled(40) : scaled(18)
+
+      const dlGfx = this.add.graphics().setDepth(10)
+      const drawDl = (hover: boolean): void => {
+        dlGfx.clear()
+        dlGfx.fillStyle(0x000000, 0.4)
+        dlGfx.fillRoundedRect(
+          dlX - dlBtnW / 2 + 2,
+          dlY - dlBtnH / 2 + 2,
+          dlBtnW,
+          dlBtnH,
+          6,
+        )
+        dlGfx.fillStyle(hover ? 0x335533 : 0x223322, 0.95)
+        dlGfx.fillRoundedRect(
+          dlX - dlBtnW / 2,
+          dlY - dlBtnH / 2,
+          dlBtnW,
+          dlBtnH,
+          6,
+        )
+        dlGfx.lineStyle(1, hover ? 0x66dd66 : 0x44aa44, 0.8)
+        dlGfx.strokeRoundedRect(
+          dlX - dlBtnW / 2,
+          dlY - dlBtnH / 2,
+          dlBtnW,
+          dlBtnH,
+          6,
+        )
+      }
+      drawDl(false)
+
+      const dlText = this.add
+        .text(dlX, dlY, "DOWNLOAD", {
+          fontSize: fontSize(11),
+          color: "#66dd66",
+          fontFamily: "monospace",
+          fontStyle: "bold",
+          stroke: "#000000",
+          strokeThickness: 2,
+        })
+        .setOrigin(0.5)
+        .setDepth(11)
+
+      const dlHit = this.add
+        .rectangle(dlX, dlY, dlBtnW, dlBtnH, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(12)
+
+      dlHit.on("pointerover", () => {
+        drawDl(true)
+        dlText.setColor("#aaffaa")
+        SoundManager.playHover()
+      })
+      dlHit.on("pointerout", () => {
+        drawDl(false)
+        dlText.setColor("#66dd66")
+      })
+      dlHit.on("pointerdown", () => {
+        SoundManager.playClick()
+        window.open(
+          "https://github.com/giovanneluna/poke-survivors/releases/latest",
+          "_blank",
+        )
+      })
+    }
+
     // ── Versão ───────────────────────────────────────────────────────
     const versionBadge = this.add.graphics().setDepth(10)
     const badgeW = scaled(90)
@@ -459,7 +532,10 @@ export class TitleScene extends Phaser.Scene {
     credits.on("pointerover", () => credits.setColor("#aaaaaa"))
     credits.on("pointerout", () => credits.setColor("#666666"))
     credits.on("pointerdown", () => {
-      window.open("https://github.com/giovanneluna", "_blank")
+      const url = "https://github.com/giovanneluna";
+      import("@tauri-apps/plugin-shell")
+        .then(({ open }) => open(url))
+        .catch(() => window.open(url, "_blank"));
     })
 
     // ── Fade in ──────────────────────────────────────────────────────

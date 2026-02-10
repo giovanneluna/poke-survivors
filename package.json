@@ -7,12 +7,17 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
+    "@tauri-apps/plugin-shell": "^2.3.5",
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.10.0",
     "playwright": "^1.58.2",
     "sharp": "^0.34.5",
     "typescript": "^5.7.2",

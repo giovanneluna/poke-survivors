@@ -591,6 +591,22 @@ class EventSystemImpl {
     this.ctx.pickups.add(pickup);
   }
 
+  // ── Dev: force-trigger any event by id ──────────────────────────────
+
+  /** Returns the list of registered event ids + names for dev UI. */
+  getEventList(): ReadonlyArray<{ id: string; name: string }> {
+    return this.events.map(e => ({ id: e.id, name: e.name }));
+  }
+
+  /** Force-trigger an event by id, ignoring cooldowns/timers/chance. */
+  forceEvent(eventId: string): void {
+    const evt = this.events.find(e => e.id === eventId);
+    if (!evt) return;
+    const gameTime = this.ctx.scene.time.now;
+    evt.lastFiredAt = gameTime;
+    evt.execute(this.ctx, gameTime);
+  }
+
   // ── Cleanup ──────────────────────────────────────────────────────────
 
   destroy(): void {
