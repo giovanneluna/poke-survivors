@@ -86,6 +86,10 @@ export class UIScene extends Phaser.Scene {
   // ── Companion HUD ───────────────────────────────────────────────
   private companionIcons: Phaser.GameObjects.Image[] = [];
 
+  // ── Event Banner ────────────────────────────────────────────────
+  private activeEventBanner: Phaser.GameObjects.Text | null = null;
+  private fpsText!: Phaser.GameObjects.Text;
+
   // ── Companion Select ────────────────────────────────────────────
   private companionSelectContainer: Phaser.GameObjects.Container | null = null;
 
@@ -108,6 +112,9 @@ export class UIScene extends Phaser.Scene {
     this.add.text(scaled(10), scaled(8), 'HP', { ...this.textStyle, fontSize: fontSize(12) }).setDepth(100);
     this.reviveText = this.add.text(scaled(190), scaled(12), '', {
       ...this.textStyle, fontSize: fontSize(10), color: '#ffaa00',
+    }).setDepth(100);
+    this.fpsText = this.add.text(scaled(185), scaled(8), '', {
+      ...this.textStyle, fontSize: fontSize(10), color: '#aaaaaa',
     }).setDepth(100);
     this.xpBar = this.add.graphics().setDepth(100);
 
@@ -336,6 +343,11 @@ export class UIScene extends Phaser.Scene {
     const hpColor = hpRatio > 0.5 ? 0x44dd44 : hpRatio > 0.25 ? 0xdddd44 : 0xdd4444;
     this.hpBar.fillStyle(hpColor);
     this.hpBar.fillRoundedRect(scaled(30), scaled(10), hpBarWidth * hpRatio, scaled(12), scaled(3));
+
+    // FPS
+    const fps = Math.round(this.game.loop.actualFps);
+    this.fpsText.setText(`${fps}`);
+    this.fpsText.setColor(fps >= 50 ? '#aaaaaa' : fps >= 30 ? '#dddd44' : '#dd4444');
 
     // XP Bar
     this.xpBar.clear();
@@ -574,20 +586,34 @@ export class UIScene extends Phaser.Scene {
 
   // ── Event Banner ────────────────────────────────────────────────
   private showEventBanner(name: string, color: string): void {
+    // Destruir banner anterior se existir (evita overlap)
+    if (this.activeEventBanner) {
+      this.tweens.killTweensOf(this.activeEventBanner);
+      this.activeEventBanner.destroy();
+      this.activeEventBanner = null;
+    }
+
     const cam = this.cameras.main;
     const banner = this.add.text(cam.width / 2, -scaled(40), `EVENT: ${name}`, {
       fontSize: fontSize(20), color, fontFamily: 'monospace',
       stroke: '#000000', strokeThickness: scaled(4),
     }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
 
+    this.activeEventBanner = banner;
+
     this.tweens.add({
       targets: banner,
-      y: 40,
+      y: cam.height * 0.25,
       duration: 500,
       ease: 'Back.Out',
       hold: 3000,
       yoyo: true,
-      onComplete: () => banner.destroy(),
+      onComplete: () => {
+        banner.destroy();
+        if (this.activeEventBanner === banner) {
+          this.activeEventBanner = null;
+        }
+      },
     });
   }
 
@@ -1074,6 +1100,13 @@ export class UIScene extends Phaser.Scene {
   };
 
   private showBossWarning(name: string, archetype?: string): void {
+    // Limpar event banner para não sobrepor
+    if (this.activeEventBanner) {
+      this.tweens.killTweensOf(this.activeEventBanner);
+      this.activeEventBanner.destroy();
+      this.activeEventBanner = null;
+    }
+
     const { width, height } = this.cameras.main;
 
     // Flash vermelho

@@ -127,15 +127,14 @@ export class DragonBreath implements Attack {
 
       // Stun: paralisa o inimigo brevemente
       if (Math.random() < this.stunChance) {
-        enemy.setTint(0x7744ff);
-        const body = enemy.body as Phaser.Physics.Arcade.Body;
-        body.setVelocity(0, 0);
-        this.scene.time.delayedCall(800, () => {
-          if (enemy.active) {
-            enemy.clearTint();
-            // Velocidade sera restaurada no proximo moveToward()
-          }
-        });
+        const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+        if (body) {
+          enemy.setTint(0x7744ff);
+          body.setVelocity(0, 0);
+          this.scene.time.delayedCall(800, () => {
+            if (enemy.active) enemy.clearTint();
+          });
+        }
       }
     }
   }

@@ -1,6 +1,7 @@
 import Phaser from "phaser"
 import type {
   EnemyConfig,
+  EnemyBehavior,
   Direction,
   SpriteConfig,
   EnemyRangedConfig,
@@ -17,6 +18,7 @@ import {
   recordDamage,
   getDamageBuff,
   getDamageSource,
+  getFormDamageMultiplier,
 } from "../systems/DamageTracker"
 import { safeExplode } from "../utils/particles"
 import { ATTACKS } from "../config"
@@ -44,6 +46,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   readonly teleportConfig: EnemyTeleportConfig | undefined
   readonly boomerang: EnemyBoomerangConfig | undefined
   readonly slowAura: EnemySlowAuraConfig | undefined
+  readonly behavior: EnemyBehavior | undefined
   private lastAttackTime = 0
   private lastTeleportTime = 0
   private lastBoomerangTime = 0
@@ -79,6 +82,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.teleportConfig = config.teleport
     this.boomerang = config.boomerang
     this.slowAura = config.slowAura
+    this.behavior = config.behavior
 
     this.setScale(config.scale)
     this.setDepth(5)
@@ -143,21 +147,28 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     return time < this.poisonUntil
   }
 
-  moveToward(target: Phaser.Math.Vector2): void {
-    if (!this.active || !this.body || this.isDead) return
-
-    // Speed: aplica multiplicadores (enrage, wet)
-    let effectiveSpeed = this.speed * this.speedMultiplier
+  getEffectiveSpeed(): number {
+    let speed = this.speed * this.speedMultiplier
     if (this.isWet(this.scene.time.now)) {
-      effectiveSpeed *= this.wetSpeedMult
+      speed *= this.wetSpeedMult
     }
+    return speed
+  }
 
-    this.scene.physics.moveToObject(this, target, effectiveSpeed)
+  getHpRatio(): number {
+    return this.hp / this.maxHp
+  }
 
+  /** Sync walk animation + shadow to current velocity (called by EnemyBehaviors) */
+  updateAnimation(): void {
+    if (!this.body) return
     const vx = this.body.velocity.x
     const vy = this.body.velocity.y
+    if (Math.abs(vx) < 1 && Math.abs(vy) < 1) {
+      if (this.shadow) this.shadow.setPosition(this.x, this.y + 8)
+      return
+    }
     const newDir = this.velocityToDirection(vx, vy)
-
     if (newDir !== this.currentDir) {
       this.currentDir = newDir
       const animKey = `${this.spriteConfig.key}-${newDir}`
@@ -165,10 +176,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.play(animKey)
       }
     }
-
     if (this.shadow) {
       this.shadow.setPosition(this.x, this.y + 8)
     }
+  }
+
+  moveToward(target: Phaser.Math.Vector2): void {
+    if (!this.active || !this.body || this.isDead) return
+
+    this.scene.physics.moveToObject(this, target, this.getEffectiveSpeed())
+    this.updateAnimation()
   }
 
   tryRangedAttack(
@@ -314,6 +331,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const damageBuff = getDamageBuff()
     if (damageBuff > 1) {
       finalAmount = Math.floor(finalAmount * damageBuff)
+    }
+
+    // ── Form damage multiplier (stage2 = +40%) ─────
+    const formMult = getFormDamageMultiplier()
+    if (formMult > 1) {
+      finalAmount = Math.floor(finalAmount * formMult)
     }
 
     if (passive && passive.type !== "none") {

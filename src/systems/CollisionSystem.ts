@@ -10,6 +10,8 @@ import { setDamageSource, clearDamageSource } from './DamageTracker';
 import { unlockPokedexEntry } from './SaveSystem';
 import { getMegaSystem } from './MegaSystem';
 import { getCompanionSystem } from './CompanionSystem';
+import { getStatsTracker } from './RunRecorder';
+import { getComboSystem } from './ComboSystem';
 import { ENEMY_TYPES } from '../data/type-chart';
 import type { EnemyType } from '../types';
 
@@ -38,10 +40,28 @@ export class CollisionSystem {
           const took = player.takeDamage(enemy.getContactDamage(), scene.time.now);
           if (took) {
             SoundManager.playPlayerHit();
-            if (enemy.contactEffect?.type === 'slow') {
-              player.applySlow(enemy.contactEffect.durationMs, scene.time.now);
-            } else if (enemy.contactEffect?.type === 'poison' && enemy.contactEffect.dps) {
-              player.applyPoison(enemy.contactEffect.dps, enemy.contactEffect.durationMs, scene.time.now);
+            const ce = enemy.contactEffect;
+            if (ce) {
+              switch (ce.type) {
+                case 'slow':
+                  player.applySlow(ce.durationMs, scene.time.now);
+                  break;
+                case 'poison':
+                  if (ce.dps) player.applyPoison(ce.dps, ce.durationMs, scene.time.now);
+                  break;
+                case 'knockback':
+                  player.applyKnockback(enemy.x, enemy.y, ce.force ?? 200);
+                  break;
+                case 'drain':
+                  enemy.heal(ce.amount ?? 3);
+                  break;
+                case 'stun':
+                  player.applyStun(ce.durationMs, scene.time.now);
+                  break;
+                case 'confusion':
+                  player.applyConfusion(ce.durationMs, scene.time.now);
+                  break;
+              }
             }
             scene.events.emit('stats-refresh');
             if (player.isDead()) scene.events.emit('player-died');
@@ -295,6 +315,10 @@ export class CollisionSystem {
     this.ctx.player.stats.kills++;
     this.pickupSystem.spawnXpGem(enemy.x, enemy.y, enemy.xpValue);
 
+    // Run stats + combo tracking
+    getStatsTracker().recordKill(enemy.enemyKey, enemy.xpValue);
+    getComboSystem().recordKill();
+
     // Mega gauge tracking
     getMegaSystem()?.addKill();
 
@@ -306,6 +330,7 @@ export class CollisionSystem {
       this.pickupSystem.spawnPickup(enemy.x, enemy.y, 'gachaBox');
       this.pickupSystem.spawnBossCoins(enemy.x, enemy.y);
       getCompanionSystem()?.tryDropFriendBall(enemy.x, enemy.y);
+      getStatsTracker().recordBossKill(enemy.name);
       this.ctx.scene.events.emit('boss-killed', enemy.name);
     }
   }

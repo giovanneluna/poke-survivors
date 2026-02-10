@@ -4,6 +4,7 @@ import { Destructible } from '../entities/Destructible';
 import { Pickup } from '../entities/Pickup';
 import { SoundManager } from '../audio/SoundManager';
 import type { GameContext } from './GameContext';
+import { getStatsTracker } from './RunRecorder';
 
 // ── Coin tiers ──────────────────────────────────────────────────────
 const COIN_TIERS = {
@@ -221,24 +222,28 @@ export class PickupSystem {
         player.heal(25);
         SoundManager.playPickupItem();
         this.showPickupNotification('+25 HP', 0x44ff44);
+        getStatsTracker().recordBerry();
         break;
 
       case 'sitrusBerry':
         player.heal(50);
         SoundManager.playPickupItem();
         this.showPickupNotification('+50 HP', 0x44ff44);
+        getStatsTracker().recordBerry();
         break;
 
       case 'liechiBerry':
         player.applyBuff('damage', 2, 30_000, scene.time.now);
         SoundManager.playPickupItem();
         this.showPickupNotification('2x DANO por 30s!', 0xff4444);
+        getStatsTracker().recordBerry();
         break;
 
       case 'salacBerry':
         player.applyBuff('speed', 1.5, 30_000, scene.time.now);
         SoundManager.playPickupItem();
         this.showPickupNotification('1.5x SPEED por 30s!', 0x44ddff);
+        getStatsTracker().recordBerry();
         break;
 
       case 'magnetBurst':

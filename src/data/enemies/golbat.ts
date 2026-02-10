@@ -10,13 +10,6 @@ export const GOLBAT: EnemyConfig = {
   damage: 14,
   xpValue: 12,
   scale: 0.8,
-  rangedAttack: {
-    projectileKey: "atk-air-slash",
-    damage: 8,
-    speed: 120,
-    cooldownMs: 3500,
-    range: 280,
-    homing: false,
-    projectileScale: 1.2,
-  },
+  behavior: 'swooper',
+  contactEffect: { type: 'drain', durationMs: 0, amount: 3 },
 }

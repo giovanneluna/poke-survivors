@@ -92,10 +92,12 @@ export class Hurricane implements Attack {
 
         for (const enemy of aliveEnemies) {
           // Pull para o centro
-          const angleToCenter = Math.atan2(ty - enemy.y, tx - enemy.x);
-          const body = enemy.body as Phaser.Physics.Arcade.Body;
-          body.velocity.x += Math.cos(angleToCenter) * this.pullForce;
-          body.velocity.y += Math.sin(angleToCenter) * this.pullForce;
+          const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+          if (body) {
+            const angleToCenter = Math.atan2(ty - enemy.y, tx - enemy.x);
+            body.velocity.x += Math.cos(angleToCenter) * this.pullForce;
+            body.velocity.y += Math.sin(angleToCenter) * this.pullForce;
+          }
 
           // Dano
           if (typeof enemy.takeDamage === 'function') {

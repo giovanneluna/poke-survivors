@@ -43,9 +43,11 @@ export class Growl implements Attack {
     const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.radius);
 
     for (const enemy of enemies) {
+      const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+      if (!body) continue;
+
       // Debuff visual: tint cinza
       enemy.setTint(0xaaaaaa);
-      const body = enemy.body as Phaser.Physics.Arcade.Body;
       body.velocity.scale(this.debuffAmount);
 
       // Limpar tint após curto tempo

@@ -10,13 +10,6 @@ export const CROBAT: EnemyConfig = {
   damage: 16,
   xpValue: 80,
   scale: 0.9,
-  rangedAttack: {
-    projectileKey: "atk-air-slash",
-    damage: 12,
-    speed: 160,
-    cooldownMs: 2500,
-    range: 320,
-    homing: false,
-    projectileScale: 3,
-  },
+  behavior: 'dasher',
+  contactEffect: { type: 'poison', durationMs: 3000, dps: 2 },
 }

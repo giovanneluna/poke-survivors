@@ -6,6 +6,7 @@ import { Enemy } from '../entities/Enemy';
 import { getSpatialGrid } from './SpatialHashGrid';
 import { SoundManager } from '../audio/SoundManager';
 import { Destructible } from '../entities/Destructible';
+import { Pickup } from '../entities/Pickup';
 import { DESTRUCTIBLES } from '../config';
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -38,10 +39,9 @@ interface ActiveHealingZone {
 }
 
 interface ActiveEclipse {
-  readonly overlay: Phaser.GameObjects.Rectangle;
+  readonly fx: Phaser.FX.ColorMatrix;
   readonly createdAt: number;
   readonly duration: number;
-  fadingOut: boolean;
 }
 
 interface ActiveSwarm {
@@ -343,26 +343,14 @@ class EventSystemImpl {
     const cam = scene.cameras.main;
     SoundManager.playEventWarning();
 
-    const overlay = scene.add.rectangle(
-      cam.centerX, cam.centerY,
-      cam.width * 3, cam.height * 3,
-      0x000022, 0,
-    );
-    overlay.setDepth(1).setScrollFactor(0);
-
-    // Fade in
-    scene.tweens.add({
-      targets: overlay,
-      alpha: 0.4,
-      duration: 2000,
-      ease: 'Sine.easeIn',
-    });
+    // Camera postFX ColorMatrix — darkens everything the camera renders
+    const fx = cam.postFX.addColorMatrix();
+    fx.brightness(1); // starts normal
 
     this.activeEclipse = {
-      overlay,
+      fx,
       createdAt: gameTime,
       duration: EventSystemImpl.ECLIPSE_DURATION_MS,
-      fadingOut: false,
     };
 
     scene.events.emit('event-banner', { name: 'Eclipse!', color: '#6644aa' });
@@ -374,48 +362,127 @@ class EventSystemImpl {
     SoundManager.playEventWarning();
 
     const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-    const x = Phaser.Math.Clamp(
+    const spawnX = Phaser.Math.Clamp(
       player.x + Math.cos(angle) * 300,
       100, GAME.worldWidth - 100,
     );
-    const y = Phaser.Math.Clamp(
+    const spawnY = Phaser.Math.Clamp(
       player.y + Math.sin(angle) * 300,
       100, GAME.worldHeight - 100,
     );
 
-    // Spawn special gacha box with sparkle effect
-    this.spawnGachaBox(x, y);
+    // Spawn special gacha box at Mew's initial position
+    this.spawnGachaBox(spawnX, spawnY);
 
-    // Mew visual sprite (decorative, floats away and fades)
-    if (scene.textures.exists('mew-walk')) {
-      const mew = scene.add.sprite(x, y - 30, 'mew-walk');
-      mew.setScale(1.2).setDepth(10);
-      mew.play('mew-walk-down');
-      scene.tweens.add({
-        targets: mew,
-        x: x + Phaser.Math.Between(-150, 150),
-        y: y + Phaser.Math.Between(-150, 150),
-        alpha: 0,
-        duration: 5000,
-        ease: 'Sine.easeIn',
-        onComplete: () => mew.destroy(),
-      });
-    }
-
-    // Sparkle ring to draw attention
-    const sparkle = scene.add.circle(x, y, 40, 0xff44ff, 0.2);
+    // Sparkle ring de entrada
+    const sparkle = scene.add.circle(spawnX, spawnY, 40, 0xff44ff, 0.2);
     sparkle.setDepth(1);
     scene.tweens.add({
-      targets: sparkle,
-      scaleX: 2,
-      scaleY: 2,
-      alpha: 0,
-      duration: 1500,
-      ease: 'Sine.easeOut',
+      targets: sparkle, scaleX: 2, scaleY: 2, alpha: 0,
+      duration: 1500, ease: 'Sine.easeOut',
       onComplete: () => sparkle.destroy(),
     });
 
     scene.events.emit('event-banner', { name: 'Legendary Sighting!', color: '#ff44ff' });
+
+    // Mew com IA de fuga
+    if (!scene.textures.exists('mew-walk')) return;
+
+    const mew = scene.add.sprite(spawnX, spawnY, 'mew-walk');
+    mew.setScale(1.2).setDepth(10);
+    mew.play('mew-walk-down');
+
+    const MEW_SPEED = 120;
+    const MEW_DURATION = 15_000;
+    const SPARKLE_INTERVAL = 800;
+    let lastDir = '';
+    let sparkleTimer = 0;
+
+    // Loop de fuga: Mew corre para longe do jogador
+    const fleeEvent = scene.time.addEvent({
+      delay: 50, loop: true,
+      callback: () => {
+        if (!mew.active || !player.active) return;
+
+        const dx = mew.x - player.x;
+        const dy = mew.y - player.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Direção de fuga (oposta ao jogador)
+        let fleeX: number, fleeY: number;
+        if (dist < 10) {
+          fleeX = Math.random() - 0.5;
+          fleeY = Math.random() - 0.5;
+        } else {
+          fleeX = dx / dist;
+          fleeY = dy / dist;
+        }
+
+        // Bounce nas bordas do mundo
+        const margin = 80;
+        if (mew.x < margin) fleeX = Math.abs(fleeX);
+        if (mew.x > GAME.worldWidth - margin) fleeX = -Math.abs(fleeX);
+        if (mew.y < margin) fleeY = Math.abs(fleeY);
+        if (mew.y > GAME.worldHeight - margin) fleeY = -Math.abs(fleeY);
+
+        // Mover
+        const step = MEW_SPEED * 0.05;
+        mew.x += fleeX * step;
+        mew.y += fleeY * step;
+
+        // Animação direcional
+        const fleeAngle = Math.atan2(fleeY, fleeX);
+        const dir = EventSystemImpl.angleToDir(fleeAngle);
+        if (dir !== lastDir) {
+          lastDir = dir;
+          const animKey = `mew-walk-${dir}`;
+          if (mew.anims.currentAnim?.key !== animKey) {
+            mew.play(animKey);
+          }
+        }
+
+        // Trail de sparkles rosa
+        sparkleTimer += 50;
+        if (sparkleTimer >= SPARKLE_INTERVAL) {
+          sparkleTimer = 0;
+          const trail = scene.add.circle(mew.x, mew.y + 10, 6, 0xff88ff, 0.6);
+          trail.setDepth(5);
+          scene.tweens.add({
+            targets: trail, alpha: 0, scaleX: 0.3, scaleY: 0.3,
+            duration: 600, onComplete: () => trail.destroy(),
+          });
+        }
+      },
+    });
+
+    // Teleport de saída após duração
+    scene.time.delayedCall(MEW_DURATION, () => {
+      fleeEvent.destroy();
+      if (!mew.active) return;
+
+      // Flash de teleporte
+      const flash = scene.add.circle(mew.x, mew.y, 30, 0xff44ff, 0.8);
+      flash.setDepth(15);
+      scene.tweens.add({
+        targets: flash, scaleX: 3, scaleY: 3, alpha: 0,
+        duration: 500, onComplete: () => flash.destroy(),
+      });
+      mew.destroy();
+    });
+  }
+
+  /** Converte ângulo em direção de walk animation (8 dirs) */
+  private static angleToDir(angle: number): string {
+    const deg = Phaser.Math.RadToDeg(angle);
+    const norm = ((deg % 360) + 360) % 360;
+    if (norm < 22.5 || norm >= 337.5) return 'right';
+    if (norm < 67.5) return 'downRight';
+    if (norm < 112.5) return 'down';
+    if (norm < 157.5) return 'downLeft';
+    if (norm < 202.5) return 'left';
+    if (norm < 247.5) return 'upLeft';
+    if (norm < 292.5) return 'up';
+    return 'upRight';
   }
 
   private executeTreasureRoom(ctx: GameContext, _gameTime: number): void {
@@ -512,23 +579,35 @@ class EventSystemImpl {
   private updateEclipse(gameTime: number): void {
     if (!this.activeEclipse) return;
 
-    const elapsed = gameTime - this.activeEclipse.createdAt;
+    const eclipse = this.activeEclipse;
+    const elapsed = gameTime - eclipse.createdAt;
 
-    // Start fade out near end
-    if (elapsed >= this.activeEclipse.duration && !this.activeEclipse.fadingOut) {
-      this.activeEclipse.fadingOut = true;
-      const overlay = this.activeEclipse.overlay;
-      this.ctx.scene.tweens.add({
-        targets: overlay,
-        alpha: 0,
-        duration: 2000,
-        ease: 'Sine.easeOut',
-        onComplete: () => {
-          overlay.destroy();
-        },
-      });
+    const FADE_IN_MS = 2000;
+    const FADE_OUT_MS = 2000;
+    const MIN_BRIGHTNESS = 0.35; // 0=black, 1=normal
+
+    if (elapsed >= eclipse.duration + FADE_OUT_MS) {
+      // Done — reset to normal and clear
+      eclipse.fx.reset();
       this.activeEclipse = null;
+      return;
     }
+
+    // Calculate brightness: 1.0 (normal) → MIN_BRIGHTNESS (dark) → 1.0 (normal)
+    let brightness = 1;
+    if (elapsed >= eclipse.duration) {
+      const fadeProgress = (elapsed - eclipse.duration) / FADE_OUT_MS;
+      brightness = MIN_BRIGHTNESS + (1 - MIN_BRIGHTNESS) * fadeProgress;
+    } else if (elapsed < FADE_IN_MS) {
+      brightness = 1 - (1 - MIN_BRIGHTNESS) * (elapsed / FADE_IN_MS);
+    } else {
+      brightness = MIN_BRIGHTNESS;
+    }
+
+    // CRITICAL: reset() before brightness() — brightness() MULTIPLIES the matrix,
+    // so without reset it compounds each frame (0.99^60 ≈ 0.54 per second)
+    eclipse.fx.reset();
+    eclipse.fx.brightness(Phaser.Math.Clamp(brightness, 0, 1));
   }
 
   private updateSwarm(): void {
@@ -575,22 +654,8 @@ class EventSystemImpl {
   // ── Helpers ──────────────────────────────────────────────────────────
 
   private spawnGachaBox(x: number, y: number): void {
-    const scene = this.ctx.scene;
-    const pickup = scene.physics.add.sprite(x, y, 'gacha-box');
-    pickup.setDepth(5);
-    pickup.setScale(1.2);
-    pickup.setData('pickupType', 'gachaBox');
-
-    // Bobbing animation
-    scene.tweens.add({
-      targets: pickup,
-      y: y - 8,
-      duration: 800,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
-
+    const pickup = new Pickup(this.ctx.scene, x, y, 'gachaBox', 'gacha-box');
+    pickup.setDepth(5).setScale(1.2);
     this.ctx.pickups.add(pickup);
   }
 
@@ -619,7 +684,7 @@ class EventSystemImpl {
     this.activeHealingZones.length = 0;
 
     if (this.activeEclipse) {
-      this.activeEclipse.overlay.destroy();
+      this.activeEclipse.fx.reset();
       this.activeEclipse = null;
     }
 

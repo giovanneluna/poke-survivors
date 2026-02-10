@@ -13,7 +13,7 @@ import type {
 } from "../types"
 import { formIndex } from "../types"
 import { getPassive } from "../systems/PassiveSystem"
-import { setDamageSource, clearDamageSource } from "../systems/DamageTracker"
+import { setDamageSource, clearDamageSource, setFormDamageMultiplier } from "../systems/DamageTracker"
 import { getMegaSystem } from "../systems/MegaSystem"
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
@@ -149,6 +149,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return time < this.slowUntil
   }
 
+  // ── Knockback effect ────────────────────────────────────────────
+  applyKnockback(fromX: number, fromY: number, force: number): void {
+    const angle = Phaser.Math.Angle.Between(fromX, fromY, this.x, this.y)
+    const body = this.body as Phaser.Physics.Arcade.Body
+    body.setVelocity(Math.cos(angle) * force, Math.sin(angle) * force)
+    this.invincibleUntil = Math.max(
+      this.invincibleUntil,
+      this.scene.time.now + 300,
+    )
+  }
+
   // ── Confusion effect (3s cooldown between applications) ──────────
   applyConfusion(durationMs: number, time: number): void {
     if (time - this.lastConfuseApplied < Player.CONFUSE_COOLDOWN) return
@@ -280,6 +291,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.stats.form = targetForm
     this.stats.attackSlots = formConfig.maxAttackSlots
     this.stats.passiveSlots = formConfig.maxPassiveSlots
+
+    // +40% dano na forma final (stage2)
+    const formDmgMap: Record<PokemonForm, number> = {
+      base: 1,
+      stage1: 1,
+      stage2: 1.4,
+    }
+    setFormDamageMultiplier(formDmgMap[targetForm])
 
     // Atualiza tier da passiva (Blaze/Torrent)
     const passive = getPassive()

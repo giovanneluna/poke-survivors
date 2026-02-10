@@ -145,7 +145,7 @@ export class BodySlam implements Attack {
 
   upgrade(): void {
     this.level++;
-    this.damage += 3;
+    this.damage += 5;
     this.range += 4;
     if (this.level % 2 === 0) this.slamCount++;
     this.cooldown = Math.max(250, this.cooldown - 30);

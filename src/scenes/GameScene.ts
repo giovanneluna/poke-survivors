@@ -16,10 +16,12 @@ import { UpgradeSystem } from "../systems/UpgradeSystem"
 import { DebugSystem } from "../systems/DebugSystem"
 import { PassiveSystem, getPassive } from "../systems/PassiveSystem"
 import { initSpatialGrid, getSpatialGrid } from "../systems/SpatialHashGrid"
+import { clearSpores } from "../systems/EnemyBehaviors"
 import {
   resetDamageTotals,
   getDamageTotals,
   setDamageBuff,
+  setRunRecordDamage,
 } from "../systems/DamageTracker"
 import { safeExplode } from "../utils/particles"
 import { initStatsTracker, getStatsTracker } from "../systems/RunRecorder"
@@ -156,6 +158,7 @@ export class GameScene extends Phaser.Scene {
     // ── Persistent systems ───────────────────────────────────────────
     initSaveSystem()
     initStatsTracker()
+    setRunRecordDamage((attackKey, amount) => getStatsTracker().recordDamage(attackKey, amount))
     initComboSystem()
 
     // ── Spatial hash grid (deve ser antes dos systems) ──────────────
@@ -273,10 +276,8 @@ export class GameScene extends Phaser.Scene {
       "cone-attack-kill",
       (x: number, y: number, xpValue: number, enemyKey?: string) => {
         this.upgradeSystem.onConeAttackKill(x, y, xpValue)
-        if (enemyKey) {
-          getStatsTracker().recordKill(enemyKey, xpValue)
-          getComboSystem().recordKill()
-        }
+        getStatsTracker().recordKill(enemyKey ?? "unknown", xpValue)
+        getComboSystem().recordKill()
       },
     )
 
@@ -510,7 +511,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Enemy movement + attacks
-    this.spawnSystem.update(time)
+    this.spawnSystem.update(time, delta)
 
     // Phase 3: Event System
     getEventSystem().update(this.gameTime, delta)
@@ -637,6 +638,7 @@ export class GameScene extends Phaser.Scene {
     // ── Phase 3 cleanup ────────────────────────────────────────────
     getMusicManager()?.fadeOut(2000)
     getEventSystem().destroy()
+    clearSpores()
 
     this.events.emit("game-over", {
       level: this.player.stats.level,

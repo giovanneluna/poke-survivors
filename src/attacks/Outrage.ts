@@ -96,11 +96,9 @@ export class Outrage implements Attack {
       aura.destroy();
       this.isActive = false;
 
-      // Confusão: player fica lento
+      // Confusão: player fica lento via applySlow (seguro contra overlap e pause)
       if (this.player.active) {
-        this.player.setTint(0xffff00);
-        const origSpeed = this.player.stats.speed;
-        this.player.stats.speed = Math.floor(origSpeed * 0.4);
+        this.player.applySlow(this.confusionDuration, this.scene.time.now);
 
         const confTxt = this.scene.add.text(this.player.x, this.player.y - 20, 'Confused...', {
           fontSize: '10px', color: '#ffff44', fontFamily: 'monospace',
@@ -109,13 +107,6 @@ export class Outrage implements Attack {
         this.scene.tweens.add({
           targets: confTxt, alpha: 0, duration: this.confusionDuration,
           onComplete: () => confTxt.destroy(),
-        });
-
-        this.scene.time.delayedCall(this.confusionDuration, () => {
-          if (this.player.active) {
-            this.player.stats.speed = origSpeed;
-            this.player.clearTint();
-          }
         });
       }
     };

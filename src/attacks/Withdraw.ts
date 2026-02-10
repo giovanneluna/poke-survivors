@@ -67,8 +67,10 @@ export class Withdraw implements Attack {
     const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.slowRadius);
 
     for (const enemy of enemies) {
+      const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+      if (!body) continue;
+
       enemy.setTint(0x3388ff);
-      const body = enemy.body as Phaser.Physics.Arcade.Body;
       body.velocity.scale(this.slowAmount);
 
       this.scene.time.delayedCall(400, () => {

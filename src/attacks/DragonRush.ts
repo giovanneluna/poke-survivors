@@ -36,6 +36,7 @@ export class DragonRush implements Attack {
   }
 
   private charge(): void {
+    if (!this.player.active) return;
     const dir = this.player.getLastDirection();
     const angle = Math.atan2(dir.y, dir.x);
 
@@ -117,13 +118,15 @@ export class DragonRush implements Attack {
         }
 
         // Stun para os que estão no raio
-        if (!killed && inStunRadius && enemy.active && enemy.body) {
-          enemy.setTint(0x7744ff);
-          const body = enemy.body as Phaser.Physics.Arcade.Body;
-          body.setVelocity(0, 0);
-          this.scene.time.delayedCall(this.stunDuration, () => {
-            if (enemy.active) enemy.clearTint();
-          });
+        if (!killed && inStunRadius && enemy.active) {
+          const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+          if (body) {
+            enemy.setTint(0x7744ff);
+            body.setVelocity(0, 0);
+            this.scene.time.delayedCall(this.stunDuration, () => {
+              if (enemy.active) enemy.clearTint();
+            });
+          }
         }
       }
     }

@@ -126,18 +126,17 @@ export class Liquidation implements Attack {
       }
 
       // Slow: reduz velocidade do body + tint azul
-      const body = enemy.body as Phaser.Physics.Arcade.Body;
-      const slowMultiplier = 1 - this.slowPercent / 100;
-      body.velocity.x *= slowMultiplier;
-      body.velocity.y *= slowMultiplier;
-      enemy.setTint(0x3388ff);
+      const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+      if (body) {
+        const slowMultiplier = 1 - this.slowPercent / 100;
+        body.velocity.x *= slowMultiplier;
+        body.velocity.y *= slowMultiplier;
+        enemy.setTint(0x3388ff);
 
-      this.scene.time.delayedCall(this.slowDuration, () => {
-        if (enemy.active) {
-          enemy.clearTint();
-          // Restaurar velocidade normal (o Enemy.update recalcula, entao apenas limpar o tint)
-        }
-      });
+        this.scene.time.delayedCall(this.slowDuration, () => {
+          if (enemy.active) enemy.clearTint();
+        });
+      }
     }
   }
 

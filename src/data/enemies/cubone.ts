@@ -10,12 +10,5 @@ export const CUBONE: EnemyConfig = {
   damage: 12,
   xpValue: 25,
   scale: 1.0,
-  boomerang: {
-    projectileKey: 'atk-bonemerang',
-    damage: 10,
-    speed: 120,
-    cooldownMs: 3500,
-    range: 250,
-    projectileScale: 2.0,
-  },
+  behavior: 'berserker',
 };

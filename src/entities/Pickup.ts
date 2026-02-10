@@ -13,6 +13,10 @@ export class Pickup extends Phaser.Physics.Arcade.Sprite {
     this.setScale(0.8);
     this.setDepth(4);
 
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.reset(x, y);
+    body.enable = true;
+
     // Animação de flutuação
     scene.tweens.add({
       targets: this,

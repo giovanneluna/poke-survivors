@@ -77,14 +77,15 @@ export class StunSpore implements Attack {
       }
 
       // Stun: velocity 0 + tint amarelo
-      const body = enemy.body as Phaser.Physics.Arcade.Body;
-      body.velocity.set(0, 0);
-      enemy.setTint(0xffcc00);
+      const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+      if (body) {
+        body.velocity.set(0, 0);
+        enemy.setTint(0xffcc00);
 
-      // Remove stun após duração
-      this.scene.time.delayedCall(this.stunDuration, () => {
-        if (enemy.active) enemy.clearTint();
-      });
+        this.scene.time.delayedCall(this.stunDuration, () => {
+          if (enemy.active) enemy.clearTint();
+        });
+      }
     }
   }
 

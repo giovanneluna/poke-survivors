@@ -108,10 +108,12 @@ export class Surf implements Attack {
           const uid = enemy.getData('uid') ?? 0;
 
           // Push outward (sempre aplica)
-          const angleToEnemy = Math.atan2(enemy.y - cy, enemy.x - cx);
-          const body = enemy.body as Phaser.Physics.Arcade.Body;
-          body.velocity.x += Math.cos(angleToEnemy) * this.pushForce;
-          body.velocity.y += Math.sin(angleToEnemy) * this.pushForce;
+          const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+          if (body) {
+            const angleToEnemy = Math.atan2(enemy.y - cy, enemy.x - cx);
+            body.velocity.x += Math.cos(angleToEnemy) * this.pushForce;
+            body.velocity.y += Math.sin(angleToEnemy) * this.pushForce;
+          }
 
           // Dano (apenas uma vez por inimigo)
           if (hitSet.has(uid)) continue;

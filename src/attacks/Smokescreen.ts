@@ -57,9 +57,11 @@ export class Smokescreen implements Attack {
     const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.radius);
 
     for (const enemy of enemies) {
+      const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+      if (!body) continue;
+
       // Slow visual
       enemy.setTint(0x888888);
-      const body = enemy.body as Phaser.Physics.Arcade.Body;
       body.velocity.scale(this.slowAmount);
       this.tintedEnemies.add(enemy);
 

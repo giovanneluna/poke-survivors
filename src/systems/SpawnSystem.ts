@@ -8,6 +8,7 @@ import { safeExplode } from '../utils/particles';
 import type { GameContext } from './GameContext';
 import { getSpatialGrid } from './SpatialHashGrid';
 import { shouldShowVfx } from './GraphicsSettings';
+import { updateBehavior, processSpores } from './EnemyBehaviors';
 
 export class SpawnSystem {
   private spawnTimer!: Phaser.Time.TimerEvent;
@@ -55,7 +56,7 @@ export class SpawnSystem {
   }
 
   // ── Update (chamado todo frame para boss/ranged attacks) ──────────
-  update(time: number): void {
+  update(time: number, delta: number): void {
     const scene = this.ctx.scene;
     const player = this.ctx.player;
     const playerX = player.x;
@@ -71,8 +72,21 @@ export class SpawnSystem {
       this.healTintedEnemies.clear();
     }
 
+    // Process spore zones (persists after enemy death)
+    processSpores(player, time);
+
     for (const enemy of grid.getActiveEnemies()) {
-      // Teleport (Alakazam) — antes de moveToward
+      // ── Behavior system (replaces ALL legacy mechanics) ──
+      if (enemy.behavior) {
+        updateBehavior(enemy, player, time, delta);
+        grid.updatePosition(enemy);
+        const dist = Phaser.Math.Distance.Between(playerX, playerY, enemy.x, enemy.y);
+        if (dist > SPAWN.despawnDistance && enemy.shouldDespawn()) { enemy.cleanup(); }
+        continue;
+      }
+
+      // ── Legacy systems (enemies without behavior) ──
+      // Teleport (Alakazam boss) — antes de moveToward
       if (enemy.teleportConfig) {
         enemy.tryTeleport(playerX, playerY, time);
       }

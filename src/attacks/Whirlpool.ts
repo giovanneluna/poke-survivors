@@ -117,10 +117,12 @@ export class Whirlpool implements Attack {
           enemiesInside.add(enemy);
 
           // Pull para o centro
-          const angleToCenter = Math.atan2(ty - enemy.y, tx - enemy.x);
-          const body = enemy.body as Phaser.Physics.Arcade.Body;
-          body.velocity.x += Math.cos(angleToCenter) * this.pullForce;
-          body.velocity.y += Math.sin(angleToCenter) * this.pullForce;
+          const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+          if (body) {
+            const angleToCenter = Math.atan2(ty - enemy.y, tx - enemy.x);
+            body.velocity.x += Math.cos(angleToCenter) * this.pullForce;
+            body.velocity.y += Math.sin(angleToCenter) * this.pullForce;
+          }
 
           // Tint azul enquanto dentro
           enemy.setTint(0x4488ff);
@@ -180,15 +182,15 @@ export class Whirlpool implements Attack {
    * mas o slow visual + reducao momentanea cria o efeito desejado.
    */
   private applySlow(enemySprite: Phaser.Physics.Arcade.Sprite): void {
-    const body = enemySprite.body as Phaser.Physics.Arcade.Body;
+    const body = enemySprite.body as Phaser.Physics.Arcade.Body | null;
+    if (!body) return;
+
     body.velocity.x *= this.slowMultiplier;
     body.velocity.y *= this.slowMultiplier;
     enemySprite.setTint(0x6688cc);
 
     this.scene.time.delayedCall(this.slowDurationMs, () => {
-      if (enemySprite.active) {
-        enemySprite.clearTint();
-      }
+      if (enemySprite.active) enemySprite.clearTint();
     });
   }
 

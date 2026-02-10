@@ -92,6 +92,11 @@ export type EnemyType =
   | 'fearow' | 'pidgeot' | 'machamp' | 'golem';
 export type Direction = 'down' | 'downRight' | 'right' | 'upRight' | 'up' | 'upLeft' | 'left' | 'downLeft';
 
+// ── Comportamentos de Inimigos ──────────────────────────────────
+export type EnemyBehavior =
+  | 'charger' | 'swooper' | 'circler' | 'berserker'
+  | 'dasher' | 'tank' | 'sporeWalker' | 'confuser' | 'healer' | 'teleporter';
+
 // ── Held Items (expandido) ────────────────────────────────────────
 export type HeldItemType =
   | 'charcoal' | 'wideLens' | 'choiceSpecs' | 'quickClaw' | 'leftovers'
@@ -134,10 +139,12 @@ export interface AttackPoolEntry {
 
 // ── Configurações de Inimigos ─────────────────────────────────────
 export interface EnemyContactEffect {
-  readonly type: 'slow' | 'poison';
+  readonly type: 'slow' | 'poison' | 'knockback' | 'drain' | 'stun' | 'confusion';
   readonly durationMs: number;
   readonly multiplier?: number; // para slow
   readonly dps?: number;        // para poison (damage per second)
+  readonly force?: number;      // para knockback (pixels)
+  readonly amount?: number;     // para drain (HP)
 }
 
 /** Config de cura para inimigos healers (Gloom) */
@@ -190,6 +197,7 @@ export interface EnemyConfig {
   readonly teleport?: EnemyTeleportConfig;
   readonly boomerang?: EnemyBoomerangConfig;
   readonly slowAura?: EnemySlowAuraConfig;
+  readonly behavior?: EnemyBehavior;
 }
 
 export interface EnemyRangedConfig {

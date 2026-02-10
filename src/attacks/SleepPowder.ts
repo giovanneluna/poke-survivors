@@ -98,8 +98,10 @@ export class SleepPowder implements Attack {
       hitEnemies.add(uid);
 
       // Aplica slow visual + mecânico
+      const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+      if (!body) continue;
+
       enemy.setTint(0x66cc44);
-      const body = enemy.body as Phaser.Physics.Arcade.Body;
       body.velocity.scale(this.slowScale);
 
       setDamageSource(this.type);

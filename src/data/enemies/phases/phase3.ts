@@ -35,43 +35,43 @@ export const PHASE3: PhaseConfig = {
 
     // Wave 48 (24:00): Post-Gengar — Graveler + Machoke reforçam
     { enemies: [{ type: 'marowak', weight: 2 }, { type: 'graveler', weight: 1 }, { type: 'machoke', weight: 1 }, { type: 'hypno', weight: 1 }, { type: 'parasect', weight: 1 }],
-      spawnRate: 60, maxEnemies: 190 },
+      spawnRate: 100, maxEnemies: 90 },
     // Wave 49 (24:30): Confusion swarm + Crobat air attack
     { enemies: [{ type: 'venomoth', weight: 1 }, { type: 'butterfree', weight: 1 }, { type: 'crobat', weight: 1 }, { type: 'hypno', weight: 1 }],
-      spawnRate: 58, maxEnemies: 192 },
+      spawnRate: 95, maxEnemies: 92 },
     // Wave 50 (25:00): Tank avalanche
     { enemies: [{ type: 'parasect', weight: 2 }, { type: 'marowak', weight: 2 }, { type: 'cubone', weight: 2 }],
-      spawnRate: 56, maxEnemies: 195 },
+      spawnRate: 92, maxEnemies: 95 },
     // Wave 51 (25:30): Mixed elite
     { enemies: [{ type: 'hypno', weight: 2 }, { type: 'venomoth', weight: 1 }, { type: 'marowak', weight: 1 }, { type: 'gloom', weight: 1 }],
-      spawnRate: 54, maxEnemies: 198 },
+      spawnRate: 90, maxEnemies: 98 },
     // Wave 52 (26:00): Rock + Bone storm
     { enemies: [{ type: 'marowak', weight: 2 }, { type: 'graveler', weight: 2 }, { type: 'machoke', weight: 1 }, { type: 'hypno', weight: 1 }],
-      spawnRate: 52, maxEnemies: 200 },
+      spawnRate: 88, maxEnemies: 100 },
     // Wave 53 (26:30): Pre-respawn rush
     { enemies: [{ type: 'venomoth', weight: 1 }, { type: 'butterfree', weight: 1 }, { type: 'hypno', weight: 2 }, { type: 'parasect', weight: 1 }],
-      spawnRate: 50, maxEnemies: 202 },
+      spawnRate: 85, maxEnemies: 105 },
 
     // ── BOSS: Raticate ×2 @ 27:00 ──
 
     // Wave 54 (27:00): Post-respawn
     { enemies: [{ type: 'hypno', weight: 2 }, { type: 'marowak', weight: 2 }, { type: 'venomoth', weight: 1 }],
-      spawnRate: 48, maxEnemies: 205 },
+      spawnRate: 80, maxEnemies: 110 },
     // Wave 55 (27:30): Elite swarm + Crobat
     { enemies: [{ type: 'venomoth', weight: 1 }, { type: 'hypno', weight: 2 }, { type: 'crobat', weight: 1 }, { type: 'butterfree', weight: 1 }],
-      spawnRate: 46, maxEnemies: 208 },
+      spawnRate: 75, maxEnemies: 115 },
     // Wave 56 (28:00): Stun + bone combo
     { enemies: [{ type: 'hypno', weight: 3 }, { type: 'marowak', weight: 2 }, { type: 'parasect', weight: 1 }],
-      spawnRate: 44, maxEnemies: 210 },
+      spawnRate: 72, maxEnemies: 118 },
     // Wave 57 (28:30): Healer + tank fortress
     { enemies: [{ type: 'parasect', weight: 2 }, { type: 'gloom', weight: 2 }, { type: 'marowak', weight: 2 }],
-      spawnRate: 42, maxEnemies: 212 },
+      spawnRate: 68, maxEnemies: 120 },
     // Wave 58 (29:00): Peak P3
     { enemies: [{ type: 'venomoth', weight: 1 }, { type: 'hypno', weight: 2 }, { type: 'marowak', weight: 2 }, { type: 'butterfree', weight: 1 }],
-      spawnRate: 40, maxEnemies: 215 },
+      spawnRate: 65, maxEnemies: 125 },
     // Wave 59 (29:30): Final P3 — everything maxed
     { enemies: [{ type: 'venomoth', weight: 1 }, { type: 'hypno', weight: 2 }, { type: 'marowak', weight: 2 }, { type: 'parasect', weight: 1 }, { type: 'gloom', weight: 1 }],
-      spawnRate: 38, maxEnemies: 220 },
+      spawnRate: 60, maxEnemies: 130 },
   ],
 
   bosses: [

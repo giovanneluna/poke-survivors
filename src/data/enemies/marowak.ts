@@ -5,17 +5,11 @@ export const MAROWAK: EnemyConfig = {
   key: "marowak",
   name: "Marowak",
   sprite: SPRITES.marowak,
-  hp: 200,
-  speed: 45,
+  hp: 300,      // +50% (era 200)
+  speed: 23,    // 50% (era 45)
   damage: 28,
   xpValue: 80,
   scale: 1.4,
-  boomerang: {
-    projectileKey: "atk-bonemerang-tibia",
-    damage: 22,
-    speed: 280,
-    cooldownMs: 3500,
-    range: 350,
-    projectileScale: 2.5,
-  },
+  behavior: 'tank',
+  contactEffect: { type: 'stun', durationMs: 500 },
 }

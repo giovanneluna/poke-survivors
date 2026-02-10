@@ -488,14 +488,14 @@ export class TitleScene extends Phaser.Scene {
     const badgeW = scaled(90)
     const badgeH = scaled(20)
     const badgeX = width / 2 - badgeW / 2
-    const badgeY = height - 38
+    const badgeY = height - 55
     versionBadge.fillStyle(0xff6600, 0.25)
     versionBadge.fillRoundedRect(badgeX, badgeY, badgeW, badgeH, 5)
     versionBadge.lineStyle(1, 0xff6600, 0.6)
     versionBadge.strokeRoundedRect(badgeX, badgeY, badgeW, badgeH, 5)
 
     const versionText = this.add
-      .text(width / 2, badgeY + badgeH / 2, "BETA 0.30", {
+      .text(width / 2, badgeY + badgeH / 2, "BETA 0.34", {
         fontSize: fontSize(11),
         color: "#ff8844",
         fontFamily: "monospace",
@@ -532,10 +532,10 @@ export class TitleScene extends Phaser.Scene {
     credits.on("pointerover", () => credits.setColor("#aaaaaa"))
     credits.on("pointerout", () => credits.setColor("#666666"))
     credits.on("pointerdown", () => {
-      const url = "https://github.com/giovanneluna";
+      const url = "https://github.com/giovanneluna"
       import("@tauri-apps/plugin-shell")
         .then(({ open }) => open(url))
-        .catch(() => window.open(url, "_blank"));
+        .catch(() => window.open(url, "_blank"))
     })
 
     // ── Fade in ──────────────────────────────────────────────────────

@@ -10,13 +10,5 @@ export const PIDGEOTTO: EnemyConfig = {
   damage: 12,
   xpValue: 10,
   scale: 0.8,
-  rangedAttack: {
-    projectileKey: 'atk-air-slash',
-    damage: 7,
-    speed: 130,
-    cooldownMs: 3200,
-    range: 260,
-    homing: false,
-    projectileScale: 1.0,
-  },
+  behavior: 'circler',
 };

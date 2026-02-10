@@ -121,15 +121,15 @@ export class FrenzyPlant implements Attack {
       }
 
       // Stun visual: velocity 0 + tint amarelo
-      const body = enemy.body as Phaser.Physics.Arcade.Body;
-      body.velocity.set(0, 0);
-      enemy.setTint(0xccaa00);
+      const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+      if (body) {
+        body.velocity.set(0, 0);
+        enemy.setTint(0xccaa00);
 
-      this.scene.time.delayedCall(stunDur, () => {
-        if (enemy.active) {
-          enemy.clearTint();
-        }
-      });
+        this.scene.time.delayedCall(stunDur, () => {
+          if (enemy.active) enemy.clearTint();
+        });
+      }
     }
   }
 

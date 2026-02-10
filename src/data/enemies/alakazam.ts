@@ -6,21 +6,10 @@ export const ALAKAZAM: EnemyConfig = {
   name: 'Alakazam',
   sprite: SPRITES.alakazam,
   hp: 90,
-  speed: 50,
+  speed: 50,    // Behavior applies 40% multiplier
   damage: 12,
   xpValue: 110,
   scale: 1.0,
-  teleport: {
-    cooldownMs: 6500,
-    range: 220,
-  },
-  rangedAttack: {
-    projectileKey: 'atk-psychic',
-    damage: 15,
-    speed: 160,
-    cooldownMs: 3000,
-    range: 350,
-    homing: true,
-    projectileScale: 0.7,
-  },
+  behavior: 'teleporter',
+  contactEffect: { type: 'stun', durationMs: 1000 },
 };

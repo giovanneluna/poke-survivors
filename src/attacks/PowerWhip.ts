@@ -135,10 +135,12 @@ export class PowerWhip implements Attack {
       }
 
       // Knockback: empurra na direcao oposta ao jogador
-      const angleFromPlayer = Math.atan2(enemy.y - py, enemy.x - px);
-      const body = enemy.body as Phaser.Physics.Arcade.Body;
-      body.velocity.x += Math.cos(angleFromPlayer) * this.knockbackForce;
-      body.velocity.y += Math.sin(angleFromPlayer) * this.knockbackForce;
+      const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+      if (body) {
+        const angleFromPlayer = Math.atan2(enemy.y - py, enemy.x - px);
+        body.velocity.x += Math.cos(angleFromPlayer) * this.knockbackForce;
+        body.velocity.y += Math.sin(angleFromPlayer) * this.knockbackForce;
+      }
     }
   }
 

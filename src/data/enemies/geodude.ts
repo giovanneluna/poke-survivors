@@ -10,13 +10,6 @@ export const GEODUDE: EnemyConfig = {
   damage: 15,
   xpValue: 10,
   scale: 1.0,
-  rangedAttack: {
-    projectileKey: "atk-rock-throw",
-    damage: 12,
-    speed: 100,
-    cooldownMs: 5000,
-    range: 280,
-    homing: false,
-    projectileScale: 1, // 16x16 * 3.5 = 56x56 visível
-  },
+  behavior: 'charger',
+  contactEffect: { type: 'knockback', durationMs: 0, force: 200 },
 }
