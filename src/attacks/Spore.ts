@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { safeExplode } from '../utils/particles';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 /**
  * Spore: esporos perfeitos com 100% stun em area.
@@ -51,14 +52,16 @@ export class Spore implements Attack {
     });
 
     // Circulo indicador de area
-    const areaIndicator = this.scene.add.circle(cx, cy, this.radius, 0x66bb66, 0.15);
-    areaIndicator.setDepth(5);
-    this.scene.tweens.add({
-      targets: areaIndicator,
-      alpha: 0,
-      duration: 800,
-      onComplete: () => areaIndicator.destroy(),
-    });
+    if (shouldShowVfx()) {
+      const areaIndicator = this.scene.add.circle(cx, cy, this.radius, 0x66bb66, 0.15);
+      areaIndicator.setDepth(5);
+      this.scene.tweens.add({
+        targets: areaIndicator,
+        alpha: 0,
+        duration: 800,
+        onComplete: () => areaIndicator.destroy(),
+      });
+    }
 
     // Particulas verdes de esporos
     safeExplode(this.scene, cx, cy, 'fire-particle', {

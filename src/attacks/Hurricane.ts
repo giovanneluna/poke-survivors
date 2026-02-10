@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Hurricane: tornado que puxa inimigos para o centro.
@@ -67,11 +68,14 @@ export class Hurricane implements Attack {
     });
 
     // Partículas de vento
-    const windEmitter = this.scene.add.particles(tx, ty, 'wind-particle', {
-      speed: { min: 20, max: 80 }, lifespan: 400, quantity: 3, frequency: 80,
-      scale: { start: 1.5, end: 0 }, tint: [0x88ccff, 0xaaddff, 0xffffff],
-      angle: { min: 0, max: 360 },
-    });
+    let windEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+    if (shouldShowVfx()) {
+      windEmitter = this.scene.add.particles(tx, ty, 'wind-particle', {
+        speed: { min: 20, max: 80 }, lifespan: 400, quantity: getVfxQuantity(3), frequency: 80,
+        scale: { start: 1.5, end: 0 }, tint: [0x88ccff, 0xaaddff, 0xffffff],
+        angle: { min: 0, max: 360 },
+      });
+    }
 
     // Tick de dano + pull a cada 200ms
     let elapsed = 0;
@@ -107,7 +111,7 @@ export class Hurricane implements Attack {
 
     const cleanup = () => {
       tickEvent.destroy();
-      windEmitter.destroy();
+      windEmitter?.destroy();
       this.scene.tweens.add({
         targets: tornado, alpha: 0, scale: 0.3, duration: 300,
         onComplete: () => tornado.destroy(),

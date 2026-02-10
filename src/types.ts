@@ -100,7 +100,7 @@ export type HeldItemType =
   | 'miracleSeed' | 'bigRoot' | 'blackSludge' | 'leafStone'
   | 'revive';
 
-export type PickupType = 'oranBerry' | 'sitrusBerry' | 'liechiBerry' | 'salacBerry' | 'magnetBurst' | 'rareCandy' | 'pokeballBomb' | 'gachaBox' | 'xpShare' | 'duplicator';
+export type PickupType = 'oranBerry' | 'sitrusBerry' | 'liechiBerry' | 'salacBerry' | 'magnetBurst' | 'rareCandy' | 'pokeballBomb' | 'gachaBox' | 'xpShare' | 'duplicator' | 'friendBall' | 'coinSmall' | 'coinMedium' | 'coinLarge';
 export type DestructibleType = 'tallGrass' | 'berryBush' | 'rockSmash' | 'treasureChest';
 
 // ── Sprite sheet config (PMDCollab format) ─────────────────────────

@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { safeExplode } from '../utils/particles';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Ice Beam: raio de gelo no inimigo mais proximo.
@@ -102,15 +103,18 @@ export class IceBeam implements Attack {
       this.scene.physics.moveToObject(bullet, target, 280);
 
       // Trail de particulas de gelo
-      const trail = this.scene.add.particles(0, 0, 'ice-particle', {
-        follow: bullet,
-        speed: { min: 5, max: 20 },
-        lifespan: 200,
-        scale: { start: 1, end: 0 },
-        quantity: 1,
-        frequency: 50,
-        tint: [0x88ddff, 0xaaeeff, 0xffffff],
-      });
+      let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+      if (shouldShowVfx()) {
+        trail = this.scene.add.particles(0, 0, 'ice-particle', {
+          follow: bullet,
+          speed: { min: 5, max: 20 },
+          lifespan: 200,
+          scale: { start: 1, end: 0 },
+          quantity: getVfxQuantity(1),
+          frequency: 50,
+          tint: [0x88ddff, 0xaaeeff, 0xffffff],
+        });
+      }
 
       // Auto-destruir apos 3s com efeito de freeze visual
       this.scene.time.delayedCall(3000, () => {
@@ -120,7 +124,7 @@ export class IceBeam implements Attack {
           body.checkCollision.none = true;
           body.enable = false;
         }
-        trail.destroy();
+        trail?.destroy();
       });
     }
   }

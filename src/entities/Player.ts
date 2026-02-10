@@ -14,6 +14,7 @@ import type {
 import { formIndex } from "../types"
 import { getPassive } from "../systems/PassiveSystem"
 import { setDamageSource, clearDamageSource } from "../systems/DamageTracker"
+import { getMegaSystem } from "../systems/MegaSystem"
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   readonly stats: PlayerState
@@ -32,6 +33,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private shadow: Phaser.GameObjects.Image
   private slowUntil = 0
   private readonly slowMultiplier = 0.4
+  private spriteOverrideKey: string | null = null
   private poisonUntil = 0
   private poisonDps = 0
   private confusionUntil = 0
@@ -40,6 +42,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   private stunUntil = 0
   private readonly forms: readonly PokemonFormConfig[]
   godMode = false
+  private statusTinted = false
 
   // Berry buff system
   private readonly activeBuffs = new Map<string, { multiplier: number; expiresAt: number }>()
@@ -292,6 +295,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     return this.stats.form
   }
 
+  setSpriteOverride(key: string | null): void {
+    this.spriteOverrideKey = key
+    if (key) {
+      this.setTexture(key)
+      this.setFrame(0)
+    } else {
+      this.setTexture(this.spriteConfig.key)
+      this.setFrame(0)
+    }
+    this.playWalkAnim(this.currentDir)
+  }
+
   isDead(): boolean {
     return this.stats.hp <= 0
   }
@@ -352,13 +367,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.anims.stop()
     }
 
-    // Visual de slow
-    if (this.isSlowed(time)) {
-      this.setTint(0x8888ff)
-    }
-    // Visual de confusion (rosa pulsante)
+    // Visual de status effects — prioridade: confusion > slow
     if (this.isConfused(time)) {
       this.setTint(Math.floor(time / 150) % 2 === 0 ? 0xff66aa : 0xff99cc)
+      this.statusTinted = true
+    } else if (this.isSlowed(time)) {
+      this.setTint(0x8888ff)
+      this.statusTinted = true
+    } else if (this.statusTinted) {
+      this.clearTint()
+      this.statusTinted = false
     }
 
     // Atualiza sombra
@@ -366,7 +384,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   private playWalkAnim(dir: Direction): void {
-    const animKey = `${this.spriteConfig.key}-${dir}`
+    const key = this.spriteOverrideKey ?? this.spriteConfig.key
+    const animKey = `${key}-${dir}`
     if (this.anims.currentAnim?.key !== animKey) {
       this.play(animKey)
     }
@@ -385,9 +404,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   updateAttacks(time: number, delta: number): void {
+    const mega = getMegaSystem()
+    const effectiveDelta = mega?.isActive() ? delta * mega.getAttackSpeedMultiplier() : delta
     for (const attack of this.attacks.values()) {
       setDamageSource(attack.type)
-      attack.update(time, delta)
+      attack.update(time, effectiveDelta)
       clearDamageSource()
     }
   }

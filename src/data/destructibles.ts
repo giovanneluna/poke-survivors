@@ -34,12 +34,13 @@ export const DESTRUCTIBLES: Readonly<Record<string, DestructibleConfig>> = {
     textureKey: "dest-rock",
     scale: 1.4,
     drops: [
+      { type: "coinSmall", chance: 0.25 },
       { type: "xpGem", chance: 0.3, count: 8 },
-      { type: "oranBerry", chance: 0.25 },
-      { type: "rareCandy", chance: 0.15 },
+      { type: "oranBerry", chance: 0.2 },
+      { type: "rareCandy", chance: 0.12 },
       { type: "pokeballBomb", chance: 0.001 },
-      { type: "xpShare", chance: 0.1 },
-      { type: "duplicator", chance: 0.1 },
+      { type: "xpShare", chance: 0.08 },
+      { type: "duplicator", chance: 0.08 },
     ],
   },
   treasureChest: {

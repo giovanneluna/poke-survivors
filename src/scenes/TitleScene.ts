@@ -1,5 +1,7 @@
 import Phaser from "phaser"
 import { SoundManager } from "../audio/SoundManager"
+import { getCoins, initSaveSystem } from "../systems/SaveSystem"
+import { fontSize, scaled } from "../utils/ui-scale"
 
 export class TitleScene extends Phaser.Scene {
   constructor() {
@@ -59,7 +61,7 @@ export class TitleScene extends Phaser.Scene {
     // ── Título: "POKÉ WORLD" ─────────────────────────────────────────
     const titleLine1 = this.add
       .text(width / 2, 55, "POKÉ WORLD", {
-        fontSize: "42px",
+        fontSize: fontSize(42),
         color: "#ffcc00",
         fontFamily: "monospace",
         fontStyle: "bold",
@@ -81,7 +83,7 @@ export class TitleScene extends Phaser.Scene {
     // ── Subtítulo: "SURVIVORS" ────────────────────────────────────────
     const titleLine2 = this.add
       .text(width / 2, 100, "SURVIVORS", {
-        fontSize: "52px",
+        fontSize: fontSize(52),
         color: "#ff6600",
         fontFamily: "monospace",
         fontStyle: "bold",
@@ -103,10 +105,14 @@ export class TitleScene extends Phaser.Scene {
 
     // ── Artwork dos 3 Starters ───────────────────────────────────────
     const artY = height * 0.42
-    const artScale = 0.22
+    const artScale = 0.22 * (scaled(100) / 100)
 
     // Bulbasaur (esquerda, trás)
-    const bulba = this.add.image(width / 2 - 120, artY + 10, "art-bulbasaur")
+    const bulba = this.add.image(
+      width / 2 - scaled(120),
+      artY + 10,
+      "art-bulbasaur",
+    )
     bulba
       .setScale(artScale * 0.85)
       .setDepth(8)
@@ -121,7 +127,11 @@ export class TitleScene extends Phaser.Scene {
     })
 
     // Squirtle (direita, trás)
-    const squirtle = this.add.image(width / 2 + 120, artY + 10, "art-squirtle")
+    const squirtle = this.add.image(
+      width / 2 + scaled(120),
+      artY + 10,
+      "art-squirtle",
+    )
     squirtle
       .setScale(artScale * 0.85)
       .setDepth(8)
@@ -155,15 +165,15 @@ export class TitleScene extends Phaser.Scene {
       "shard-grass",
       "shard-gold",
     ]
-    const shardY = artY + 65
+    const shardY = artY + scaled(65)
 
     for (let i = 0; i < 12; i++) {
       const tex = shardTextures[i % shardTextures.length]
-      const sx = width / 2 + Phaser.Math.Between(-180, 180)
+      const sx = width / 2 + Phaser.Math.Between(-scaled(180), scaled(180))
       const sy = shardY + Phaser.Math.Between(-10, 20)
       const shard = this.add
         .image(sx, sy, tex)
-        .setScale(Phaser.Math.FloatBetween(1.0, 2.0))
+        .setScale(Phaser.Math.FloatBetween(1.0, 2.0) * (scaled(100) / 100))
         .setAlpha(Phaser.Math.FloatBetween(0.3, 0.7))
         .setAngle(Phaser.Math.Between(-30, 30))
         .setDepth(7)
@@ -184,7 +194,7 @@ export class TitleScene extends Phaser.Scene {
     // ── Tipo badge ───────────────────────────────────────────────────
     this.add
       .text(width / 2, 133, "🔥 FIRE RED EDITION 🔥", {
-        fontSize: "11px",
+        fontSize: fontSize(11),
         color: "#ff8844",
         fontFamily: "monospace",
       })
@@ -193,8 +203,8 @@ export class TitleScene extends Phaser.Scene {
 
     // ── Botão "ENTRAR AGORA" ─────────────────────────────────────────
     const btnY = height * 0.78
-    const btnWidth = 220
-    const btnHeight = 50
+    const btnWidth = scaled(220)
+    const btnHeight = scaled(50)
 
     const btnBg = this.add.graphics().setDepth(10)
     this.drawButton(
@@ -209,7 +219,7 @@ export class TitleScene extends Phaser.Scene {
 
     const btnText = this.add
       .text(width / 2, btnY, "▶  ENTRAR AGORA", {
-        fontSize: "18px",
+        fontSize: fontSize(18),
         color: "#ffffff",
         fontFamily: "monospace",
         fontStyle: "bold",
@@ -274,10 +284,136 @@ export class TitleScene extends Phaser.Scene {
       )
     })
 
+    // ── Botões MELHORIAS + POKÉDEX + ESTATÍSTICAS ──────────────────
+    const secBtnW = scaled(120)
+    const secBtnH = scaled(32)
+    const secBtnY = btnY + scaled(50)
+    const secGap = scaled(8)
+
+    const createSecBtn = (
+      x: number,
+      label: string,
+      color: number,
+      hoverColor: number,
+      textColor: string,
+      targetScene: string,
+    ): void => {
+      const gfx = this.add.graphics().setDepth(10)
+      const draw = (hover: boolean): void => {
+        gfx.clear()
+        gfx.fillStyle(0x000000, 0.4)
+        gfx.fillRoundedRect(
+          x - secBtnW / 2 + 2,
+          secBtnY - secBtnH / 2 + 3,
+          secBtnW,
+          secBtnH,
+          8,
+        )
+        gfx.fillStyle(hover ? hoverColor : color, 0.95)
+        gfx.fillRoundedRect(
+          x - secBtnW / 2,
+          secBtnY - secBtnH / 2,
+          secBtnW,
+          secBtnH,
+          8,
+        )
+        gfx.lineStyle(2, hover ? 0x8888aa : 0x555577)
+        gfx.strokeRoundedRect(
+          x - secBtnW / 2,
+          secBtnY - secBtnH / 2,
+          secBtnW,
+          secBtnH,
+          8,
+        )
+      }
+      draw(false)
+      const txt = this.add
+        .text(x, secBtnY, label, {
+          fontSize: fontSize(10),
+          color: textColor,
+          fontFamily: "monospace",
+          fontStyle: "bold",
+          stroke: "#000000",
+          strokeThickness: 2,
+        })
+        .setOrigin(0.5)
+        .setDepth(11)
+      const hit = this.add
+        .rectangle(x, secBtnY, secBtnW, secBtnH, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(12)
+      hit.on("pointerover", () => {
+        draw(true)
+        txt.setColor("#ffcc00")
+        SoundManager.playHover()
+      })
+      hit.on("pointerout", () => {
+        draw(false)
+        txt.setColor(textColor)
+      })
+      hit.on("pointerdown", () => {
+        SoundManager.playClick()
+        this.scene.start(targetScene)
+      })
+    }
+
+    const secCount = 4
+    const secTotalW = secCount * secBtnW + (secCount - 1) * secGap
+    const secStartX = width / 2 - secTotalW / 2 + secBtnW / 2
+    createSecBtn(
+      secStartX,
+      "MELHORIAS",
+      0x1a1a44,
+      0x2a2a55,
+      "#aaaaff",
+      "PowerUpScene",
+    )
+    createSecBtn(
+      secStartX + secBtnW + secGap,
+      "POKÉDEX",
+      0x2a1122,
+      0x442244,
+      "#ff6688",
+      "PokedexScene",
+    )
+    createSecBtn(
+      secStartX + 2 * (secBtnW + secGap),
+      "ESTATÍSTICAS",
+      0x112233,
+      0x223344,
+      "#66aaff",
+      "StatsScene",
+    )
+    createSecBtn(
+      secStartX + 3 * (secBtnW + secGap),
+      "SAVE DATA",
+      0x1a2a1a,
+      0x2a3a2a,
+      "#88cc88",
+      "SaveScene",
+    )
+
+    // ── Coin counter ────────────────────────────────────────────────
+    initSaveSystem()
+    const coins = getCoins()
+    if (coins > 0) {
+      this.add
+        .text(width - 15, 15, `₽ ${coins}`, {
+          fontSize: fontSize(14),
+          color: "#ffd700",
+          fontFamily: "monospace",
+          fontStyle: "bold",
+          stroke: "#000000",
+          strokeThickness: 3,
+        })
+        .setOrigin(1, 0.5)
+        .setDepth(10)
+    }
+
     // ── Versão ───────────────────────────────────────────────────────
     const versionBadge = this.add.graphics().setDepth(10)
-    const badgeW = 90
-    const badgeH = 20
+    const badgeW = scaled(90)
+    const badgeH = scaled(20)
     const badgeX = width / 2 - badgeW / 2
     const badgeY = height - 38
     versionBadge.fillStyle(0xff6600, 0.25)
@@ -286,8 +422,8 @@ export class TitleScene extends Phaser.Scene {
     versionBadge.strokeRoundedRect(badgeX, badgeY, badgeW, badgeH, 5)
 
     const versionText = this.add
-      .text(width / 2, badgeY + badgeH / 2, "BETA 0.21", {
-        fontSize: "11px",
+      .text(width / 2, badgeY + badgeH / 2, "BETA 0.30", {
+        fontSize: fontSize(11),
         color: "#ff8844",
         fontFamily: "monospace",
         fontStyle: "bold",
@@ -311,7 +447,7 @@ export class TitleScene extends Phaser.Scene {
         height - 12,
         "Desenvolvido por Giovanne  •  github.com/giovanneluna",
         {
-          fontSize: "10px",
+          fontSize: fontSize(10),
           color: "#666666",
           fontFamily: "monospace",
         },

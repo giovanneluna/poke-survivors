@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 /**
  * Petal Dance: dança de pétalas 360° que expande em espiral ao redor do jogador.
@@ -60,15 +61,18 @@ export class PetalDance implements Attack {
     });
 
     // Partículas de pétalas
-    const petalEmitter = this.scene.add.particles(this.player.x, this.player.y, 'fire-particle', {
-      speed: { min: 20, max: 80 },
-      lifespan: 600,
-      quantity: 2,
-      frequency: 100,
-      scale: { start: 1.5, end: 0 },
-      angle: { min: 0, max: 360 },
-      tint: [0xff88aa, 0xff66cc, 0xffaadd],
-    });
+    let petalEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+    if (shouldShowVfx()) {
+      petalEmitter = this.scene.add.particles(this.player.x, this.player.y, 'fire-particle', {
+        speed: { min: 20, max: 80 },
+        lifespan: 600,
+        quantity: 2,
+        frequency: 100,
+        scale: { start: 1.5, end: 0 },
+        angle: { min: 0, max: 360 },
+        tint: [0xff88aa, 0xff66cc, 0xffaadd],
+      });
+    }
 
     // Tick de dano: 200ms, danifica todos no raio atual
     let elapsed = 0;
@@ -104,7 +108,7 @@ export class PetalDance implements Attack {
         this.tickEvent.destroy();
         this.tickEvent = null;
       }
-      petalEmitter.destroy();
+      petalEmitter?.destroy();
       if (this.activeSprite) {
         this.scene.tweens.add({
           targets: this.activeSprite,

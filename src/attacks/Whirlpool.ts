@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 /**
  * Whirlpool: vórtice de agua que prende e puxa inimigos.
@@ -79,15 +80,18 @@ export class Whirlpool implements Attack {
     });
 
     // Particulas de agua girando ao redor do centro
-    const waterEmitter = this.scene.add.particles(tx, ty, 'water-particle', {
-      speed: { min: 20, max: 60 },
-      lifespan: 400,
-      quantity: 3,
-      frequency: 80,
-      scale: { start: 1.5, end: 0 },
-      tint: [0x3388ff, 0x44aaff, 0x66ccff],
-      angle: { min: 0, max: 360 },
-    });
+    let waterEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+    if (shouldShowVfx()) {
+      waterEmitter = this.scene.add.particles(tx, ty, 'water-particle', {
+        speed: { min: 20, max: 60 },
+        lifespan: 400,
+        quantity: 3,
+        frequency: 80,
+        scale: { start: 1.5, end: 0 },
+        tint: [0x3388ff, 0x44aaff, 0x66ccff],
+        angle: { min: 0, max: 360 },
+      });
+    }
 
     // Track de inimigos que estao dentro do vortex (para aplicar slow ao sair)
     const enemiesInside = new Set<Phaser.Physics.Arcade.Sprite>();
@@ -144,7 +148,7 @@ export class Whirlpool implements Attack {
 
     const cleanup = () => {
       tickEvent.destroy();
-      waterEmitter.destroy();
+      waterEmitter?.destroy();
 
       // Aplica slow em todos que ainda estao dentro ao terminar
       for (const enemySprite of enemiesInside) {

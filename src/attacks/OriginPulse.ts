@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 interface ActiveCone {
   sprite: Phaser.GameObjects.Sprite;
@@ -117,7 +118,10 @@ export class OriginPulse implements Attack {
       const py = this.player.y + Math.sin(angleRad) * this.range * t;
 
       // Visual: circulo de agua pulsante
-      const waterZone = this.scene.add.circle(px, py, 18, 0x3388ff, 0.25).setDepth(3);
+      let waterZone: Phaser.GameObjects.Arc | null = null;
+      if (shouldShowVfx()) {
+        waterZone = this.scene.add.circle(px, py, 18, 0x3388ff, 0.25).setDepth(3);
+      }
 
       let tickCount = 0;
       const tickEvent = this.scene.time.addEvent({
@@ -156,12 +160,14 @@ export class OriginPulse implements Attack {
       });
 
       // Fade out e destruir a zona visual
-      this.scene.tweens.add({
-        targets: waterZone,
-        alpha: 0,
-        duration: this.lingerDurationMs,
-        onComplete: () => waterZone.destroy(),
-      });
+      if (waterZone) {
+        this.scene.tweens.add({
+          targets: waterZone,
+          alpha: 0,
+          duration: this.lingerDurationMs,
+          onComplete: () => waterZone?.destroy(),
+        });
+      }
     }
   }
 

@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 type CardinalDir = 'up' | 'down' | 'left' | 'right';
 
@@ -142,12 +143,14 @@ export class FlareRush implements Attack {
         this.scene.time.delayedCall(450, () => particles.destroy());
 
         // Zona de fogo visual
-        const fire = this.scene.add.circle(p.x, p.y, 12, 0xff4400, 0.3);
-        fire.setDepth(6);
-        this.scene.tweens.add({
-          targets: fire, alpha: 0, duration: this.trailDuration,
-          onComplete: () => fire.destroy(),
-        });
+        if (shouldShowVfx()) {
+          const fire = this.scene.add.circle(p.x, p.y, 12, 0xff4400, 0.3);
+          fire.setDepth(6);
+          this.scene.tweens.add({
+            targets: fire, alpha: 0, duration: this.trailDuration,
+            onComplete: () => fire.destroy(),
+          });
+        }
       });
     }
 

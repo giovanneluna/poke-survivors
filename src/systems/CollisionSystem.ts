@@ -8,6 +8,8 @@ import type { GameContext } from './GameContext';
 import type { PickupSystem } from './PickupSystem';
 import { setDamageSource, clearDamageSource } from './DamageTracker';
 import { unlockPokedexEntry } from './SaveSystem';
+import { getMegaSystem } from './MegaSystem';
+import { getCompanionSystem } from './CompanionSystem';
 import { ENEMY_TYPES } from '../data/type-chart';
 import type { EnemyType } from '../types';
 
@@ -293,12 +295,17 @@ export class CollisionSystem {
     this.ctx.player.stats.kills++;
     this.pickupSystem.spawnXpGem(enemy.x, enemy.y, enemy.xpValue);
 
+    // Mega gauge tracking
+    getMegaSystem()?.addKill();
+
     // Pokédex tracking
     const enemyType = ENEMY_TYPES[enemy.enemyKey as EnemyType];
     unlockPokedexEntry(enemy.enemyKey, enemy.enemyKey, enemyType ?? 'normal');
 
     if (enemy instanceof Boss) {
       this.pickupSystem.spawnPickup(enemy.x, enemy.y, 'gachaBox');
+      this.pickupSystem.spawnBossCoins(enemy.x, enemy.y);
+      getCompanionSystem()?.tryDropFriendBall(enemy.x, enemy.y);
       this.ctx.scene.events.emit('boss-killed', enemy.name);
     }
   }

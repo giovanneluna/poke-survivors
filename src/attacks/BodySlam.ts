@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { safeExplode } from '../utils/particles';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 /**
  * Body Slam: evolucao do Tackle.
@@ -60,31 +61,33 @@ export class BodySlam implements Attack {
         const slamY = this.player.y + offsetY;
 
         // Circulo branco/azul de impacto
-        const flash = this.scene.add.circle(slamX, slamY, 22, 0xccddff, 0.7);
-        flash.setDepth(10);
-        this.scene.tweens.add({
-          targets: flash,
-          alpha: 0,
-          scaleX: 2.0,
-          scaleY: 2.0,
-          duration: 200,
-          ease: 'Sine.Out',
-          onComplete: () => flash.destroy(),
-        });
+        if (shouldShowVfx()) {
+          const flash = this.scene.add.circle(slamX, slamY, 22, 0xccddff, 0.7);
+          flash.setDepth(10);
+          this.scene.tweens.add({
+            targets: flash,
+            alpha: 0,
+            scaleX: 2.0,
+            scaleY: 2.0,
+            duration: 200,
+            ease: 'Sine.Out',
+            onComplete: () => flash.destroy(),
+          });
 
-        // Anel de impacto azulado
-        const ring = this.scene.add.circle(slamX, slamY, 8, 0x6699cc, 0.5);
-        ring.setDepth(10);
-        ring.setStrokeStyle(2, 0x88bbff, 0.6);
-        this.scene.tweens.add({
-          targets: ring,
-          alpha: 0,
-          scaleX: 2.5,
-          scaleY: 2.5,
-          duration: 250,
-          ease: 'Sine.Out',
-          onComplete: () => ring.destroy(),
-        });
+          // Anel de impacto azulado
+          const ring = this.scene.add.circle(slamX, slamY, 8, 0x6699cc, 0.5);
+          ring.setDepth(10);
+          ring.setStrokeStyle(2, 0x88bbff, 0.6);
+          this.scene.tweens.add({
+            targets: ring,
+            alpha: 0,
+            scaleX: 2.5,
+            scaleY: 2.5,
+            duration: 250,
+            ease: 'Sine.Out',
+            onComplete: () => ring.destroy(),
+          });
+        }
 
         // Particulas de impacto
         safeExplode(this.scene, slamX, slamY, 'water-particle', {

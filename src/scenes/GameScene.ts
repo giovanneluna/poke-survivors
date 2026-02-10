@@ -24,12 +24,18 @@ import {
 import { safeExplode } from "../utils/particles"
 import { initStatsTracker, getStatsTracker } from "../systems/RunRecorder"
 import { initComboSystem, getComboSystem } from "../systems/ComboSystem"
+import { initEventSystem, getEventSystem } from "../systems/EventSystem"
+import { /* initMegaSystem, */ getMegaSystem } from "../systems/MegaSystem"
+import { initMusicManager, getMusicManager } from "../audio/MusicManager"
+import { initCompanionSystem, getCompanionSystem } from "../systems/CompanionSystem"
 import {
   initSaveSystem,
   addCoins,
   updateRecord,
+  accumulateRunStats,
   getPowerUpLevel,
 } from "../systems/SaveSystem"
+import { Boss } from "../entities/Boss"
 
 export class GameScene extends Phaser.Scene {
   player!: Player
@@ -155,6 +161,19 @@ export class GameScene extends Phaser.Scene {
     // ── Spatial hash grid (deve ser antes dos systems) ──────────────
     initSpatialGrid(128)
 
+    // ── Phase 3: Event System ──────────────────────────────────────
+    initEventSystem(ctx)
+
+    // ── Phase 3: Mega System (desativado — reativar quando sprites completas)
+    // initMegaSystem(ctx)
+
+    // ── Phase 3: Music Manager ─────────────────────────────────────
+    const music = initMusicManager()
+    music.start()
+
+    // ── Phase 4: Companion System ──────────────────────────────────
+    initCompanionSystem(ctx)
+
     // ── Instantiate systems ─────────────────────────────────────────
     new PassiveSystem(this.starterKey) // self-registers as module singleton
     this.worldSystem = new WorldSystem(ctx)
@@ -238,9 +257,9 @@ export class GameScene extends Phaser.Scene {
       const accepted = this.upgradeSystem.handleReroll(false)
       if (!accepted) return
       this.rerollLocked = true
-      this.time.delayedCall(250, () => {
+      setTimeout(() => {
         this.rerollLocked = false
-      })
+      }, 250)
     })
 
     this.events.on("gacha-reward", (rewardType: string) => {
@@ -397,6 +416,27 @@ export class GameScene extends Phaser.Scene {
       },
     )
 
+    // ── Mega activation — Space bar (desktop) or double-tap (mobile) ──
+    this.input.keyboard?.on("keydown-SPACE", () => {
+      getMegaSystem()?.activate(this.gameTime)
+    })
+
+    // ── EventSystem wave change hook ──────────────────────────────────
+    this.events.on("wave-changed", (waveIndex: number) => {
+      getEventSystem().onWaveChanged(waveIndex, this.gameTime)
+    })
+
+    // ── Friend Ball collected → show companion selection ──────────────
+    this.events.on("friend-ball-collected", () => {
+      const choices = getCompanionSystem()?.getAvailableChoices() ?? []
+      this.scene.get("UIScene").events.emit("show-companion-select", choices)
+    })
+
+    // ── Companion selected from UI ────────────────────────────────────
+    this.scene.get("UIScene").events.on("companion-selected", (key: string) => {
+      getCompanionSystem()?.addCompanion(key)
+    })
+
     // ── Heal events (Leech Seed, Giga Drain) ─────────────────────────
     this.events.on("leech-seed-heal", (amount: number) => {
       this.player.stats.hp = Math.min(
@@ -471,6 +511,21 @@ export class GameScene extends Phaser.Scene {
 
     // Enemy movement + attacks
     this.spawnSystem.update(time)
+
+    // Phase 3: Event System
+    getEventSystem().update(this.gameTime, delta)
+
+    // Phase 3: Mega System
+    getMegaSystem()?.update(this.gameTime, delta)
+
+    // Phase 3: Music Manager
+    getMusicManager()?.update(
+      getSpatialGrid().getActiveCount(),
+      this.isBossAlive(),
+    )
+
+    // Phase 4: Companion System
+    getCompanionSystem()?.update(time, delta)
 
     // XP magnetism (gems persist forever — disable body when far for perf)
     const gemChildren = this.xpGems.getChildren()
@@ -547,16 +602,28 @@ export class GameScene extends Phaser.Scene {
     const runStats = tracker.getRunStats()
     const timeSeconds = Math.floor(this.gameTime / 1000)
 
-    // ── Calculate PokéDollars ──────────────────────────────────────
-    const coinsEarned = Math.floor(
-      runStats.totalKills * 1 +
-        runStats.bossesDefeated.length * 50 +
-        timeSeconds * 0.5 +
-        runStats.levelReached * 10,
-    )
+    // ── PokéDollars = collected coins + small time/level bonus ─────
+    const collectedCoins = this.pickupSystem.getRunCoins()
+    const bonusCoins = Math.floor(timeSeconds * 0.5 + runStats.levelReached * 5)
+    const coinsEarned = collectedCoins + bonusCoins
 
     // ── Save to persistent storage ─────────────────────────────────
     addCoins(coinsEarned)
+    accumulateRunStats({
+      kills: runStats.totalKills,
+      bossesDefeated: runStats.bossesDefeated.length,
+      damageDealt: runStats.totalDamageDealt,
+      coinsEarned,
+      timePlayed: timeSeconds,
+      distance: runStats.distanceTraveled,
+      berries: runStats.berriesCollected,
+      xp: runStats.xpCollected,
+      combo: getComboSystem().getBestCombo(),
+      starterKey: this.starterKey,
+      formName: this.starterConfig.forms.find((f) => f.form === this.player.stats.form)
+        ?.name ?? this.starterConfig.name,
+      damageByAttack: runStats.damageByAttack,
+    })
     const newRecords = {
       time: updateRecord("bestTime", timeSeconds),
       kills: updateRecord("bestKills", runStats.totalKills),
@@ -565,6 +632,10 @@ export class GameScene extends Phaser.Scene {
 
     // ── Combo stats ────────────────────────────────────────────────
     const bestCombo = getComboSystem().getBestCombo()
+
+    // ── Phase 3 cleanup ────────────────────────────────────────────
+    getMusicManager()?.fadeOut(2000)
+    getEventSystem().destroy()
 
     this.events.emit("game-over", {
       level: this.player.stats.level,
@@ -706,6 +777,15 @@ export class GameScene extends Phaser.Scene {
     return this.spawnSystem
   }
 
+  private isBossAlive(): boolean {
+    const children = this.enemyGroup.getChildren()
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i] as Phaser.GameObjects.GameObject
+      if (child.active && child instanceof Boss) return true
+    }
+    return false
+  }
+
   private emitStats(): void {
     const currentForm = this.starterConfig.forms.find(
       (f) => f.form === this.player.stats.form,
@@ -727,6 +807,10 @@ export class GameScene extends Phaser.Scene {
       damageTotals: Object.fromEntries(getDamageTotals()),
       combo: getComboSystem().getCurrentCombo(),
       comboActive: getComboSystem().isActive(),
+      megaGauge: getMegaSystem()?.getGaugeRatio() ?? 0,
+      megaActive: getMegaSystem()?.isActive() ?? false,
+      megaTimeRemaining: getMegaSystem()?.getMegaTimeRemaining(this.gameTime) ?? 0,
+      companions: getCompanionSystem()?.getCompanions() ?? [],
     })
   }
 }

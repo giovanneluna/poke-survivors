@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { safeExplode } from '../utils/particles';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Muddy Water: evolucao do Water Pulse.
@@ -104,22 +105,25 @@ export class MuddyWater implements Attack {
       this.scene.physics.moveToObject(bullet, target, MuddyWater.SPEED);
 
       // Trail de particulas com tint lamacento
-      const trail = this.scene.add.particles(0, 0, 'water-particle', {
-        follow: bullet,
-        speed: { min: 5, max: 20 },
-        lifespan: 200,
-        scale: { start: 1.2, end: 0 },
-        quantity: 1,
-        frequency: 50,
-        tint: MuddyWater.MUDDY_TINTS as unknown as number[],
-      });
+      let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+      if (shouldShowVfx()) {
+        trail = this.scene.add.particles(0, 0, 'water-particle', {
+          follow: bullet,
+          speed: { min: 5, max: 20 },
+          lifespan: 200,
+          scale: { start: 1.2, end: 0 },
+          quantity: getVfxQuantity(1),
+          frequency: 50,
+          tint: MuddyWater.MUDDY_TINTS as unknown as number[],
+        });
+      }
 
       // Auto-destruir apos 3s (so se ainda for o mesmo disparo)
       this.scene.time.delayedCall(3000, () => {
         if (bullet.active && bullet.getData('fireId') === currentFireId) {
           this.killBullet(bullet);
         }
-        trail.destroy();
+        trail?.destroy();
       });
     }
   }

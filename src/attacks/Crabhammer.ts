@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 type CardinalDir = 'up' | 'down' | 'left' | 'right';
 
@@ -112,18 +113,20 @@ export class Crabhammer implements Attack {
       ? [0xffffff, 0x88ddff, 0x44aaff, 0x66ccff]
       : [0x3388ff, 0x44aaff, 0x66ccff];
 
-    const emitter = this.scene.add.particles(
-      this.player.x + offset.x, this.player.y + offset.y, 'water-particle', {
-        speed: { min: 30, max: 80 },
-        lifespan: 200,
-        quantity: isCrit ? 12 : 6,
-        scale: { start: isCrit ? 2 : 1.2, end: 0 },
-        tint: particleTints,
-        emitting: false,
-      },
-    );
-    emitter.explode();
-    this.scene.time.delayedCall(300, () => emitter.destroy());
+    if (shouldShowVfx()) {
+      const emitter = this.scene.add.particles(
+        this.player.x + offset.x, this.player.y + offset.y, 'water-particle', {
+          speed: { min: 30, max: 80 },
+          lifespan: 200,
+          quantity: getVfxQuantity(isCrit ? 12 : 6),
+          scale: { start: isCrit ? 2 : 1.2, end: 0 },
+          tint: particleTints,
+          emitting: false,
+        },
+      );
+      emitter.explode();
+      this.scene.time.delayedCall(300, () => emitter.destroy());
+    }
 
     // Efeitos de crit: texto + screen shake
     if (isCrit) {

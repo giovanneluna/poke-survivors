@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Bubble: bolhas lentas com ricochete + slow AoE no pop final.
@@ -100,21 +101,24 @@ export class Bubble implements Attack {
         Math.sin(finalAngle) * this.speed,
       );
 
-      const trail = this.scene.add.particles(0, 0, 'water-particle', {
-        follow: bubble,
-        speed: { min: 3, max: 12 },
-        lifespan: 250,
-        scale: { start: 0.8, end: 0 },
-        quantity: 1,
-        frequency: 60,
-        tint: [0x44aaff, 0x88ccff, 0xaaddff],
-      });
+      let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+      if (shouldShowVfx()) {
+        trail = this.scene.add.particles(0, 0, 'water-particle', {
+          follow: bubble,
+          speed: { min: 3, max: 12 },
+          lifespan: 250,
+          scale: { start: 0.8, end: 0 },
+          quantity: getVfxQuantity(1),
+          frequency: 60,
+          tint: [0x44aaff, 0x88ccff, 0xaaddff],
+        });
+      }
 
       this.scene.time.delayedCall(2500, () => {
         if (bubble.active && bubble.getData('fireId') === currentFireId) {
           this.popBubble(bubble);
         }
-        trail.destroy();
+        trail?.destroy();
       });
     }
   }

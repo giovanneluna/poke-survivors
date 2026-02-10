@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { safeExplode } from '../utils/particles';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Hyper Beam 2: raio devastador que PERFURA inimigos (nao morre na colisao).
@@ -90,15 +91,18 @@ export class HyperBeam2 implements Attack {
     this.scene.physics.moveToObject(bullet, target, 400);
 
     // Trail dourado
-    const trail = this.scene.add.particles(0, 0, 'fire-particle', {
-      follow: bullet,
-      speed: { min: 5, max: 25 },
-      lifespan: 250,
-      scale: { start: 1.5, end: 0 },
-      quantity: 2,
-      frequency: 40,
-      tint: [0xffdd44, 0xffaa22],
-    });
+    let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+    if (shouldShowVfx()) {
+      trail = this.scene.add.particles(0, 0, 'fire-particle', {
+        follow: bullet,
+        speed: { min: 5, max: 25 },
+        lifespan: 250,
+        scale: { start: 1.5, end: 0 },
+        quantity: getVfxQuantity(2),
+        frequency: 40,
+        tint: [0xffdd44, 0xffaa22],
+      });
+    }
 
     // Auto-destruir apos 3s (protecao contra stale timer)
     this.scene.time.delayedCall(3000, () => {
@@ -107,7 +111,7 @@ export class HyperBeam2 implements Attack {
         body.checkCollision.none = true;
         body.enable = false;
       }
-      trail.destroy();
+      trail?.destroy();
     });
   }
 

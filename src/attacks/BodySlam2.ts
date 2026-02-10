@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 interface ActiveDash {
   sprite: Phaser.GameObjects.Sprite;
@@ -81,16 +82,18 @@ export class BodySlam2 implements Attack {
       const py = startY + (endY - startY) * t;
 
       this.scene.time.delayedCall(i * 30, () => {
-        const trailParticles = this.scene.add.particles(px, py, 'fire-particle', {
-          speed: { min: 15, max: 40 },
-          lifespan: 250,
-          quantity: 3,
-          scale: { start: 1.2, end: 0 },
-          tint: [0xccddff, 0xffffff, 0x88bbff],
-          emitting: false,
-        });
-        trailParticles.explode();
-        this.scene.time.delayedCall(350, () => trailParticles.destroy());
+        if (shouldShowVfx()) {
+          const trailParticles = this.scene.add.particles(px, py, 'fire-particle', {
+            speed: { min: 15, max: 40 },
+            lifespan: 250,
+            quantity: getVfxQuantity(3),
+            scale: { start: 1.2, end: 0 },
+            tint: [0xccddff, 0xffffff, 0x88bbff],
+            emitting: false,
+          });
+          trailParticles.explode();
+          this.scene.time.delayedCall(350, () => trailParticles.destroy());
+        }
       });
     }
 

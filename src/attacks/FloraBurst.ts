@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Flora Burst: explosao floral apocaliptica com falloff de distancia.
@@ -53,15 +54,18 @@ export class FloraBurst implements Attack {
     });
 
     // Particulas de petala rosa continuamente
-    const petalEmitter = this.scene.add.particles(cx, cy, 'fire-particle', {
-      speed: { min: 20, max: 70 },
-      lifespan: 500,
-      quantity: 4,
-      frequency: 80,
-      scale: { start: 1.8, end: 0 },
-      tint: [0xff66aa, 0xff88cc, 0xffaadd],
-      angle: { min: 0, max: 360 },
-    });
+    let petalEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+    if (shouldShowVfx()) {
+      petalEmitter = this.scene.add.particles(cx, cy, 'fire-particle', {
+        speed: { min: 20, max: 70 },
+        lifespan: 500,
+        quantity: getVfxQuantity(4),
+        frequency: 80,
+        scale: { start: 1.8, end: 0 },
+        tint: [0xff66aa, 0xff88cc, 0xffaadd],
+        angle: { min: 0, max: 360 },
+      });
+    }
 
     // Tick de dano com falloff a cada 200ms
     let elapsed = 0;
@@ -95,7 +99,7 @@ export class FloraBurst implements Attack {
 
     const cleanup = (): void => {
       tickEvent.destroy();
-      petalEmitter.destroy();
+      petalEmitter?.destroy();
       this.scene.tweens.add({
         targets: floraSprite,
         alpha: 0,

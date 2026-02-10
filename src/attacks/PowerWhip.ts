@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 interface ActiveCone {
   readonly sprite: Phaser.GameObjects.Sprite;
@@ -74,22 +75,24 @@ export class PowerWhip implements Attack {
     });
 
     // Particulas verdes de chicotada
-    const emitter = this.scene.add.particles(
-      this.player.x + offsetX, this.player.y + offsetY, 'fire-particle', {
-        speed: { min: 40, max: 100 },
-        lifespan: 250,
-        quantity: 6,
-        scale: { start: 1.5, end: 0 },
-        angle: {
-          min: Phaser.Math.RadToDeg(dirAngleRad) - this.arcAngleDeg / 2,
-          max: Phaser.Math.RadToDeg(dirAngleRad) + this.arcAngleDeg / 2,
+    if (shouldShowVfx()) {
+      const emitter = this.scene.add.particles(
+        this.player.x + offsetX, this.player.y + offsetY, 'fire-particle', {
+          speed: { min: 40, max: 100 },
+          lifespan: 250,
+          quantity: 6,
+          scale: { start: 1.5, end: 0 },
+          angle: {
+            min: Phaser.Math.RadToDeg(dirAngleRad) - this.arcAngleDeg / 2,
+            max: Phaser.Math.RadToDeg(dirAngleRad) + this.arcAngleDeg / 2,
+          },
+          tint: [0x228822, 0x44cc44, 0x66ff66],
+          emitting: false,
         },
-        tint: [0x228822, 0x44cc44, 0x66ff66],
-        emitting: false,
-      },
-    );
-    emitter.explode();
-    this.scene.time.delayedCall(350, () => emitter.destroy());
+      );
+      emitter.explode();
+      this.scene.time.delayedCall(350, () => emitter.destroy());
+    }
 
     // Dano contínuo via activeCone (update detecta inimigos a cada frame)
     this.activeCone = {

@@ -10,7 +10,7 @@ export class Pickup extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this as Phaser.GameObjects.GameObject);
 
     this.pickupType = pickupType;
-    this.setScale(1.5);
+    this.setScale(0.8);
     this.setDepth(4);
 
     // Animação de flutuação

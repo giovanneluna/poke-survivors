@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 interface ActiveCone {
   sprite: Phaser.GameObjects.Sprite;
@@ -81,17 +82,19 @@ export class BlastBurn implements Attack {
     });
 
     // Particulas complementares
-    const particles1 = this.scene.add.particles(this.player.x, this.player.y, 'fire-particle', {
-      speed: { min: 200, max: 400 },
-      angle: { min: dirAngleDeg - this.coneAngleDeg / 2, max: dirAngleDeg + this.coneAngleDeg / 2 },
-      lifespan: 400,
-      quantity: 25,
-      scale: { start: 3, end: 0.3 },
-      tint: [0xff0000, 0xff2200, 0xff6600, 0xffaa00],
-      emitting: false,
-    });
-    particles1.explode();
-    this.scene.time.delayedCall(500, () => particles1.destroy());
+    if (shouldShowVfx()) {
+      const particles1 = this.scene.add.particles(this.player.x, this.player.y, 'fire-particle', {
+        speed: { min: 200, max: 400 },
+        angle: { min: dirAngleDeg - this.coneAngleDeg / 2, max: dirAngleDeg + this.coneAngleDeg / 2 },
+        lifespan: 400,
+        quantity: getVfxQuantity(25),
+        scale: { start: 3, end: 0.3 },
+        tint: [0xff0000, 0xff2200, 0xff6600, 0xffaa00],
+        emitting: false,
+      });
+      particles1.explode();
+      this.scene.time.delayedCall(500, () => particles1.destroy());
+    }
 
     // Shake da camera
     this.scene.cameras.main.shake(200, 0.005);

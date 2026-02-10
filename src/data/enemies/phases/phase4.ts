@@ -16,7 +16,7 @@ export const PHASE4: PhaseConfig = {
     { enemies: [{ type: 'venomoth', weight: 1 }, { type: 'alakazam', weight: 1 }, { type: 'electrode', weight: 1 }, { type: 'graveler', weight: 1 }, { type: 'machoke', weight: 1 }, { type: 'butterfree', weight: 1 }],
       spawnRate: 34, maxEnemies: 230 },
     // Wave 64 (32:00): Status hell
-    { enemies: [{ type: 'hypno', weight: 2 }, { type: 'venomoth', weight: 2 }, { type: 'alakazam', weight: 1 }, { type: 'gloom', weight: 1 }],
+    { enemies: [{ type: 'hypno', weight: 2 }, { type: 'venomoth', weight: 1 }, { type: 'alakazam', weight: 1 }, { type: 'gloom', weight: 1 }],
       spawnRate: 33, maxEnemies: 232 },
     // Wave 65 (32:30): Pre-boss rush
     { enemies: [{ type: 'electrode', weight: 3 }, { type: 'alakazam', weight: 2 }, { type: 'hypno', weight: 1 }],
@@ -25,7 +25,7 @@ export const PHASE4: PhaseConfig = {
     // ── BOSS: Beedrill ×2 @ 33:00 ──
 
     // Wave 66 (33:00): Explosion swarm
-    { enemies: [{ type: 'electrode', weight: 3 }, { type: 'venomoth', weight: 2 }, { type: 'parasect', weight: 1 }],
+    { enemies: [{ type: 'electrode', weight: 3 }, { type: 'venomoth', weight: 1 }, { type: 'parasect', weight: 1 }],
       spawnRate: 30, maxEnemies: 238 },
     // Wave 67 (33:30): Psychic barrage
     { enemies: [{ type: 'alakazam', weight: 3 }, { type: 'hypno', weight: 2 }, { type: 'electrode', weight: 1 }],
@@ -40,7 +40,7 @@ export const PHASE4: PhaseConfig = {
     { enemies: [{ type: 'alakazam', weight: 2 }, { type: 'electrode', weight: 2 }, { type: 'hypno', weight: 1 }, { type: 'venomoth', weight: 1 }],
       spawnRate: 26, maxEnemies: 248 },
     // Wave 71 (35:30): Pre-boss surge
-    { enemies: [{ type: 'electrode', weight: 2 }, { type: 'venomoth', weight: 2 }, { type: 'alakazam', weight: 2 }, { type: 'hypno', weight: 1 }],
+    { enemies: [{ type: 'electrode', weight: 2 }, { type: 'venomoth', weight: 1 }, { type: 'alakazam', weight: 2 }, { type: 'hypno', weight: 1 }],
       spawnRate: 25, maxEnemies: 250 },
 
     // ── BOSS: Gengar ×2 @ 36:00 ──
@@ -52,13 +52,13 @@ export const PHASE4: PhaseConfig = {
     { enemies: [{ type: 'electrode', weight: 4 }, { type: 'alakazam', weight: 2 }],
       spawnRate: 23, maxEnemies: 255 },
     // Wave 74 (37:00): Psychic swarm
-    { enemies: [{ type: 'hypno', weight: 3 }, { type: 'venomoth', weight: 2 }, { type: 'alakazam', weight: 1 }],
+    { enemies: [{ type: 'hypno', weight: 3 }, { type: 'venomoth', weight: 1 }, { type: 'alakazam', weight: 1 }],
       spawnRate: 22, maxEnemies: 258 },
     // Wave 75 (37:30): Bone apocalypse
     { enemies: [{ type: 'marowak', weight: 3 }, { type: 'cubone', weight: 2 }, { type: 'electrode', weight: 1 }],
       spawnRate: 21, maxEnemies: 260 },
     // Wave 76 (38:00): Status storm
-    { enemies: [{ type: 'venomoth', weight: 2 }, { type: 'hypno', weight: 2 }, { type: 'parasect', weight: 1 }, { type: 'electrode', weight: 1 }],
+    { enemies: [{ type: 'venomoth', weight: 1 }, { type: 'hypno', weight: 2 }, { type: 'parasect', weight: 1 }, { type: 'electrode', weight: 1 }],
       spawnRate: 20, maxEnemies: 262 },
     // Wave 77 (38:30): Pre-final rush
     { enemies: [{ type: 'alakazam', weight: 2 }, { type: 'electrode', weight: 2 }, { type: 'hypno', weight: 2 }, { type: 'venomoth', weight: 1 }],
@@ -70,7 +70,7 @@ export const PHASE4: PhaseConfig = {
     { enemies: [{ type: 'alakazam', weight: 2 }, { type: 'electrode', weight: 2 }, { type: 'hypno', weight: 2 }, { type: 'marowak', weight: 1 }, { type: 'venomoth', weight: 1 }],
       spawnRate: 16, maxEnemies: 270 },
     // Wave 79 (39:30): Victory lap — absolute chaos
-    { enemies: [{ type: 'electrode', weight: 3 }, { type: 'alakazam', weight: 3 }, { type: 'hypno', weight: 2 }, { type: 'venomoth', weight: 2 }],
+    { enemies: [{ type: 'electrode', weight: 3 }, { type: 'alakazam', weight: 3 }, { type: 'hypno', weight: 2 }, { type: 'venomoth', weight: 1 }],
       spawnRate: 15, maxEnemies: 280 },
   ],
 

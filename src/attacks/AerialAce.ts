@@ -6,6 +6,7 @@ import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { safeExplode } from '../utils/particles';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Aerial Ace: lâminas homing que nunca erram.
@@ -56,11 +57,14 @@ export class AerialAce implements Attack {
         blade.setScale(1.5).setDepth(10).setAlpha(0.9);
         blade.play('anim-aerial-ace');
 
-        const trail = this.scene.add.particles(0, 0, 'wind-particle', {
-          follow: blade, speed: { min: 10, max: 30 }, lifespan: 150,
-          scale: { start: 1, end: 0 }, quantity: 1, frequency: 30,
-          tint: [0x88ccff, 0xffffff],
-        });
+        let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+        if (shouldShowVfx()) {
+          trail = this.scene.add.particles(0, 0, 'wind-particle', {
+            follow: blade, speed: { min: 10, max: 30 }, lifespan: 150,
+            scale: { start: 1, end: 0 }, quantity: getVfxQuantity(1), frequency: 30,
+            tint: [0x88ccff, 0xffffff],
+          });
+        }
 
         // Homing: persegue o target
         let alive = true;
@@ -109,7 +113,7 @@ export class AerialAce implements Attack {
           if (!alive) return;
           alive = false;
           moveEvent.destroy();
-          trail.destroy();
+          trail?.destroy();
           blade.destroy();
         };
 

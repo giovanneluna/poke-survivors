@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { safeExplode } from '../utils/particles';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 /**
  * Draco Meteor: chuva de meteoros apocalíptica.
@@ -54,11 +55,14 @@ export class DracoMeteor implements Attack {
 
       this.scene.time.delayedCall(i * 200, () => {
         // Shadow/alvo no chão
-        const shadow = this.scene.add.circle(targetX, targetY, this.impactRadius * 0.5, 0x7744ff, 0.2);
-        shadow.setDepth(5);
-        this.scene.tweens.add({
-          targets: shadow, alpha: 0.5, duration: 400,
-        });
+        let shadow: Phaser.GameObjects.Arc | null = null;
+        if (shouldShowVfx()) {
+          shadow = this.scene.add.circle(targetX, targetY, this.impactRadius * 0.5, 0x7744ff, 0.2);
+          shadow.setDepth(5);
+          this.scene.tweens.add({
+            targets: shadow, alpha: 0.5, duration: 400,
+          });
+        }
 
         // Meteoro caindo (sprite animado vindo de cima)
         const meteor = this.scene.add.sprite(targetX - 60, targetY - 120, 'atk-draco-meteor');
@@ -72,7 +76,7 @@ export class DracoMeteor implements Attack {
           ease: 'Quad.easeIn',
           onComplete: () => {
             meteor.destroy();
-            shadow.destroy();
+            shadow?.destroy();
 
             // Explosão de impacto
             safeExplode(this.scene, targetX, targetY, 'dragon-particle', {
@@ -88,12 +92,14 @@ export class DracoMeteor implements Attack {
             });
 
             // Crater visual
-            const crater = this.scene.add.circle(targetX, targetY, this.impactRadius, 0x332244, 0.3);
-            crater.setDepth(4);
-            this.scene.tweens.add({
-              targets: crater, alpha: 0, duration: 1500,
-              onComplete: () => crater.destroy(),
-            });
+            if (shouldShowVfx()) {
+              const crater = this.scene.add.circle(targetX, targetY, this.impactRadius, 0x332244, 0.3);
+              crater.setDepth(4);
+              this.scene.tweens.add({
+                targets: crater, alpha: 0, duration: 1500,
+                onComplete: () => crater.destroy(),
+              });
+            }
 
             // Camera shake mini
             this.scene.cameras.main.shake(100, 0.005);

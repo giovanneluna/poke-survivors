@@ -5,8 +5,19 @@ import { Pickup } from '../entities/Pickup';
 import { SoundManager } from '../audio/SoundManager';
 import type { GameContext } from './GameContext';
 
+// ── Coin tiers ──────────────────────────────────────────────────────
+const COIN_TIERS = {
+  small:  { texture: 'coin-small',  value: 5,   scale: 0.8 },
+  medium: { texture: 'coin-medium', value: 25,  scale: 1.2 },
+  large:  { texture: 'coin-large',  value: 100, scale: 1.5 },
+} as const;
+
 export class PickupSystem {
+  private runCoins = 0;
+
   constructor(private readonly ctx: GameContext) {}
+
+  getRunCoins(): number { return this.runCoins; }
 
   // ── XP Gems (tiered) ──────────────────────────────────────────────
   private static readonly XP_TIERS: ReadonlyArray<{ threshold: number; texture: string; value: number; scale: number }> = [
@@ -38,6 +49,41 @@ export class PickupSystem {
     }
   }
 
+  // ── Coin drops ──────────────────────────────────────────────────
+  spawnCoin(x: number, y: number, tier: 'small' | 'medium' | 'large'): void {
+    const cfg = COIN_TIERS[tier];
+    const ox = Phaser.Math.Between(-15, 15);
+    const oy = Phaser.Math.Between(-15, 15);
+    const pickup = new Pickup(this.ctx.scene, x + ox, y + oy, 'coinSmall', cfg.texture);
+    pickup.setScale(cfg.scale).setDepth(4);
+    pickup.setData('coinValue', cfg.value);
+    pickup.setData('isCoin', true);
+    this.ctx.pickups.add(pickup);
+
+    // Bounce-out tween
+    this.ctx.scene.tweens.add({
+      targets: pickup, y: pickup.y - 20,
+      scaleX: cfg.scale + 0.3, scaleY: cfg.scale + 0.3,
+      duration: 200, yoyo: true, ease: 'Quad.Out',
+    });
+  }
+
+  spawnBossCoins(x: number, y: number): void {
+    // Boss drops 3-5 large coins (300-500 PokéDollars)
+    const count = Phaser.Math.Between(3, 5);
+    for (let i = 0; i < count; i++) {
+      this.spawnCoin(x, y, 'large');
+    }
+  }
+
+  spawnChestCoins(x: number, y: number): void {
+    // Treasure chest drops 1-2 medium coins (25-50 PokéDollars)
+    const count = Phaser.Math.Between(1, 2);
+    for (let i = 0; i < count; i++) {
+      this.spawnCoin(x, y, 'medium');
+    }
+  }
+
   // ── Hit Effects ──────────────────────────────────────────────────
   playFireHit(x: number, y: number): void {
     const hit = this.ctx.scene.add.sprite(x, y, 'atk-fire-hit');
@@ -64,6 +110,7 @@ export class PickupSystem {
 
     if (dest.destructibleType === 'treasureChest') {
       this.dropHeldItem(dest.x, dest.y);
+      this.spawnChestCoins(dest.x, dest.y);
       return;
     }
 
@@ -93,29 +140,29 @@ export class PickupSystem {
     const item = available[Phaser.Math.Between(0, available.length - 1)];
 
     const textureMap: Partial<Record<HeldItemType, string>> = {
-      charcoal: 'held-charcoal',
-      wideLens: 'held-wide-lens',
-      choiceSpecs: 'held-choice-specs',
-      quickClaw: 'held-quick-claw',
-      leftovers: 'held-leftovers',
-      dragonFang: 'held-dragon-fang',
-      sharpBeak: 'held-sharp-beak',
-      silkScarf: 'held-silk-scarf',
-      shellBell: 'held-shell-bell',
-      scopeLens: 'held-scope-lens',
-      razorClaw: 'held-razor-claw',
-      focusBand: 'held-focus-band',
-      metronome: 'held-metronome',
-      magnet: 'held-magnet',
-      mysticWater: 'held-mystic-water',
-      neverMeltIce: 'held-never-melt-ice',
-      miracleSeed: 'held-miracle-seed',
-      bigRoot: 'held-big-root',
-      blackSludge: 'held-black-sludge',
-      leafStone: 'held-leaf-stone',
+      charcoal: 'item-charcoal',
+      wideLens: 'item-wide-lens',
+      choiceSpecs: 'item-choice-specs',
+      quickClaw: 'item-quick-claw',
+      leftovers: 'item-leftovers',
+      dragonFang: 'item-dragon-fang',
+      sharpBeak: 'item-sharp-beak',
+      silkScarf: 'item-silk-scarf',
+      shellBell: 'item-shell-bell',
+      scopeLens: 'item-scope-lens',
+      razorClaw: 'item-razor-claw',
+      focusBand: 'item-focus-band',
+      metronome: 'item-metronome',
+      magnet: 'item-magnet',
+      mysticWater: 'item-mystic-water',
+      neverMeltIce: 'item-never-melt-ice',
+      miracleSeed: 'item-miracle-seed',
+      bigRoot: 'item-big-root',
+      blackSludge: 'item-black-sludge',
+      leafStone: 'item-leaf-stone',
     };
 
-    const pickup = new Pickup(this.ctx.scene, x, y, 'oranBerry', textureMap[item] ?? 'held-charcoal');
+    const pickup = new Pickup(this.ctx.scene, x, y, 'oranBerry', textureMap[item] ?? 'item-charcoal');
     pickup.setData('isHeldItem', true);
     pickup.setData('heldItemType', item);
     this.ctx.pickups.add(pickup);
@@ -134,6 +181,10 @@ export class PickupSystem {
       gachaBox: 'gacha-box',
       xpShare: 'pickup-xp-share',
       duplicator: 'pickup-duplicator',
+      friendBall: 'friend-ball',
+      coinSmall: 'coin-small',
+      coinMedium: 'coin-medium',
+      coinLarge: 'coin-large',
     };
     const pickup = new Pickup(this.ctx.scene, x, y, type, textureMap[type]);
     this.ctx.pickups.add(pickup);
@@ -142,6 +193,17 @@ export class PickupSystem {
   applyPickup(pickup: Pickup): void {
     const scene = this.ctx.scene;
     const player = this.ctx.player;
+
+    // Coin pickup
+    if (pickup.getData('isCoin')) {
+      const value = pickup.getData('coinValue') as number;
+      this.runCoins += value;
+      SoundManager.playPickupItem();
+      this.showPickupNotification(`+₽${value}`, 0xFFD700);
+      pickup.destroy();
+      scene.events.emit('coins-changed', this.runCoins);
+      return;
+    }
 
     // Held Item especial
     if (pickup.getData('isHeldItem')) {
@@ -186,6 +248,10 @@ export class PickupSystem {
           const gem = child as Phaser.Physics.Arcade.Sprite;
           if (gem.active) scene.physics.moveToObject(gem, player, 600);
         });
+        this.ctx.pickups.getChildren().forEach(child => {
+          const p = child as Phaser.Physics.Arcade.Sprite;
+          if (p.active) scene.physics.moveToObject(p, player, 500);
+        });
         break;
 
       case 'rareCandy':
@@ -217,6 +283,12 @@ export class PickupSystem {
         player.stats.projectileBonus += 1;
         SoundManager.playPickupItem();
         this.showPickupNotification('DUPLICATOR! +1 Projétil!', 0x44dd44);
+        break;
+
+      case 'friendBall':
+        SoundManager.playPickupItem();
+        this.showPickupNotification('FRIEND BALL!', 0x44cc44);
+        scene.events.emit('friend-ball-collected');
         break;
     }
 

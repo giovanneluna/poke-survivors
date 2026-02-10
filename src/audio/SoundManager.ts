@@ -244,6 +244,39 @@ class SoundManagerImpl {
       { freq: 20, duration: 0.1, wave: 'sine', volume: 0.3 },
     ]);
   }
+
+  playEventWarning(): void {
+    this.playTones([
+      { freq: 200, duration: 0.06, wave: 'sawtooth', volume: 0.5 },
+      { freq: 300, duration: 0.06, wave: 'sawtooth', volume: 0.5 },
+      { freq: 400, duration: 0.06, wave: 'sawtooth', volume: 0.5 },
+      { freq: 600, duration: 0.1, wave: 'sawtooth', volume: 0.4 },
+    ]);
+  }
+
+  // ── Mega Evolution Sounds ──────────────────────────────────────
+  playMegaActivate(): void {
+    this.playTones([
+      { freq: 523, duration: 0.08, wave: 'square', volume: 0.6 },
+      { freq: 659, duration: 0.08, wave: 'square', volume: 0.6 },
+      { freq: 784, duration: 0.08, wave: 'square', volume: 0.6 },
+      { freq: 1047, duration: 0.12, wave: 'square', volume: 0.7 },
+      { freq: 1319, duration: 0.15, wave: 'triangle', volume: 0.6 },
+      { freq: 1568, duration: 0.2, wave: 'triangle', volume: 0.5 },
+    ]);
+  }
+
+  playMegaReady(): void {
+    this.playTones([
+      { freq: 1200, duration: 0.06, wave: 'sine', volume: 0.3 },
+      { freq: 1600, duration: 0.08, wave: 'sine', volume: 0.25 },
+    ]);
+  }
+
+  /** Expõe o AudioContext para compartilhamento com MusicManager */
+  getAudioContext(): AudioContext {
+    return this.getContext();
+  }
 }
 
 /** Singleton global do SoundManager */

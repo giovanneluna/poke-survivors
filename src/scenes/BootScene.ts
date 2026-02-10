@@ -78,6 +78,45 @@ export class BootScene extends Phaser.Scene {
     this.load.image('item-revive', 'assets/items/revive.png');
     this.load.image('item-max-revive', 'assets/items/max-revive.png');
 
+    // ── Coin sprites (PokeAPI nuggets) ──────────────────────────
+    this.load.image('coin-small', 'assets/items/nugget.png');
+    this.load.image('coin-medium', 'assets/items/nugget.png');
+    this.load.image('coin-large', 'assets/items/big-nugget.png');
+
+    // ── Real pickup sprites (PokeAPI) ───────────────────────────
+    this.load.image('pickup-oran', 'assets/items/oran-berry.png');
+    this.load.image('pickup-sitrus', 'assets/items/sitrus-berry.png');
+    this.load.image('pickup-liechi', 'assets/items/liechi-berry.png');
+    this.load.image('pickup-salac', 'assets/items/salac-berry.png');
+    this.load.image('pickup-candy', 'assets/items/rare-candy.png');
+    this.load.image('pickup-magnet', 'assets/items/magnet.png');
+    this.load.image('pickup-bomb', 'assets/items/poke-ball.png');
+    this.load.image('pickup-xp-share', 'assets/items/exp-share.png');
+    this.load.image('pickup-duplicator', 'assets/items/up-grade.png');
+    this.load.image('friend-ball', 'assets/items/friend-ball.png');
+    this.load.image('gacha-box', 'assets/items/poke-ball.png');
+
+    // ── Mega stone sprites (PokeAPI) ────────────────────────────
+    this.load.image('mega-stone-fire', 'assets/items/charizardite-x.png');
+    this.load.image('mega-stone-water', 'assets/items/blastoisinite.png');
+    this.load.image('mega-stone-grass', 'assets/items/venusaurite.png');
+
+    // ── Mega form artwork (PokeAPI official artwork) ──────────
+    this.load.image('art-mega-charizard-x', 'assets/artwork/mega-charizard-x.png');
+    this.load.image('art-mega-blastoise', 'assets/artwork/mega-blastoise.png');
+    this.load.image('art-mega-venusaur', 'assets/artwork/mega-venusaur.png');
+
+    // ── Mega form walk sprites (PMDCollab — sprite/{dex}/0000/0001/) ─
+    this.load.spritesheet('mega-charizard-x-walk', 'assets/pokemon/mega-charizard-x-walk.png', { frameWidth: 48, frameHeight: 48 });
+    this.load.spritesheet('mega-blastoise-walk', 'assets/pokemon/mega-blastoise-walk.png', { frameWidth: 32, frameHeight: 40 });
+    this.load.spritesheet('mega-venusaur-walk', 'assets/pokemon/mega-venusaur-walk.png', { frameWidth: 32, frameHeight: 32 });
+
+    // ── Mew sprite (PMDCollab — Legendary event) ────────────────
+    this.load.spritesheet('mew-walk', 'assets/pokemon/mew-walk.png', { frameWidth: 40, frameHeight: 64 });
+
+    // ── Healing effect sprite (pokemonAutoChess RECOVER) ────────
+    this.load.spritesheet('atk-recover', 'assets/attacks/normal/recover-sheet.png', { frameWidth: 64, frameHeight: 64 });
+
     // ── Fire attack spritesheets ──────────────────────────────────
     this.load.spritesheet('atk-ember', 'assets/attacks/fire/ember-sheet.png', { frameWidth: 26, frameHeight: 26 });
     this.load.spritesheet('atk-fire-range', 'assets/attacks/fire/fire-range-sheet.png', { frameWidth: 40, frameHeight: 40 });
@@ -285,6 +324,12 @@ export class BootScene extends Phaser.Scene {
     for (const config of Object.values(ENEMIES)) {
       this.createWalkAnims(config.sprite);
     }
+    // Mew walk anims (Legendary event — not in ENEMIES registry)
+    this.createWalkAnims({ key: 'mew-walk', path: 'assets/pokemon/mew-walk.png', frameWidth: 40, frameHeight: 64, frameCount: 6, directions: 8 });
+    // Mega form walk anims (PMDCollab)
+    this.createWalkAnims({ key: 'mega-charizard-x-walk', path: 'assets/pokemon/mega-charizard-x-walk.png', frameWidth: 48, frameHeight: 48, frameCount: 4, directions: 8 });
+    this.createWalkAnims({ key: 'mega-blastoise-walk', path: 'assets/pokemon/mega-blastoise-walk.png', frameWidth: 32, frameHeight: 40, frameCount: 4, directions: 8 });
+    this.createWalkAnims({ key: 'mega-venusaur-walk', path: 'assets/pokemon/mega-venusaur-walk.png', frameWidth: 32, frameHeight: 32, frameCount: 4, directions: 8 });
     this.createAttackAnims();
     this.generateTextures();
     this.scene.start('TitleScene');
@@ -828,6 +873,8 @@ export class BootScene extends Phaser.Scene {
     this.anims.create({ key: 'anim-ground-melee', frames: this.anims.generateFrameNumbers('atk-ground-melee', { start: 0, end: 11 }), frameRate: 16, repeat: 0 });
     // Normal: Extreme Speed (11f)
     this.anims.create({ key: 'anim-extreme-speed', frames: this.anims.generateFrameNumbers('atk-extreme-speed', { start: 0, end: 10 }), frameRate: 16, repeat: 0 });
+    // Recover healing effect (7 frames, play once)
+    this.anims.create({ key: 'anim-recover', frames: this.anims.generateFrameNumbers('atk-recover', { start: 0, end: 6 }), frameRate: 10, repeat: 0 });
   }
 
   private createWalkAnims(sprite: SpriteConfig): void {
@@ -987,190 +1034,11 @@ export class BootScene extends Phaser.Scene {
     g.generateTexture('dest-chest', 20, 18);
 
     // ── Pickups ──────────────────────────────────────────────────
-    // Oran Berry - bolinha azul (heal 25)
-    g.clear(); g.fillStyle(0x4488ff); g.fillCircle(5, 5, 5);
-    g.fillStyle(0x66aaff, 0.7); g.fillCircle(4, 3, 2);
-    g.fillStyle(0x338833); g.fillRect(4, 0, 2, 2);
-    g.generateTexture('pickup-oran', 10, 10);
+    // All pickups now loaded as real PokeAPI sprites in preload():
+    // pickup-oran, pickup-sitrus, pickup-liechi, pickup-salac, pickup-candy,
+    // pickup-magnet, pickup-bomb, pickup-xp-share, pickup-duplicator
 
-    // Sitrus Berry - bolinha amarela (heal 50)
-    g.clear(); g.fillStyle(0xddcc22); g.fillCircle(5, 5, 5);
-    g.fillStyle(0xffee66, 0.7); g.fillCircle(4, 3, 2);
-    g.fillStyle(0x338833); g.fillRect(4, 0, 2, 2);
-    g.generateTexture('pickup-sitrus', 10, 10);
-
-    // Liechi Berry - bolinha vermelha (2x damage 30s)
-    g.clear(); g.fillStyle(0xdd3333); g.fillCircle(5, 5, 5);
-    g.fillStyle(0xff6666, 0.7); g.fillCircle(4, 3, 2);
-    g.fillStyle(0x338833); g.fillRect(4, 0, 2, 2);
-    g.generateTexture('pickup-liechi', 10, 10);
-
-    // Salac Berry - bolinha verde (1.5x speed 30s)
-    g.clear(); g.fillStyle(0x33bb55); g.fillCircle(5, 5, 5);
-    g.fillStyle(0x66dd88, 0.7); g.fillCircle(4, 3, 2);
-    g.fillStyle(0x226622); g.fillRect(4, 0, 2, 2);
-    g.generateTexture('pickup-salac', 10, 10);
-
-    // Magnet Burst - ímã
-    g.clear(); g.fillStyle(0xcc0000); g.fillRect(1, 1, 4, 8);
-    g.fillStyle(0x0000cc); g.fillRect(7, 1, 4, 8);
-    g.fillStyle(0xcccccc); g.fillRect(4, 1, 4, 3);
-    g.generateTexture('pickup-magnet', 12, 10);
-
-    // Rare Candy - diamante dourado
-    g.clear(); g.fillStyle(0xFFD700);
-    g.fillTriangle(6, 0, 12, 6, 6, 12); g.fillTriangle(6, 0, 0, 6, 6, 12);
-    g.fillStyle(0xFFE44D, 0.6); g.fillTriangle(6, 2, 10, 6, 6, 10);
-    g.generateTexture('pickup-candy', 12, 12);
-
-    // Pokéball Bomb - pokébola
-    g.clear(); g.fillStyle(0xff0000); g.fillCircle(6, 6, 6);
-    g.fillStyle(0xffffff); g.fillRect(0, 5, 12, 3);
-    g.fillStyle(0xffffff); g.fillCircle(6, 6, 6);
-    g.fillStyle(0xff0000); g.fillCircle(6, 3, 5);
-    g.fillStyle(0x333333); g.fillRect(0, 5, 12, 2);
-    g.fillStyle(0xffffff); g.fillCircle(6, 6, 2);
-    g.fillStyle(0x333333); g.fillCircle(6, 6, 1);
-    g.generateTexture('pickup-bomb', 12, 12);
-
-    // XP Share - estrela roxa com brilho
-    g.clear(); g.fillStyle(0xaa44ff);
-    g.fillTriangle(6, 0, 8, 4, 12, 5); g.fillTriangle(12, 5, 8, 7, 10, 12);
-    g.fillTriangle(10, 12, 6, 9, 2, 12); g.fillTriangle(2, 12, 4, 7, 0, 5);
-    g.fillTriangle(0, 5, 4, 4, 6, 0);
-    g.fillStyle(0xdd88ff, 0.7); g.fillCircle(6, 6, 2);
-    g.generateTexture('pickup-xp-share', 12, 12);
-
-    // Duplicator - seta dupla verde
-    g.clear(); g.fillStyle(0x44dd44);
-    g.fillTriangle(3, 0, 6, 4, 0, 4);
-    g.fillRect(1, 4, 4, 4);
-    g.fillStyle(0x66ff66);
-    g.fillTriangle(9, 0, 12, 4, 6, 4);
-    g.fillRect(7, 4, 4, 4);
-    g.fillStyle(0xffffff, 0.3); g.fillRect(2, 1, 2, 2); g.fillRect(8, 1, 2, 2);
-    g.generateTexture('pickup-duplicator', 12, 8);
-
-    // Held Items textures
-    // Charcoal
-    g.clear(); g.fillStyle(0x333333); g.fillCircle(6, 6, 5);
-    g.fillStyle(0xff4400, 0.6); g.fillCircle(5, 4, 2);
-    g.fillStyle(0xff6600, 0.4); g.fillCircle(7, 7, 1.5);
-    g.generateTexture('held-charcoal', 12, 12);
-
-    // Wide Lens
-    g.clear(); g.fillStyle(0x88ccff, 0.8); g.fillCircle(6, 6, 5);
-    g.fillStyle(0xaaddff, 0.5); g.fillCircle(6, 6, 3);
-    g.fillStyle(0xcccccc); g.fillRect(10, 5, 3, 2);
-    g.generateTexture('held-wide-lens', 14, 12);
-
-    // Choice Specs
-    g.clear(); g.fillStyle(0xaa44ff); g.fillCircle(4, 5, 3); g.fillCircle(10, 5, 3);
-    g.fillStyle(0xcc66ff, 0.5); g.fillCircle(4, 4, 1.5); g.fillCircle(10, 4, 1.5);
-    g.fillStyle(0x666666); g.fillRect(6, 4, 3, 1);
-    g.generateTexture('held-choice-specs', 14, 10);
-
-    // Quick Claw
-    g.clear(); g.fillStyle(0xeeeeee); g.fillTriangle(6, 0, 11, 10, 1, 10);
-    g.fillStyle(0x44aaff, 0.6); g.fillTriangle(6, 2, 9, 9, 3, 9);
-    g.generateTexture('held-quick-claw', 12, 12);
-
-    // Leftovers
-    g.clear(); g.fillStyle(0x88aa44); g.fillRect(2, 2, 8, 8);
-    g.fillStyle(0xaacc66, 0.7); g.fillRect(3, 3, 6, 4);
-    g.fillStyle(0x666644); g.fillRect(2, 6, 8, 2);
-    g.generateTexture('held-leftovers', 12, 12);
-
-    // Dragon Fang
-    g.clear(); g.fillStyle(0x7744ff); g.fillTriangle(6, 0, 11, 12, 1, 12);
-    g.fillStyle(0x9966ff, 0.6); g.fillTriangle(6, 3, 9, 10, 3, 10);
-    g.generateTexture('held-dragon-fang', 12, 12);
-
-    // Sharp Beak
-    g.clear(); g.fillStyle(0x88ccff); g.fillTriangle(6, 0, 10, 12, 2, 12);
-    g.fillStyle(0xaaddff, 0.5); g.fillTriangle(6, 2, 8, 10, 4, 10);
-    g.fillStyle(0xffcc00); g.fillRect(4, 0, 4, 3);
-    g.generateTexture('held-sharp-beak', 12, 12);
-
-    // Silk Scarf
-    g.clear(); g.fillStyle(0xffffff); g.fillRect(1, 3, 10, 4);
-    g.fillStyle(0xeeeeee, 0.8); g.fillRect(2, 4, 8, 2);
-    g.fillStyle(0xdddddd); g.fillRect(0, 5, 3, 5); g.fillRect(9, 5, 3, 5);
-    g.generateTexture('held-silk-scarf', 12, 12);
-
-    // Shell Bell
-    g.clear(); g.fillStyle(0xffcc44); g.fillCircle(6, 6, 5);
-    g.fillStyle(0xffdd66, 0.6); g.fillCircle(5, 5, 3);
-    g.fillStyle(0xeeaa22); g.fillCircle(6, 8, 2);
-    g.generateTexture('held-shell-bell', 12, 12);
-
-    // Scope Lens
-    g.clear(); g.fillStyle(0xff44aa); g.fillCircle(6, 6, 5);
-    g.fillStyle(0xff66cc, 0.5); g.fillCircle(6, 6, 3);
-    g.fillStyle(0x333333); g.fillRect(0, 5, 12, 2);
-    g.fillStyle(0x333333); g.fillRect(5, 0, 2, 12);
-    g.generateTexture('held-scope-lens', 12, 12);
-
-    // Razor Claw
-    g.clear(); g.fillStyle(0xcc4444); g.fillTriangle(2, 0, 6, 12, 0, 8);
-    g.fillTriangle(6, 0, 10, 12, 4, 8);
-    g.fillTriangle(10, 0, 12, 10, 8, 8);
-    g.generateTexture('held-razor-claw', 12, 12);
-
-    // Focus Band
-    g.clear(); g.fillStyle(0xff8800); g.fillRect(0, 3, 12, 6);
-    g.fillStyle(0xffaa44, 0.7); g.fillRect(1, 4, 10, 4);
-    g.fillStyle(0xffcc00); g.fillCircle(6, 6, 2);
-    g.generateTexture('held-focus-band', 12, 12);
-
-    // Metronome
-    g.clear(); g.fillStyle(0xdddddd); g.fillRect(5, 0, 2, 10);
-    g.fillStyle(0xaaaaaa); g.fillRect(3, 8, 6, 4);
-    g.fillStyle(0x44aaff); g.fillCircle(6, 2, 2);
-    g.generateTexture('held-metronome', 12, 12);
-
-    // Magnet (held)
-    g.clear(); g.fillStyle(0xcc0000); g.fillRect(1, 1, 4, 8);
-    g.fillStyle(0x0000cc); g.fillRect(7, 1, 4, 8);
-    g.fillStyle(0xcccccc); g.fillRect(4, 1, 4, 3);
-    g.generateTexture('held-magnet', 12, 10);
-
-    // Mystic Water (held)
-    g.clear(); g.fillStyle(0x3388ff); g.fillCircle(6, 6, 5);
-    g.fillStyle(0x44aaff, 0.6); g.fillCircle(5, 4, 3);
-    g.fillStyle(0x66ccff, 0.3); g.fillCircle(4, 3, 1.5);
-    g.generateTexture('held-mystic-water', 12, 12);
-
-    // Never-Melt Ice (held)
-    g.clear(); g.fillStyle(0x88ddff); g.fillTriangle(6, 0, 11, 10, 1, 10);
-    g.fillStyle(0xaaeeff, 0.6); g.fillTriangle(6, 2, 9, 9, 3, 9);
-    g.fillStyle(0xffffff, 0.4); g.fillTriangle(6, 3, 8, 8, 4, 8);
-    g.generateTexture('held-never-melt-ice', 12, 12);
-
-    // Miracle Seed (held) — green seed with gold sparkle
-    g.clear(); g.fillStyle(0x44bb44); g.fillCircle(6, 7, 5);
-    g.fillStyle(0x66dd66); g.fillCircle(5, 6, 3);
-    g.fillStyle(0xffdd44); g.fillRect(5, 2, 2, 3);
-    g.generateTexture('held-miracle-seed', 12, 12);
-
-    // Big Root (held) — brown root shape
-    g.clear(); g.fillStyle(0x8B5E3C); g.fillRect(4, 1, 4, 10);
-    g.fillStyle(0x6B3E1C); g.fillRect(2, 6, 3, 4);
-    g.fillStyle(0x6B3E1C); g.fillRect(7, 4, 3, 5);
-    g.fillStyle(0xAA7744); g.fillRect(5, 2, 2, 4);
-    g.generateTexture('held-big-root', 12, 12);
-
-    // Black Sludge (held) — dark purple blob
-    g.clear(); g.fillStyle(0x442266); g.fillCircle(6, 7, 5);
-    g.fillStyle(0x553388); g.fillCircle(5, 6, 3);
-    g.fillStyle(0x332244); g.fillCircle(7, 8, 2);
-    g.generateTexture('held-black-sludge', 12, 12);
-
-    // Leaf Stone (held) — green gem
-    g.clear(); g.fillStyle(0x44aa44); g.fillTriangle(6, 1, 11, 8, 1, 8);
-    g.fillStyle(0x66cc66); g.fillRect(3, 8, 6, 3);
-    g.fillStyle(0x88ee88, 0.5); g.fillTriangle(6, 3, 9, 7, 3, 7);
-    g.generateTexture('held-leaf-stone', 12, 12);
+    // Held Items — all loaded as real PokeAPI sprites (item-*) in preload()
 
     // ── Texturas de ataques (procedurais) ──────────────────────────
     // Slash arc (arco branco para Scratch/Slash/FurySwipes/NightSlash)
@@ -1304,15 +1172,17 @@ export class BootScene extends Phaser.Scene {
     g.lineStyle(1, 0xffcc00, 0.3); g.strokeCircle(12, 12, 5);
     g.generateTexture('explosion-ring', 24, 24);
 
-    // ── Gacha Box (pokeball dourada) ──────────────────────────────
-    g.clear();
-    g.fillStyle(0xFFD700); g.fillCircle(16, 16, 14);  // corpo dourado
-    g.fillStyle(0xFFE44D, 0.5); g.fillCircle(16, 12, 12); // metade superior mais clara
-    g.fillStyle(0x8B6914); g.fillRect(2, 14, 28, 3);  // linha central escura
-    g.fillStyle(0xFFD700); g.fillRect(2, 15, 28, 1);   // destaque na linha
-    g.fillStyle(0xffffff); g.fillCircle(16, 16, 4);    // botão central branco
-    g.fillStyle(0xFFD700); g.fillCircle(16, 16, 2);    // centro do botão dourado
-    g.generateTexture('gacha-box', 32, 32);
+    // ── Pokemon Center cross ────────────────────────────────────────
+    const pcGfx = this.add.graphics();
+    pcGfx.fillStyle(0xffffff, 1);
+    pcGfx.fillRect(0, 0, 16, 16);
+    pcGfx.fillStyle(0xff0000, 1);
+    pcGfx.fillRect(6, 2, 4, 12);  // vertical bar
+    pcGfx.fillRect(2, 6, 12, 4);  // horizontal bar
+    pcGfx.generateTexture('pokecenter-cross', 16, 16);
+    pcGfx.destroy();
+
+    // Gacha box (gacha-box) loaded from PokeAPI poke-ball sprite
 
     // ── Shards para Title Screen ──────────────────────────────────
     // Shard vermelho (fogo)
@@ -1342,6 +1212,18 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xFFE44D, 0.6);
     g.fillTriangle(5, 1, 8, 7, 2, 7);
     g.generateTexture('shard-gold', 10, 8);
+
+    // ── Mega particle (golden sparkle) ────────────────────────────
+    g.clear(); g.fillStyle(0xffd700, 1);
+    g.fillCircle(3, 3, 3);
+    g.generateTexture('mega-particle', 6, 6);
+
+    // Friend ball loaded from PokeAPI sprite
+
+    // ── Companion bullet ────────────────────────────────────────
+    g.clear(); g.fillStyle(0xffffff, 1);
+    g.fillCircle(3, 3, 3);
+    g.generateTexture('companion-bullet', 6, 6);
 
     g.destroy();
   }

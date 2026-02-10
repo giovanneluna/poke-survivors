@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 type CardinalDir = 'up' | 'down' | 'left' | 'right';
 
@@ -128,13 +129,15 @@ export class AquaJet implements Attack {
       const py = startY + (endY - startY) * t;
 
       this.scene.time.delayedCall(i * 30, () => {
-        const p = this.scene.add.particles(px, py, 'water-particle', {
-          speed: { min: 20, max: 60 }, lifespan: 300, quantity: 4,
-          scale: { start: 1.5, end: 0 }, tint: [0x3388ff, 0x44aaff, 0x66ccff],
-          emitting: false,
-        });
-        p.explode();
-        this.scene.time.delayedCall(400, () => p.destroy());
+        if (shouldShowVfx()) {
+          const p = this.scene.add.particles(px, py, 'water-particle', {
+            speed: { min: 20, max: 60 }, lifespan: 300, quantity: getVfxQuantity(4),
+            scale: { start: 1.5, end: 0 }, tint: [0x3388ff, 0x44aaff, 0x66ccff],
+            emitting: false,
+          });
+          p.explode();
+          this.scene.time.delayedCall(400, () => p.destroy());
+        }
       });
     }
 

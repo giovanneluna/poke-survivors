@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Air Slash: lâmina de ar que atravessa inimigos.
@@ -53,11 +54,14 @@ export class AirSlash implements Attack {
       const hitSet = new Set<number>();
 
       // Trail de vento
-      const trail = this.scene.add.particles(0, 0, 'wind-particle', {
-        follow: blade, speed: { min: 10, max: 30 }, lifespan: 150,
-        scale: { start: 1, end: 0 }, quantity: 1, frequency: 40,
-        tint: [0x88ccff, 0xaaddff],
-      });
+      let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+      if (shouldShowVfx()) {
+        trail = this.scene.add.particles(0, 0, 'wind-particle', {
+          follow: blade, speed: { min: 10, max: 30 }, lifespan: 150,
+          scale: { start: 1, end: 0 }, quantity: getVfxQuantity(1), frequency: 40,
+          tint: [0x88ccff, 0xaaddff],
+        });
+      }
 
       const moveEvent = this.scene.time.addEvent({
         delay: 16, loop: true,
@@ -90,7 +94,7 @@ export class AirSlash implements Attack {
 
       const cleanup = () => {
         moveEvent.destroy();
-        trail.destroy();
+        trail?.destroy();
         blade.destroy();
       };
 

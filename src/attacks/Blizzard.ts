@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { safeExplode } from '../utils/particles';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Blizzard: evolucao do Ice Beam.
@@ -36,7 +37,7 @@ export class Blizzard implements Attack {
   /** Rastreamento de projeteis homing ativos (sprite -> dados de tracking) */
   private readonly activeHomingBullets: Map<number, {
     bullet: Phaser.Physics.Arcade.Sprite;
-    trail: Phaser.GameObjects.Particles.ParticleEmitter;
+    trail: Phaser.GameObjects.Particles.ParticleEmitter | null;
     alive: boolean;
     spawnTime: number;
   }> = new Map();
@@ -103,15 +104,18 @@ export class Blizzard implements Attack {
         bullet.setRotation(angleToTarget);
 
         // Trail de particulas de gelo
-        const trail = this.scene.add.particles(0, 0, 'ice-particle', {
-          follow: bullet,
-          speed: { min: 5, max: 20 },
-          lifespan: 200,
-          scale: { start: 1, end: 0 },
-          quantity: 1,
-          frequency: 40,
-          tint: Blizzard.ICE_TINTS as unknown as number[],
-        });
+        let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+        if (shouldShowVfx()) {
+          trail = this.scene.add.particles(0, 0, 'ice-particle', {
+            follow: bullet,
+            speed: { min: 5, max: 20 },
+            lifespan: 200,
+            scale: { start: 1, end: 0 },
+            quantity: getVfxQuantity(1),
+            frequency: 40,
+            tint: Blizzard.ICE_TINTS as unknown as number[],
+          });
+        }
 
         // Registra no tracking de homing
         this.activeHomingBullets.set(currentFireId, {
@@ -199,15 +203,17 @@ export class Blizzard implements Attack {
    */
   private freezeBurst(x: number, y: number): void {
     // Visual: circulo azul expandindo
-    const circle = this.scene.add.circle(x, y, 10, 0x88ddff, 0.6).setDepth(12);
-    this.scene.tweens.add({
-      targets: circle,
-      scaleX: Blizzard.FREEZE_RADIUS / 10,
-      scaleY: Blizzard.FREEZE_RADIUS / 10,
-      alpha: 0,
-      duration: 400,
-      onComplete: () => circle.destroy(),
-    });
+    if (shouldShowVfx()) {
+      const circle = this.scene.add.circle(x, y, 10, 0x88ddff, 0.6).setDepth(12);
+      this.scene.tweens.add({
+        targets: circle,
+        scaleX: Blizzard.FREEZE_RADIUS / 10,
+        scaleY: Blizzard.FREEZE_RADIUS / 10,
+        alpha: 0,
+        duration: 400,
+        onComplete: () => circle.destroy(),
+      });
+    }
 
     // Particulas de gelo explosivas
     safeExplode(this.scene, x, y, 'ice-particle', {
@@ -254,7 +260,7 @@ export class Blizzard implements Attack {
       body.enable = false;
     }
 
-    tracking.trail.destroy();
+    tracking.trail?.destroy();
     this.activeHomingBullets.delete(fireId);
   }
 

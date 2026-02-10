@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 /**
  * Tackle: investida rapida na direcao do movimento.
@@ -44,17 +45,19 @@ export class Tackle implements Attack {
     const px = this.player.x + offsetX;
     const py = this.player.y + offsetY;
 
-    const flash = this.scene.add.circle(px, py, 20, 0xffffff, 0.7);
-    flash.setDepth(10);
-    this.scene.tweens.add({
-      targets: flash,
-      alpha: 0,
-      scaleX: 1.8,
-      scaleY: 1.8,
-      duration: 200,
-      ease: 'Sine.Out',
-      onComplete: () => flash.destroy(),
-    });
+    if (shouldShowVfx()) {
+      const flash = this.scene.add.circle(px, py, 20, 0xffffff, 0.7);
+      flash.setDepth(10);
+      this.scene.tweens.add({
+        targets: flash,
+        alpha: 0,
+        scaleX: 1.8,
+        scaleY: 1.8,
+        duration: 200,
+        ease: 'Sine.Out',
+        onComplete: () => flash.destroy(),
+      });
+    }
 
     // Dano em arco
     const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.range);

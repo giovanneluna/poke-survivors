@@ -5,9 +5,15 @@ import { SoundManager } from '../audio/SoundManager';
 import { Boss } from '../entities/Boss';
 import { GameScene } from './GameScene';
 import type { RunStats } from '../systems/RunRecorder';
-import { getCoins } from '../systems/SaveSystem';
+import { getCoins, getQuality, getVfxIntensity, setQuality, setVfxIntensity } from '../systems/SaveSystem';
 import { MiniMap } from '../ui/MiniMap';
 import { getComboSystem } from '../systems/ComboSystem';
+import { HELD_ITEMS } from '../data/items/held-items';
+import { fontSize, scaled } from '../utils/ui-scale';
+
+interface CompanionInfo {
+  readonly getKey: () => string;
+}
 
 interface StatsData extends PlayerState {
   time: number;
@@ -18,6 +24,10 @@ interface StatsData extends PlayerState {
   damageTotals: Record<string, number>;
   combo: number;
   comboActive: boolean;
+  megaGauge: number;
+  megaActive: boolean;
+  megaTimeRemaining: number;
+  companions: readonly CompanionInfo[];
 }
 
 interface GameOverData {
@@ -39,6 +49,7 @@ export class UIScene extends Phaser.Scene {
   private formText!: Phaser.GameObjects.Text;
   private slotsText!: Phaser.GameObjects.Text;
   private killsText!: Phaser.GameObjects.Text;
+  private coinText!: Phaser.GameObjects.Text;
   private timerText!: Phaser.GameObjects.Text;
   private reviveText!: Phaser.GameObjects.Text;
   private itemsContainer!: Phaser.GameObjects.Container;
@@ -56,18 +67,33 @@ export class UIScene extends Phaser.Scene {
   private devSearchText = '';
   private devPanelKeyHandler: ((event: KeyboardEvent) => void) | null = null;
   private pauseContainer!: Phaser.GameObjects.Container;
+  private _pauseSliderMove?: (p: Phaser.Input.Pointer) => void;
+  private _pauseSliderUp?: () => void;
   private damageContainer!: Phaser.GameObjects.Container;
   private comboText!: Phaser.GameObjects.Text;
   private comboLabelText!: Phaser.GameObjects.Text;
   private miniMap: MiniMap | null = null;
   private userPaused = false;
+  private itemTooltip: Phaser.GameObjects.Text | null = null;
+
+  // ── Mega Gauge ──────────────────────────────────────────────────
+  private megaBarBg!: Phaser.GameObjects.Rectangle;
+  private megaBarFill!: Phaser.GameObjects.Rectangle;
+  private megaLabel!: Phaser.GameObjects.Text;
+  private megaPulseTween: Phaser.Tweens.Tween | null = null;
+
+  // ── Companion HUD ───────────────────────────────────────────────
+  private companionIcons: Phaser.GameObjects.Image[] = [];
+
+  // ── Companion Select ────────────────────────────────────────────
+  private companionSelectContainer: Phaser.GameObjects.Container | null = null;
 
   private readonly textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
-    fontSize: '14px',
+    fontSize: fontSize(14),
     color: '#ffffff',
     fontFamily: 'monospace',
     stroke: '#000000',
-    strokeThickness: 3,
+    strokeThickness: scaled(3),
   };
 
   constructor() {
@@ -78,36 +104,54 @@ export class UIScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
 
     this.hpBar = this.add.graphics().setDepth(100);
-    this.add.text(10, 8, 'HP', { ...this.textStyle, fontSize: '12px' }).setDepth(100);
-    this.reviveText = this.add.text(190, 12, '', {
-      ...this.textStyle, fontSize: '10px', color: '#ffaa00',
+    this.add.text(scaled(10), scaled(8), 'HP', { ...this.textStyle, fontSize: fontSize(12) }).setDepth(100);
+    this.reviveText = this.add.text(scaled(190), scaled(12), '', {
+      ...this.textStyle, fontSize: fontSize(10), color: '#ffaa00',
     }).setDepth(100);
     this.xpBar = this.add.graphics().setDepth(100);
 
-    this.levelText = this.add.text(10, 30, 'Lv 1', {
-      ...this.textStyle, fontSize: '16px', color: '#ffcc00',
+    // ── Mega Gauge Bar (abaixo do HP bar) ──────────────────────────
+    const megaBarX = scaled(30);
+    const megaBarY = scaled(24); // HP bar y(10) + height(12) + gap(2)
+    const megaBarWidth = scaled(150); // mesma largura do HP bar
+    const megaBarHeight = scaled(6);
+    this.megaBarBg = this.add.rectangle(megaBarX, megaBarY, megaBarWidth, megaBarHeight, 0x333333)
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(100);
+    this.megaBarFill = this.add.rectangle(megaBarX, megaBarY, 0, megaBarHeight, 0xffd700)
+      .setOrigin(0, 0).setScrollFactor(0).setDepth(101);
+    this.megaLabel = this.add.text(megaBarX + megaBarWidth / 2, megaBarY, '', {
+      fontSize: fontSize(10), color: '#ffd700', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: scaled(2),
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(102);
+
+    this.levelText = this.add.text(scaled(10), scaled(34), 'Lv 1', {
+      ...this.textStyle, fontSize: fontSize(16), color: '#ffcc00',
     }).setDepth(100);
 
-    this.formText = this.add.text(70, 33, 'Charmander', {
-      ...this.textStyle, fontSize: '11px', color: '#ff8844',
+    this.formText = this.add.text(scaled(70), scaled(37), 'Charmander', {
+      ...this.textStyle, fontSize: fontSize(11), color: '#ff8844',
     }).setDepth(100);
 
-    this.slotsText = this.add.text(10, 48, '', {
-      ...this.textStyle, fontSize: '9px', color: '#aaaaaa',
+    this.slotsText = this.add.text(scaled(10), scaled(52), '', {
+      ...this.textStyle, fontSize: fontSize(9), color: '#aaaaaa',
     }).setDepth(100);
 
-    this.killsText = this.add.text(width - 10, 10, 'Kills: 0', {
+    this.killsText = this.add.text(width - scaled(10), scaled(10), 'Kills: 0', {
       ...this.textStyle,
     }).setOrigin(1, 0).setDepth(100);
 
-    this.timerText = this.add.text(width / 2, 10, '0:00', {
-      ...this.textStyle, fontSize: '18px',
+    this.coinText = this.add.text(width - scaled(10), scaled(28), '₽ 0', {
+      ...this.textStyle, fontSize: fontSize(11), color: '#ffd700',
+    }).setOrigin(1, 0).setDepth(100);
+
+    this.timerText = this.add.text(width / 2, scaled(10), '0:00', {
+      ...this.textStyle, fontSize: fontSize(18),
     }).setOrigin(0.5, 0).setDepth(100);
 
     // Held Items display (bottom-left)
-    this.itemsContainer = this.add.container(10, 0).setDepth(100);
+    this.itemsContainer = this.add.container(scaled(10), 0).setDepth(100);
     // Attacks display (bottom-left, above items)
-    this.attacksContainer = this.add.container(10, 0).setDepth(100);
+    this.attacksContainer = this.add.container(scaled(10), 0).setDepth(100);
 
     this.levelUpContainer = this.add.container(0, 0).setDepth(200).setVisible(false);
     this.gameOverContainer = this.add.container(0, 0).setDepth(200).setVisible(false);
@@ -116,8 +160,8 @@ export class UIScene extends Phaser.Scene {
     this.gachaContainer = this.add.container(0, 0).setDepth(300).setVisible(false);
 
     // ── Botão Mute ─────────────────────────────────────────────────
-    const muteBtn = this.add.text(width - 10, 30, SoundManager.isMuted() ? '🔇' : '🔊', {
-      fontSize: '18px',
+    const muteBtn = this.add.text(width - scaled(10), scaled(30), SoundManager.isMuted() ? '🔇' : '🔊', {
+      fontSize: fontSize(18),
     }).setOrigin(1, 0).setDepth(100).setInteractive({ useHandCursor: true });
 
     muteBtn.on('pointerdown', () => {
@@ -127,8 +171,8 @@ export class UIScene extends Phaser.Scene {
     });
 
     // ── Botão Pause ──────────────────────────────────────────────────
-    const pauseBtn = this.add.text(width - 10, 52, '⏸', {
-      fontSize: '16px',
+    const pauseBtn = this.add.text(width - scaled(10), scaled(52), '⏸', {
+      fontSize: fontSize(16),
     }).setOrigin(1, 0).setDepth(100).setInteractive({ useHandCursor: true });
 
     this.pauseContainer = this.add.container(0, 0).setDepth(180).setVisible(false);
@@ -145,8 +189,8 @@ export class UIScene extends Phaser.Scene {
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     let debugYOffset = 0;
     if (isLocal) {
-      const debugBtn = this.add.text(width - 10, 74, '☐', {
-        fontSize: '14px', color: '#888888',
+      const debugBtn = this.add.text(width - scaled(10), scaled(74), '☐', {
+        fontSize: fontSize(14), color: '#888888',
       }).setOrigin(1, 0).setDepth(100).setInteractive({ useHandCursor: true });
       let debugOn = false;
       debugBtn.on('pointerdown', () => {
@@ -168,24 +212,24 @@ export class UIScene extends Phaser.Scene {
           }
         });
       });
-      debugYOffset = 22;
+      debugYOffset = scaled(22);
     }
 
     // ── Combo Display ─────────────────────────────────────────────────
-    this.comboText = this.add.text(width / 2, 32, '', {
-      fontSize: '16px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 4,
+    this.comboText = this.add.text(width / 2, scaled(32), '', {
+      fontSize: fontSize(16), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(4),
     }).setOrigin(0.5).setDepth(100).setAlpha(0);
-    this.comboLabelText = this.add.text(width / 2, 50, '', {
-      fontSize: '12px', color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 3,
+    this.comboLabelText = this.add.text(width / 2, scaled(50), '', {
+      fontSize: fontSize(12), color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(3),
     }).setOrigin(0.5).setDepth(100).setAlpha(0);
 
     // ── Mini-Map ──────────────────────────────────────────────────────
-    this.miniMap = new MiniMap(this, width - 130, height - 140, 120, 3000, 3000);
+    this.miniMap = new MiniMap(this, width - scaled(130), height - scaled(140), scaled(120), 3000, 3000);
 
     // ── Damage Tracker (abaixo de kills/mute/pause/debug) ──────────────
-    this.damageContainer = this.add.container(width - 10, 72 + debugYOffset).setDepth(100);
+    this.damageContainer = this.add.container(width - scaled(10), scaled(72) + debugYOffset).setDepth(100);
 
     const gameScene = this.scene.get('GameScene');
     gameScene.events.on('stats-update', (stats: StatsData) => this.updateHUD(stats));
@@ -196,32 +240,48 @@ export class UIScene extends Phaser.Scene {
     });
     gameScene.events.on('revive-used', (remaining: number) => {
       const cam = this.cameras.main;
-      const msg = this.add.text(cam.width / 2, cam.height / 2 - 60, 'REVIVE!', {
-        fontSize: '28px', color: '#ffaa00', fontFamily: 'monospace', fontStyle: 'bold',
-        stroke: '#000000', strokeThickness: 5,
+      const msg = this.add.text(cam.width / 2, cam.height / 2 - scaled(60), 'REVIVE!', {
+        fontSize: fontSize(28), color: '#ffaa00', fontFamily: 'monospace', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: scaled(5),
       }).setOrigin(0.5).setDepth(999);
-      const sub = this.add.text(cam.width / 2, cam.height / 2 - 30, `${remaining} restante${remaining !== 1 ? 's' : ''}`, {
-        fontSize: '14px', color: '#ffffff', fontFamily: 'monospace',
-        stroke: '#000000', strokeThickness: 3,
+      const sub = this.add.text(cam.width / 2, cam.height / 2 - scaled(30), `${remaining} restante${remaining !== 1 ? 's' : ''}`, {
+        fontSize: fontSize(14), color: '#ffffff', fontFamily: 'monospace',
+        stroke: '#000000', strokeThickness: scaled(3),
       }).setOrigin(0.5).setDepth(999);
       this.tweens.add({ targets: [msg, sub], alpha: 0, y: '-=40', duration: 2000, delay: 800, onComplete: () => { msg.destroy(); sub.destroy(); } });
     });
 
-    // ── Type effectiveness floating text ──────────────────────────────
+    // ── Type effectiveness floating text (throttled to avoid flood) ────
+    let lastEffectivenessTime = 0;
     gameScene.events.on('type-effectiveness', (data: { x: number; y: number; label: string; color: string; multiplier: number }) => {
+      const now = Date.now();
+      // Super Efetivo always shows; others throttled to max 1 per 400ms
+      if (data.multiplier < 1.5 && now - lastEffectivenessTime < 400) return;
+      lastEffectivenessTime = now;
+
       const cam = this.scene.get('GameScene').cameras.main;
       const screenX = data.x - cam.scrollX;
       const screenY = data.y - cam.scrollY;
       if (screenX < -50 || screenX > cam.width + 50 || screenY < -50 || screenY > cam.height + 50) return;
       const txt = this.add.text(screenX, screenY, data.label, {
-        fontSize: data.multiplier >= 1.5 ? '11px' : '9px',
+        fontSize: data.multiplier >= 1.5 ? fontSize(11) : fontSize(9),
         color: data.color,
         fontFamily: 'monospace',
         fontStyle: 'bold',
         stroke: '#000000',
-        strokeThickness: 2,
+        strokeThickness: scaled(2),
       }).setOrigin(0.5).setDepth(200);
       this.tweens.add({ targets: txt, y: screenY - 25, alpha: 0, duration: 800, ease: 'Power2', onComplete: () => txt.destroy() });
+    });
+
+    // ── Event Banner (top of screen) ──────────────────────────────────
+    gameScene.events.on('event-banner', (data: { name: string; color: string }) => {
+      this.showEventBanner(data.name, data.color);
+    });
+
+    // ── Companion Select Overlay ────────────────────────────────────
+    this.events.on('show-companion-select', (choices: string[]) => {
+      this.showCompanionSelect(choices);
     });
 
     // ── Boss events ──────────────────────────────────────────────────
@@ -238,6 +298,11 @@ export class UIScene extends Phaser.Scene {
     // ── Boss damage numbers (resisted = gray) ───────────────────────
     gameScene.events.on('boss-damage-number', (data: { x: number; y: number; amount: number; resisted: boolean }) => {
       this.showBossDamageNumber(data);
+    });
+
+    // ── Coins ────────────────────────────────────────────────────────
+    gameScene.events.on('coins-changed', (total: number) => {
+      this.coinText.setText(`₽ ${total}`);
     });
 
     // ── Gacha ────────────────────────────────────────────────────────
@@ -263,21 +328,22 @@ export class UIScene extends Phaser.Scene {
 
     // HP Bar
     this.hpBar.clear();
-    const hpBarWidth = 150;
+    const hpBarWidth = scaled(150);
     const hpRatio = stats.hp / stats.maxHp;
     this.hpBar.fillStyle(0x333333, 0.8);
-    this.hpBar.fillRoundedRect(30, 10, hpBarWidth, 12, 3);
+    this.hpBar.fillRoundedRect(scaled(30), scaled(10), hpBarWidth, scaled(12), scaled(3));
     const hpColor = hpRatio > 0.5 ? 0x44dd44 : hpRatio > 0.25 ? 0xdddd44 : 0xdd4444;
     this.hpBar.fillStyle(hpColor);
-    this.hpBar.fillRoundedRect(30, 10, hpBarWidth * hpRatio, 12, 3);
+    this.hpBar.fillRoundedRect(scaled(30), scaled(10), hpBarWidth * hpRatio, scaled(12), scaled(3));
 
     // XP Bar
     this.xpBar.clear();
     const xpRatio = stats.xp / stats.xpToNext;
+    const xpBarH = scaled(8);
     this.xpBar.fillStyle(0x222222, 0.8);
-    this.xpBar.fillRect(0, height - 8, width, 8);
+    this.xpBar.fillRect(0, height - xpBarH, width, xpBarH);
     this.xpBar.fillStyle(0x44bbff);
-    this.xpBar.fillRect(0, height - 8, width * xpRatio, 8);
+    this.xpBar.fillRect(0, height - xpBarH, width * xpRatio, xpBarH);
 
     // Textos
     this.levelText.setText(`Lv ${stats.level}`);
@@ -307,41 +373,60 @@ export class UIScene extends Phaser.Scene {
     if (itemsHash !== this.lastItemsHash) {
       this.lastItemsHash = itemsHash;
       this.itemsContainer.removeAll(true);
-      const itemY = height - 35;
-      this.itemsContainer.setPosition(10, itemY);
+      const itemY = height - scaled(35);
+      this.itemsContainer.setPosition(scaled(10), itemY);
 
       if (stats.heldItems && stats.heldItems.length > 0) {
         const label = this.add.text(0, 0, 'Items:', {
-          fontSize: '10px', color: '#aaaaaa', fontFamily: 'monospace',
-          stroke: '#000000', strokeThickness: 2,
+          fontSize: fontSize(10), color: '#aaaaaa', fontFamily: 'monospace',
+          stroke: '#000000', strokeThickness: scaled(2),
         });
         this.itemsContainer.add(label);
 
         const textureMap: Partial<Record<HeldItemType, string>> = {
-          charcoal: 'held-charcoal',
-          wideLens: 'held-wide-lens',
-          choiceSpecs: 'held-choice-specs',
-          quickClaw: 'held-quick-claw',
-          leftovers: 'held-leftovers',
-          dragonFang: 'held-dragon-fang',
-          sharpBeak: 'held-sharp-beak',
-          silkScarf: 'held-silk-scarf',
-          shellBell: 'held-shell-bell',
-          scopeLens: 'held-scope-lens',
-          razorClaw: 'held-razor-claw',
-          focusBand: 'held-focus-band',
-          metronome: 'held-metronome',
-          magnet: 'held-magnet',
-          mysticWater: 'held-mystic-water',
-          neverMeltIce: 'held-never-melt-ice',
-          miracleSeed: 'held-miracle-seed',
-          blackSludge: 'held-black-sludge',
-          bigRoot: 'held-big-root',
-          leafStone: 'held-leaf-stone',
+          charcoal: 'item-charcoal',
+          wideLens: 'item-wide-lens',
+          choiceSpecs: 'item-choice-specs',
+          quickClaw: 'item-quick-claw',
+          leftovers: 'item-leftovers',
+          dragonFang: 'item-dragon-fang',
+          sharpBeak: 'item-sharp-beak',
+          silkScarf: 'item-silk-scarf',
+          shellBell: 'item-shell-bell',
+          scopeLens: 'item-scope-lens',
+          razorClaw: 'item-razor-claw',
+          focusBand: 'item-focus-band',
+          metronome: 'item-metronome',
+          magnet: 'item-magnet',
+          mysticWater: 'item-mystic-water',
+          neverMeltIce: 'item-never-melt-ice',
+          miracleSeed: 'item-miracle-seed',
+          blackSludge: 'item-black-sludge',
+          bigRoot: 'item-big-root',
+          leafStone: 'item-leaf-stone',
+          revive: 'item-revive',
         };
 
         stats.heldItems.forEach((item, i) => {
-          const icon = this.add.image(45 + i * 18, 5, textureMap[item] ?? 'held-charcoal').setScale(1.2);
+          const icon = this.add.image(scaled(45) + i * scaled(18), scaled(5), textureMap[item] ?? 'item-charcoal').setScale(scaled(1.2));
+          icon.setInteractive({ useHandCursor: true });
+          const itemDef = HELD_ITEMS[item];
+          if (itemDef) {
+            icon.on('pointerover', () => {
+              if (this.itemTooltip) this.itemTooltip.destroy();
+              const worldPos = this.itemsContainer.getWorldTransformMatrix();
+              const tx = worldPos.tx + scaled(45) + i * scaled(18);
+              const ty = worldPos.ty - scaled(14);
+              this.itemTooltip = this.add.text(tx, ty, `${itemDef.name}\n${itemDef.description}`, {
+                fontSize: fontSize(9), color: '#ffffff', fontFamily: 'monospace',
+                backgroundColor: '#000000aa', padding: { x: scaled(4), y: scaled(2) },
+                stroke: '#000000', strokeThickness: 1,
+              }).setOrigin(0.5, 1).setDepth(200);
+            });
+            icon.on('pointerout', () => {
+              if (this.itemTooltip) { this.itemTooltip.destroy(); this.itemTooltip = null; }
+            });
+          }
           this.itemsContainer.add(icon);
         });
       }
@@ -352,14 +437,14 @@ export class UIScene extends Phaser.Scene {
     if (attacksHash !== this.lastAttacksHash) {
       this.lastAttacksHash = attacksHash;
       this.attacksContainer.removeAll(true);
-      this.attacksContainer.setPosition(10, 62);
+      this.attacksContainer.setPosition(scaled(10), scaled(66));
 
       if (stats.attacks) {
         stats.attacks.forEach((atk, i) => {
           const name = atk.type.charAt(0).toUpperCase() + atk.type.slice(1);
-          const atkText = this.add.text(0, i * 14, `${name} Lv${atk.level}`, {
-            fontSize: '10px', color: '#ff8844', fontFamily: 'monospace',
-            stroke: '#000000', strokeThickness: 2,
+          const atkText = this.add.text(0, i * scaled(14), `${name} Lv${atk.level}`, {
+            fontSize: fontSize(10), color: '#ff8844', fontFamily: 'monospace',
+            stroke: '#000000', strokeThickness: scaled(2),
           });
           this.attacksContainer.add(atkText);
         });
@@ -389,6 +474,44 @@ export class UIScene extends Phaser.Scene {
       this.comboLabelText.setAlpha(0);
     }
 
+    // ── Mega Gauge update ──────────────────────────────────────────
+    const megaRatio = stats.megaGauge ?? 0;
+    const megaActive = stats.megaActive ?? false;
+    const isMobile = this.sys.game.device.input.touch;
+
+    // Hide mega gauge until player reaches final evolution (stage2)
+    const megaVisible = stats.form === 'stage2' || megaActive;
+    this.megaBarBg.setVisible(megaVisible);
+    this.megaBarFill.setVisible(megaVisible);
+    this.megaLabel.setVisible(megaVisible);
+
+    if (megaActive) {
+      const megaDuration = 15000;
+      const remaining = (stats.megaTimeRemaining ?? 0) / megaDuration;
+      this.megaBarFill.width = this.megaBarBg.width * Math.max(0, remaining);
+      this.megaBarFill.fillColor = 0xff4444;
+      this.megaLabel.setText('MEGA!');
+      this.megaLabel.setColor('#ff4444');
+      this.stopMegaPulse();
+    } else if (megaRatio >= 1) {
+      this.megaBarFill.width = this.megaBarBg.width;
+      this.megaBarFill.fillColor = 0xffd700;
+      const activateHint = isMobile ? 'TAP' : 'SPACE';
+      this.megaLabel.setText(`MEGA! [${activateHint}]`);
+      this.megaLabel.setColor('#ffd700');
+      this.startMegaPulse();
+    } else {
+      this.megaBarFill.width = this.megaBarBg.width * megaRatio;
+      this.megaBarFill.fillColor = 0xffd700;
+      this.megaLabel.setText('');
+      this.stopMegaPulse();
+    }
+
+    // ── Companion HUD update ────────────────────────────────────────
+    if (stats.companions) {
+      this.updateCompanionHUD(stats.companions);
+    }
+
     // Mini-map update
     if (this.miniMap) {
       const gs = this.scene.get('GameScene') as GameScene;
@@ -406,6 +529,135 @@ export class UIScene extends Phaser.Scene {
     }
   }
 
+  // ── Mega Gauge Pulse ─────────────────────────────────────────────
+  private startMegaPulse(): void {
+    if (this.megaPulseTween) return;
+    this.megaPulseTween = this.tweens.add({
+      targets: this.megaLabel,
+      alpha: { from: 1, to: 0.5 },
+      duration: 400,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.InOut',
+    });
+  }
+
+  private stopMegaPulse(): void {
+    if (!this.megaPulseTween) return;
+    this.megaPulseTween.destroy();
+    this.megaPulseTween = null;
+    this.megaLabel.setAlpha(1);
+  }
+
+  // ── Companion HUD ───────────────────────────────────────────────
+  private updateCompanionHUD(companions: readonly CompanionInfo[]): void {
+    // Rebuild only if count changed (avoid per-frame destroy/create)
+    if (this.companionIcons.length === companions.length) return;
+
+    for (const icon of this.companionIcons) icon.destroy();
+    this.companionIcons = [];
+
+    const baseX = this.megaBarBg.x + this.megaBarBg.width + 8;
+    const baseY = this.megaBarBg.y + this.megaBarBg.height / 2;
+
+    for (let i = 0; i < companions.length; i++) {
+      const key = companions[i].getKey();
+      const icon = this.add.image(
+        baseX + i * 20,
+        baseY,
+        key,
+      ).setScale(0.4).setScrollFactor(0).setDepth(100);
+      this.companionIcons.push(icon);
+    }
+  }
+
+  // ── Event Banner ────────────────────────────────────────────────
+  private showEventBanner(name: string, color: string): void {
+    const cam = this.cameras.main;
+    const banner = this.add.text(cam.width / 2, -scaled(40), `EVENT: ${name}`, {
+      fontSize: fontSize(20), color, fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: scaled(4),
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
+
+    this.tweens.add({
+      targets: banner,
+      y: 40,
+      duration: 500,
+      ease: 'Back.Out',
+      hold: 3000,
+      yoyo: true,
+      onComplete: () => banner.destroy(),
+    });
+  }
+
+  // ── Companion Select Overlay ────────────────────────────────────
+  private showCompanionSelect(choices: string[]): void {
+    // Prevent duplicate overlays
+    if (this.companionSelectContainer) {
+      this.companionSelectContainer.destroy();
+      this.companionSelectContainer = null;
+    }
+
+    const cam = this.cameras.main;
+    const container = this.add.container(0, 0).setScrollFactor(0).setDepth(310);
+    this.companionSelectContainer = container;
+
+    // Dark overlay
+    const overlay = this.add.rectangle(cam.width / 2, cam.height / 2, cam.width, cam.height, 0x000000, 0.6)
+      .setScrollFactor(0).setInteractive();
+    container.add(overlay);
+
+    const title = this.add.text(cam.width / 2, cam.height / 2 - scaled(100), 'CHOOSE A COMPANION!', {
+      fontSize: fontSize(18), color: '#44cc44', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: scaled(3),
+    }).setOrigin(0.5).setScrollFactor(0);
+    container.add(title);
+
+    const spacing = scaled(120);
+    const startX = cam.width / 2 - spacing;
+
+    for (let i = 0; i < choices.length; i++) {
+      const key = choices[i];
+      const textureKey = `${key}-walk`; // Pokédex key → sprite texture key
+      const cx = startX + i * spacing;
+      const cy = cam.height / 2;
+
+      // Card background
+      const bg = this.add.rectangle(cx, cy, scaled(90), scaled(110), 0x224422, 0.9)
+        .setStrokeStyle(scaled(2), 0x44cc44).setScrollFactor(0);
+      container.add(bg);
+
+      // Sprite (usa texture key do spritesheet, não pokédex key)
+      const sprite = this.add.image(cx, cy - scaled(15), textureKey)
+        .setScale(scaled(1.2)).setScrollFactor(0);
+      container.add(sprite);
+
+      // Name label
+      const label = this.add.text(cx, cy + scaled(35), key.toUpperCase(), {
+        fontSize: fontSize(10), color: '#ffffff', fontFamily: 'monospace',
+      }).setOrigin(0.5).setScrollFactor(0);
+      container.add(label);
+
+      // Interactive — click to select
+      bg.setInteractive({ useHandCursor: true });
+      bg.on('pointerover', () => bg.setStrokeStyle(scaled(2), 0xffff44));
+      bg.on('pointerout', () => bg.setStrokeStyle(scaled(2), 0x44cc44));
+      bg.on('pointerdown', () => {
+        this.events.emit('companion-selected', key);
+        // Cleanup
+        if (this.companionSelectContainer) {
+          this.companionSelectContainer.destroy();
+          this.companionSelectContainer = null;
+        }
+        // Resume game
+        this.scene.get('GameScene').events.emit('resume-game');
+      });
+    }
+
+    // Pause game while selecting
+    this.scene.get('GameScene').events.emit('pause-game');
+  }
+
   // ── Damage Display ───────────────────────────────────────────────
   private updateDamageDisplay(damageTotals: Record<string, number> | undefined): void {
     this.damageContainer.removeAll(true);
@@ -421,9 +673,9 @@ export class UIScene extends Phaser.Scene {
     entries.slice(0, maxVisible).forEach(([type, dmg], i) => {
       const name = type.charAt(0).toUpperCase() + type.slice(1);
       const dmgStr = dmg >= 1000 ? `${(dmg / 1000).toFixed(1)}k` : Math.floor(dmg).toString();
-      const text = this.add.text(0, i * 13, `${name} ${dmgStr}`, {
-        fontSize: '9px', color: '#cccccc', fontFamily: 'monospace',
-        stroke: '#000000', strokeThickness: 2,
+      const text = this.add.text(0, i * scaled(13), `${name} ${dmgStr}`, {
+        fontSize: fontSize(9), color: '#cccccc', fontFamily: 'monospace',
+        stroke: '#000000', strokeThickness: scaled(2),
       }).setOrigin(1, 0);
       this.damageContainer.add(text);
     });
@@ -437,30 +689,193 @@ export class UIScene extends Phaser.Scene {
 
     this.pauseContainer.removeAll(true);
 
-    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.6);
+    // Limpar listeners anteriores (caso pause reaberto sem resume)
+    if (this._pauseSliderMove) this.input.off('pointermove', this._pauseSliderMove);
+    if (this._pauseSliderUp) this.input.off('pointerup', this._pauseSliderUp);
+
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7);
+    bg.setInteractive();
     this.pauseContainer.add(bg);
 
-    const title = this.add.text(width / 2, height / 2 - 30, 'PAUSADO', {
-      fontSize: '32px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 5,
+    const cx = width / 2;
+    let yPos = height / 2 - 100;
+
+    // Título
+    const title = this.add.text(cx, yPos, 'PAUSADO', {
+      fontSize: fontSize(28), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(5),
     }).setOrigin(0.5);
     this.pauseContainer.add(title);
+    yPos += scaled(50);
 
-    const resumeBtn = this.add.text(width / 2, height / 2 + 20, '[ CONTINUAR ]', {
-      fontSize: '18px', color: '#ffcc00', fontFamily: 'monospace',
-      stroke: '#000000', strokeThickness: 3,
+    // ── Quality Toggle ─────────────────────────────────────────────
+    this.pauseContainer.add(this.add.text(cx - scaled(100), yPos, 'Qualidade', {
+      fontSize: fontSize(11), color: '#888888', fontFamily: 'monospace',
+    }).setOrigin(0, 0.5));
+
+    const initialQuality = getQuality();
+    let currentQuality = initialQuality;
+    const qualOpts: Array<'normal' | 'low'> = ['normal', 'low'];
+    const qualLabels = ['NORMAL', 'LOW'];
+    const qualBtnW = 70;
+    const qualBtnH = 24;
+    const qualGfx: Phaser.GameObjects.Graphics[] = [];
+    const qualTxts: Phaser.GameObjects.Text[] = [];
+
+    const drawQual = (idx: number): void => {
+      const g = qualGfx[idx];
+      const active = qualOpts[idx] === currentQuality;
+      g.clear();
+      const bx = cx + 10 + idx * (qualBtnW + 6);
+      g.fillStyle(active ? 0x228822 : 0x1a1a33, 0.95);
+      g.fillRoundedRect(bx, yPos - qualBtnH / 2, qualBtnW, qualBtnH, 5);
+      g.lineStyle(1, active ? 0x44dd44 : 0x444466);
+      g.strokeRoundedRect(bx, yPos - qualBtnH / 2, qualBtnW, qualBtnH, 5);
+      qualTxts[idx]?.setColor(active ? '#ffffff' : '#666666');
+    };
+
+    // Restart note (declarado antes dos botões para referência no handler)
+    const restartYPos = yPos + qualBtnH / 2 + 10;
+    const restartNote = this.add.text(cx, restartYPos, '(reinício necessário ao trocar)', {
+      fontSize: fontSize(9), color: '#ff8844', fontFamily: 'monospace',
+    }).setOrigin(0.5).setVisible(false);
+    this.pauseContainer.add(restartNote);
+
+    qualOpts.forEach((_opt, i) => {
+      const bx = cx + 10 + i * (qualBtnW + 6);
+      const g = this.add.graphics();
+      qualGfx.push(g);
+      this.pauseContainer.add(g);
+
+      const txt = this.add.text(bx + qualBtnW / 2, yPos, qualLabels[i], {
+        fontSize: fontSize(10), color: '#666666', fontFamily: 'monospace', fontStyle: 'bold',
+      }).setOrigin(0.5);
+      qualTxts.push(txt);
+      this.pauseContainer.add(txt);
+
+      drawQual(i);
+
+      const hit = this.add.rectangle(bx + qualBtnW / 2, yPos, qualBtnW, qualBtnH, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true });
+      hit.on('pointerdown', () => {
+        if (qualOpts[i] === currentQuality) return;
+        SoundManager.playClick();
+        currentQuality = qualOpts[i];
+        setQuality(currentQuality);
+        qualOpts.forEach((_, j) => drawQual(j));
+        // Só mostra nota se qualidade realmente difere da inicial
+        restartNote.setVisible(currentQuality !== initialQuality);
+      });
+      this.pauseContainer.add(hit);
+    });
+
+    yPos = restartYPos + 18;
+
+    // ── VFX Slider ─────────────────────────────────────────────────
+    this.pauseContainer.add(this.add.text(cx - scaled(100), yPos, 'Efeitos (VFX)', {
+      fontSize: fontSize(11), color: '#888888', fontFamily: 'monospace',
+    }).setOrigin(0, 0.5));
+
+    const sliderX = cx + 10;
+    const sliderW = 130;
+    const sliderH = 6;
+    let vfxValue = getVfxIntensity();
+
+    const sliderBg = this.add.graphics();
+    sliderBg.fillStyle(0x333344, 0.8);
+    sliderBg.fillRoundedRect(sliderX, yPos - sliderH / 2, sliderW, sliderH, 3);
+    this.pauseContainer.add(sliderBg);
+
+    const sliderFill = this.add.graphics();
+    this.pauseContainer.add(sliderFill);
+
+    const sliderHandle = this.add.graphics();
+    this.pauseContainer.add(sliderHandle);
+
+    const vfxLabel = this.add.text(sliderX + sliderW + scaled(8), yPos, `${vfxValue}%`, {
+      fontSize: fontSize(11), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(2),
+    }).setOrigin(0, 0.5);
+    this.pauseContainer.add(vfxLabel);
+
+    const drawVfxSlider = (): void => {
+      const ratio = Phaser.Math.Clamp(vfxValue / 100, 0, 1);
+      const fillW = Math.round(sliderW * ratio);
+      sliderFill.clear();
+      if (fillW > 1) {
+        const color = vfxValue > 66 ? 0x44dd44 : vfxValue > 33 ? 0xdddd44 : 0xdd4444;
+        sliderFill.fillStyle(color, 0.9);
+        sliderFill.fillRect(sliderX, yPos - sliderH / 2, fillW, sliderH);
+      }
+      const hx = Phaser.Math.Clamp(sliderX + fillW - 5, sliderX - 5, sliderX + sliderW - 5);
+      sliderHandle.clear();
+      sliderHandle.fillStyle(0xffffff, 0.95);
+      sliderHandle.fillRoundedRect(hx, yPos - 8, 10, 16, 3);
+      vfxLabel.setText(`${vfxValue}%`);
+    };
+    drawVfxSlider();
+
+    // Hitbox ligeiramente maior que a barra para facilitar toque
+    const sliderHit = this.add.rectangle(sliderX + sliderW / 2, yPos, sliderW + 20, 28, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true, draggable: false });
+    this.pauseContainer.add(sliderHit);
+
+    let dragging = false;
+    const updateVfx = (px: number): void => {
+      const ratio = Phaser.Math.Clamp((px - sliderX) / sliderW, 0, 1);
+      vfxValue = Math.round(ratio * 100);
+      drawVfxSlider();
+    };
+
+    sliderHit.on('pointerdown', (p: Phaser.Input.Pointer) => {
+      dragging = true;
+      updateVfx(p.x);
+    });
+
+    // Handlers nomeados — permite remover SÓ estes sem afetar outros listeners
+    const onSliderMove = (p: Phaser.Input.Pointer): void => {
+      if (dragging) updateVfx(p.x);
+    };
+    const onSliderUp = (): void => {
+      if (dragging) {
+        dragging = false;
+        setVfxIntensity(vfxValue);
+      }
+    };
+    this._pauseSliderMove = onSliderMove;
+    this._pauseSliderUp = onSliderUp;
+    this.input.on('pointermove', onSliderMove);
+    this.input.on('pointerup', onSliderUp);
+
+    yPos += 35;
+
+    // ── Botão Continuar ────────────────────────────────────────────
+    const resumeBtn = this.add.text(cx, yPos, '[ CONTINUAR ]', {
+      fontSize: fontSize(18), color: '#ffcc00', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: scaled(3),
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     this.pauseContainer.add(resumeBtn);
 
-    resumeBtn.on('pointerover', () => { resumeBtn.setColor('#ffffff'); SoundManager.playHover(); });
-    resumeBtn.on('pointerout', () => resumeBtn.setColor('#ffcc00'));
-    resumeBtn.on('pointerdown', () => {
+    const doResume = (): void => {
       SoundManager.playClick();
       this.userPaused = false;
       pauseBtn.setText('⏸');
+      this.input.off('pointermove', onSliderMove);
+      this.input.off('pointerup', onSliderUp);
+      this._pauseSliderMove = undefined;
+      this._pauseSliderUp = undefined;
       this.pauseContainer.setVisible(false);
+      // Só recarrega se qualidade realmente mudou em relação à inicial
+      if (currentQuality !== initialQuality) {
+        this.time.delayedCall(200, () => window.location.reload());
+        return;
+      }
       gameScene.events.emit('resume-game');
-    });
+    };
+
+    resumeBtn.on('pointerover', () => { resumeBtn.setColor('#ffffff'); SoundManager.playHover(); });
+    resumeBtn.on('pointerout', () => resumeBtn.setColor('#ffcc00'));
+    resumeBtn.on('pointerdown', doResume);
 
     this.pauseContainer.setVisible(true);
   }
@@ -472,66 +887,67 @@ export class UIScene extends Phaser.Scene {
     const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7);
     this.levelUpContainer.add(bg);
 
-    const title = this.add.text(width / 2, 60, `LEVEL ${level}!`, {
-      fontSize: '32px', color: '#ffcc00', fontFamily: 'monospace',
-      stroke: '#000000', strokeThickness: 4,
+    const title = this.add.text(width / 2, scaled(60), `LEVEL ${level}!`, {
+      fontSize: fontSize(32), color: '#ffcc00', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: scaled(4),
     }).setOrigin(0.5);
     this.levelUpContainer.add(title);
 
-    const subtitle = this.add.text(width / 2, 95, 'Escolha um aprimoramento:', {
-      fontSize: '14px', color: '#cccccc', fontFamily: 'monospace',
+    const subtitle = this.add.text(width / 2, scaled(95), 'Escolha um aprimoramento:', {
+      fontSize: fontSize(14), color: '#cccccc', fontFamily: 'monospace',
     }).setOrigin(0.5);
     this.levelUpContainer.add(subtitle);
 
-    const cardWidth = 200;
-    const cardHeight = 160;
-    const gap = 20;
+    const cardWidth = scaled(200);
+    const cardHeight = scaled(160);
+    const gap = scaled(20);
     const totalWidth = options.length * cardWidth + (options.length - 1) * gap;
     const startX = (width - totalWidth) / 2;
 
     options.forEach((option, i) => {
       const cx = startX + i * (cardWidth + gap) + cardWidth / 2;
-      const cy = height / 2 + 20;
+      const cy = height / 2 + scaled(20);
 
       // Classificar tipo do upgrade pelo prefixo do ID
-      const tag = option.id.startsWith('evolve') ? { label: 'EVOLUÇÃO', color: '#ff4400', bg: 0x442200, hoverBg: 0x663300, border: 3 }
-        : option.id.startsWith('new')     ? { label: 'HABILIDADE', color: '#44dd66', bg: 0x1a3322, hoverBg: 0x2a4433, border: 2 }
-        : option.id.startsWith('upgrade') ? { label: 'MELHORIA', color: '#44aaff', bg: 0x1a2244, hoverBg: 0x2a3355, border: 2 }
-        : option.id.startsWith('item')    ? { label: 'ITEM', color: '#ffcc00', bg: 0x332b1a, hoverBg: 0x443c2a, border: 2 }
-        :                                   { label: 'PASSIVA', color: '#cc88ff', bg: 0x2a1a33, hoverBg: 0x3b2a44, border: 2 };
+      const tag = option.id.startsWith('evolve') ? { label: 'EVOLUÇÃO', color: '#ff4400', bg: 0x442200, hoverBg: 0x663300, border: scaled(3) }
+        : option.id.startsWith('new')     ? { label: 'HABILIDADE', color: '#44dd66', bg: 0x1a3322, hoverBg: 0x2a4433, border: scaled(2) }
+        : option.id.startsWith('upgrade') ? { label: 'MELHORIA', color: '#44aaff', bg: 0x1a2244, hoverBg: 0x2a3355, border: scaled(2) }
+        : option.id.startsWith('item')    ? { label: 'ITEM', color: '#ffcc00', bg: 0x332b1a, hoverBg: 0x443c2a, border: scaled(2) }
+        :                                   { label: 'PASSIVA', color: '#cc88ff', bg: 0x2a1a33, hoverBg: 0x3b2a44, border: scaled(2) };
 
       const card = this.add.graphics();
+      const cardRadius = scaled(10);
       card.fillStyle(tag.bg, 0.95);
-      card.fillRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, 10);
+      card.fillRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, cardRadius);
       card.lineStyle(tag.border, option.color);
-      card.strokeRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, 10);
+      card.strokeRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, cardRadius);
       this.levelUpContainer.add(card);
 
       // Tag de categoria
-      const tagBadgeW = tag.label.length * 7 + 10;
-      const tagBadgeH = 16;
+      const tagBadgeW = tag.label.length * scaled(7) + scaled(10);
+      const tagBadgeH = scaled(16);
       const tagBadgeX = cx - tagBadgeW / 2;
-      const tagBadgeY = cy - cardHeight / 2 + 4;
+      const tagBadgeY = cy - cardHeight / 2 + scaled(4);
       const badgeGfx = this.add.graphics();
       badgeGfx.fillStyle(Phaser.Display.Color.HexStringToColor(tag.color).color, 0.2);
-      badgeGfx.fillRoundedRect(tagBadgeX, tagBadgeY, tagBadgeW, tagBadgeH, 3);
+      badgeGfx.fillRoundedRect(tagBadgeX, tagBadgeY, tagBadgeW, tagBadgeH, scaled(3));
       this.levelUpContainer.add(badgeGfx);
       const tagText = this.add.text(cx, tagBadgeY + tagBadgeH / 2, tag.label, {
-        fontSize: '8px', color: tag.color, fontFamily: 'monospace', fontStyle: 'bold',
+        fontSize: fontSize(8), color: tag.color, fontFamily: 'monospace', fontStyle: 'bold',
       }).setOrigin(0.5);
       this.levelUpContainer.add(tagText);
 
-      const icon = this.add.image(cx, cy - 35, option.icon).setScale(2).setOrigin(0.5);
+      const icon = this.add.image(cx, cy - scaled(35), option.icon).setScale(scaled(2)).setOrigin(0.5);
       this.levelUpContainer.add(icon);
 
       const name = this.add.text(cx, cy, option.name, {
-        fontSize: '14px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+        fontSize: fontSize(14), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
       }).setOrigin(0.5);
       this.levelUpContainer.add(name);
 
-      const desc = this.add.text(cx, cy + 18, option.description, {
-        fontSize: '10px', color: '#aaaaaa', fontFamily: 'monospace',
-        wordWrap: { width: cardWidth - 20 }, align: 'center',
+      const desc = this.add.text(cx, cy + scaled(18), option.description, {
+        fontSize: fontSize(10), color: '#aaaaaa', fontFamily: 'monospace',
+        wordWrap: { width: cardWidth - scaled(20) }, align: 'center',
       }).setOrigin(0.5, 0);
       this.levelUpContainer.add(desc);
 
@@ -542,17 +958,17 @@ export class UIScene extends Phaser.Scene {
         SoundManager.playHover();
         card.clear();
         card.fillStyle(tag.hoverBg, 0.95);
-        card.fillRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, 10);
-        card.lineStyle(3, option.color);
-        card.strokeRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, 10);
+        card.fillRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, cardRadius);
+        card.lineStyle(scaled(3), option.color);
+        card.strokeRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, cardRadius);
       });
 
       hitbox.on('pointerout', () => {
         card.clear();
         card.fillStyle(tag.bg, 0.95);
-        card.fillRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, 10);
+        card.fillRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, cardRadius);
         card.lineStyle(tag.border, option.color);
-        card.strokeRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, 10);
+        card.strokeRoundedRect(cx - cardWidth / 2, cy - cardHeight / 2, cardWidth, cardHeight, cardRadius);
       });
 
       hitbox.on('pointerdown', () => {
@@ -566,7 +982,7 @@ export class UIScene extends Phaser.Scene {
     });
 
     // ── Botão de Reroll ────────────────────────────────────────────
-    const rerollY = height / 2 + 120;
+    const rerollY = height / 2 + scaled(120);
     const hasRerolls = rerolls > 0;
     const rerollText = hasRerolls
       ? `Reroll (${rerolls} restante${rerolls > 1 ? 's' : ''})`
@@ -574,11 +990,11 @@ export class UIScene extends Phaser.Scene {
 
     const diceIcon = hasRerolls ? '\uD83C\uDFB2 ' : '';
     const rerollBtn = this.add.text(width / 2, rerollY, `${diceIcon}${rerollText}`, {
-      fontSize: '15px',
+      fontSize: fontSize(15),
       color: hasRerolls ? '#aaaaaa' : '#444444',
       fontFamily: 'monospace',
       stroke: '#000000',
-      strokeThickness: 2,
+      strokeThickness: scaled(2),
     }).setOrigin(0.5);
     this.levelUpContainer.add(rerollBtn);
 
@@ -613,22 +1029,22 @@ export class UIScene extends Phaser.Scene {
     this.evolutionContainer.add(bg);
 
     // Texto de evolução
-    const text1 = this.add.text(width / 2, height / 2 - 30, `${fromName} está evoluindo...`, {
-      fontSize: '20px', color: '#FFdd44', fontFamily: 'monospace',
-      stroke: '#000000', strokeThickness: 4,
+    const text1 = this.add.text(width / 2, height / 2 - scaled(30), `${fromName} está evoluindo...`, {
+      fontSize: fontSize(20), color: '#FFdd44', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: scaled(4),
     }).setOrigin(0.5).setAlpha(0);
     this.evolutionContainer.add(text1);
 
-    const text2 = this.add.text(width / 2, height / 2 + 10, `${toName}!`, {
-      fontSize: '28px', color: '#FFFFFF', fontFamily: 'monospace', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 5,
+    const text2 = this.add.text(width / 2, height / 2 + scaled(10), `${toName}!`, {
+      fontSize: fontSize(28), color: '#FFFFFF', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(5),
     }).setOrigin(0.5).setAlpha(0);
     this.evolutionContainer.add(text2);
 
     // Slots info
-    const text3 = this.add.text(width / 2, height / 2 + 50, '+1 Slot de Ataque  •  +1 Slot de Item', {
-      fontSize: '12px', color: '#88ff88', fontFamily: 'monospace',
-      stroke: '#000000', strokeThickness: 3,
+    const text3 = this.add.text(width / 2, height / 2 + scaled(50), '+1 Slot de Ataque  •  +1 Slot de Item', {
+      fontSize: fontSize(12), color: '#88ff88', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: scaled(3),
     }).setOrigin(0.5).setAlpha(0);
     this.evolutionContainer.add(text3);
 
@@ -636,7 +1052,7 @@ export class UIScene extends Phaser.Scene {
 
     // Animação de entrada
     this.tweens.add({ targets: text1, alpha: 1, duration: 400, ease: 'Power2' });
-    this.tweens.add({ targets: text2, alpha: 1, y: height / 2 + 5, duration: 500, delay: 500, ease: 'Back.Out' });
+    this.tweens.add({ targets: text2, alpha: 1, y: height / 2 + scaled(5), duration: 500, delay: 500, ease: 'Back.Out' });
     this.tweens.add({ targets: text3, alpha: 1, duration: 300, delay: 800, ease: 'Power2' });
 
     // Auto-fechar após 1.4s
@@ -664,9 +1080,9 @@ export class UIScene extends Phaser.Scene {
     this.tweens.add({ targets: flash, alpha: 0, duration: 300, onComplete: () => flash.destroy() });
 
     // Texto principal
-    const text = this.add.text(width / 2, height / 2 - 12, `WILD ${name.toUpperCase()} APPEARED!`, {
-      fontSize: '28px', color: '#ff4444', fontFamily: 'monospace', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 5,
+    const text = this.add.text(width / 2, height / 2 - scaled(12), `WILD ${name.toUpperCase()} APPEARED!`, {
+      fontSize: fontSize(28), color: '#ff4444', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(5),
     }).setOrigin(0.5).setAlpha(0).setDepth(160);
 
     this.tweens.add({
@@ -679,9 +1095,9 @@ export class UIScene extends Phaser.Scene {
     if (archetype) {
       const info = UIScene.ARCHETYPE_INFO[archetype];
       if (info) {
-        const tag = this.add.text(width / 2, height / 2 + 18, info.icon, {
-          fontSize: '14px', color: info.color, fontFamily: 'monospace', fontStyle: 'bold',
-          stroke: '#000000', strokeThickness: 3,
+        const tag = this.add.text(width / 2, height / 2 + scaled(18), info.icon, {
+          fontSize: fontSize(14), color: info.color, fontFamily: 'monospace', fontStyle: 'bold',
+          stroke: '#000000', strokeThickness: scaled(3),
         }).setOrigin(0.5).setAlpha(0).setDepth(160);
 
         this.tweens.add({
@@ -715,8 +1131,8 @@ export class UIScene extends Phaser.Scene {
     const dmgStr = Math.floor(data.amount).toString();
 
     const text = this.add.text(screenX + jitter, screenY, dmgStr, {
-      fontSize: '12px', color, fontFamily: 'monospace', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 2,
+      fontSize: fontSize(12), color, fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(2),
     }).setOrigin(0.5).setDepth(170);
 
     this.tweens.add({
@@ -735,21 +1151,24 @@ export class UIScene extends Phaser.Scene {
     this.bossHpContainer.removeAll(true);
 
     // Nome
-    const nameText = this.add.text(width / 2, 55, name, {
-      fontSize: '14px', color: '#FFD700', fontFamily: 'monospace', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 3,
+    const nameText = this.add.text(width / 2, scaled(55), name, {
+      fontSize: fontSize(14), color: '#FFD700', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(3),
     }).setOrigin(0.5);
     this.bossHpContainer.add(nameText);
 
     // Barra
+    const bossBarW = scaled(400);
+    const bossBarH = scaled(14);
+    const bossBarY = scaled(70);
     const barBg = this.add.graphics();
     barBg.fillStyle(0x333333, 0.8);
-    barBg.fillRoundedRect(width / 2 - 200, 70, 400, 14, 4);
+    barBg.fillRoundedRect(width / 2 - bossBarW / 2, bossBarY, bossBarW, bossBarH, scaled(4));
     this.bossHpContainer.add(barBg);
 
     const barFill = this.add.graphics();
     barFill.fillStyle(0x44dd44);
-    barFill.fillRoundedRect(width / 2 - 200, 70, 400, 14, 4);
+    barFill.fillRoundedRect(width / 2 - bossBarW / 2, bossBarY, bossBarW, bossBarH, scaled(4));
     this.bossHpContainer.add(barFill);
 
     // Salvar referência para update
@@ -770,10 +1189,13 @@ export class UIScene extends Phaser.Scene {
       ) as Phaser.GameObjects.Graphics | undefined;
       if (barFill) {
         barFill.clear();
+        const bossBarW = scaled(400);
+        const bossBarH = scaled(14);
+        const bossBarY = scaled(70);
         const hpRatio = Math.max(0, this.activeBoss.getHp() / this.activeBoss.getMaxHp());
         const color = hpRatio > 0.5 ? 0x44dd44 : hpRatio > 0.25 ? 0xdddd44 : 0xdd4444;
         barFill.fillStyle(color);
-        barFill.fillRoundedRect(width / 2 - 200, 70, 400 * hpRatio, 14, 4);
+        barFill.fillRoundedRect(width / 2 - bossBarW / 2, bossBarY, bossBarW * hpRatio, bossBarH, scaled(4));
 
         // Regen glow: green shimmer overlay when boss is regenerating HP
         if (this.activeBoss.hpRegenPerSec > 0 && hpRatio < 1) {
@@ -781,7 +1203,7 @@ export class UIScene extends Phaser.Scene {
           if (this.regenGlowAlpha >= 0.35) { this.regenGlowAlpha = 0.35; this.regenGlowDir = -1; }
           if (this.regenGlowAlpha <= 0.05) { this.regenGlowAlpha = 0.05; this.regenGlowDir = 1; }
           barFill.fillStyle(0x88ff88, this.regenGlowAlpha);
-          barFill.fillRoundedRect(width / 2 - 200, 70, 400 * hpRatio, 14, 4);
+          barFill.fillRoundedRect(width / 2 - bossBarW / 2, bossBarY, bossBarW * hpRatio, bossBarH, scaled(4));
         }
       }
     } else if (this.activeBoss && !this.activeBoss.active) {
@@ -800,7 +1222,7 @@ export class UIScene extends Phaser.Scene {
     this.gachaContainer.add(bg);
 
     // Pokeball girando
-    const pokeball = this.add.image(width / 2, height / 2 - 30, 'gacha-box').setScale(3);
+    const pokeball = this.add.image(width / 2, height / 2 - scaled(30), 'gacha-box').setScale(scaled(3));
     this.gachaContainer.add(pokeball);
 
     this.tweens.add({
@@ -850,9 +1272,9 @@ export class UIScene extends Phaser.Scene {
     }
 
     // Texto do resultado
-    const resultText = this.add.text(width / 2, height / 2 + 30, rewardName, {
-      fontSize: '24px', color: rewardColor, fontFamily: 'monospace', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 4,
+    const resultText = this.add.text(width / 2, height / 2 + scaled(30), rewardName, {
+      fontSize: fontSize(24), color: rewardColor, fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(4),
     }).setOrigin(0.5).setAlpha(0);
     this.gachaContainer.add(resultText);
 
@@ -862,9 +1284,9 @@ export class UIScene extends Phaser.Scene {
     });
 
     // Botão continuar
-    const continueBtn = this.add.text(width / 2, height / 2 + 80, '[ CONTINUAR ]', {
-      fontSize: '18px', color: '#ffcc00', fontFamily: 'monospace',
-      stroke: '#000000', strokeThickness: 3,
+    const continueBtn = this.add.text(width / 2, height / 2 + scaled(80), '[ CONTINUAR ]', {
+      fontSize: fontSize(18), color: '#ffcc00', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: scaled(3),
     }).setOrigin(0.5).setAlpha(0);
     this.gachaContainer.add(continueBtn);
 
@@ -904,7 +1326,7 @@ export class UIScene extends Phaser.Scene {
     drawBtn(false);
 
     this.add.text(btnX, btnY, 'DEV', {
-      fontSize: '10px', color: '#44ff44', fontFamily: 'monospace', fontStyle: 'bold',
+      fontSize: fontSize(10), color: '#44ff44', fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5).setDepth(501);
 
     const hitbox = this.add.rectangle(btnX, btnY, btnW, btnH, 0xffffff, 0)
@@ -951,12 +1373,12 @@ export class UIScene extends Phaser.Scene {
 
     // Title
     this.devPanelContainer.add(this.add.text(panelX + panelW / 2, panelY + 12, 'DEV PANEL', {
-      fontSize: '12px', color: '#44ff44', fontFamily: 'monospace', fontStyle: 'bold',
+      fontSize: fontSize(12), color: '#44ff44', fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5));
 
     // Close button
     const closeBtn = this.add.text(panelX + panelW - 15, panelY + 8, 'X', {
-      fontSize: '12px', color: '#ff4444', fontFamily: 'monospace', fontStyle: 'bold',
+      fontSize: fontSize(12), color: '#ff4444', fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerdown', () => { SoundManager.playClick(); this.toggleDevPanel(); });
     this.devPanelContainer.add(closeBtn);
@@ -999,7 +1421,7 @@ export class UIScene extends Phaser.Scene {
       this.devPanelContainer.add(gfx);
 
       const text = this.add.text(bx + btnW / 2, by + 10, btn.label, {
-        fontSize: '10px', color: btn.color, fontFamily: 'monospace', fontStyle: 'bold',
+        fontSize: fontSize(10), color: btn.color, fontFamily: 'monospace', fontStyle: 'bold',
       }).setOrigin(0.5);
       this.devPanelContainer.add(text);
 
@@ -1012,7 +1434,7 @@ export class UIScene extends Phaser.Scene {
 
     // ── Form buttons ─────────────────────────────────────────────
     this.devPanelContainer.add(this.add.text(panelX + 10, yPos, 'FORMA:', {
-      fontSize: '9px', color: '#888888', fontFamily: 'monospace',
+      fontSize: fontSize(9), color: '#888888', fontFamily: 'monospace',
     }));
     yPos += 14;
 
@@ -1029,7 +1451,7 @@ export class UIScene extends Phaser.Scene {
       this.devPanelContainer.add(gfx);
 
       this.devPanelContainer.add(this.add.text(bx + formBtnW / 2, yPos + 9, formLabels[i], {
-        fontSize: '9px', color: isActive ? '#44ff44' : '#aaaaaa', fontFamily: 'monospace', fontStyle: 'bold',
+        fontSize: fontSize(9), color: isActive ? '#44ff44' : '#aaaaaa', fontFamily: 'monospace', fontStyle: 'bold',
       }).setOrigin(0.5));
 
       const hit = this.add.rectangle(bx + formBtnW / 2, yPos + 9, formBtnW, 18, 0xffffff, 0)
@@ -1046,7 +1468,7 @@ export class UIScene extends Phaser.Scene {
 
     // ── Search bar ───────────────────────────────────────────────
     this.devPanelContainer.add(this.add.text(panelX + 10, yPos, 'ATAQUES:', {
-      fontSize: '9px', color: '#888888', fontFamily: 'monospace',
+      fontSize: fontSize(9), color: '#888888', fontFamily: 'monospace',
     }));
     yPos += 14;
 
@@ -1059,7 +1481,7 @@ export class UIScene extends Phaser.Scene {
 
     const searchDisplay = this.add.text(panelX + 15, yPos + 10,
       this.devSearchText || 'Clique para buscar...', {
-        fontSize: '10px',
+        fontSize: fontSize(10),
         color: this.devSearchText ? '#ffffff' : '#555555',
         fontFamily: 'monospace',
       }).setOrigin(0, 0.5);
@@ -1154,7 +1576,7 @@ export class UIScene extends Phaser.Scene {
       // Name + level
       const nameStr = isActive ? `${atk.name} Lv${level}` : atk.name;
       this.devPanelContainer.add(this.add.text(panelX + 12, iy + (itemH - 2) / 2, nameStr, {
-        fontSize: '9px',
+        fontSize: fontSize(9),
         color: isActive ? '#44ff44' : '#cccccc',
         fontFamily: 'monospace',
       }).setOrigin(0, 0.5));
@@ -1165,7 +1587,7 @@ export class UIScene extends Phaser.Scene {
       const toggleColor = isActive ? '#ff4444' : '#44ff44';
 
       const toggleBtn = this.add.text(toggleX, iy + (itemH - 2) / 2, `[${toggleText}]`, {
-        fontSize: '9px', color: toggleColor, fontFamily: 'monospace', fontStyle: 'bold',
+        fontSize: fontSize(9), color: toggleColor, fontFamily: 'monospace', fontStyle: 'bold',
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
       toggleBtn.on('pointerdown', () => {
         SoundManager.playClick();
@@ -1183,7 +1605,7 @@ export class UIScene extends Phaser.Scene {
       // Level +/- buttons (only if active)
       if (isActive && currentAttack) {
         const lvUpBtn = this.add.text(panelX + panelW - 22, iy + (itemH - 2) / 2, '+', {
-          fontSize: '10px', color: '#66ff66', fontFamily: 'monospace', fontStyle: 'bold',
+          fontSize: fontSize(10), color: '#66ff66', fontFamily: 'monospace', fontStyle: 'bold',
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         lvUpBtn.on('pointerdown', () => {
           SoundManager.playClick();
@@ -1199,7 +1621,7 @@ export class UIScene extends Phaser.Scene {
     if (filtered.length > maxVisible) {
       this.devPanelContainer.add(this.add.text(panelX + panelW / 2, panelY + panelH - 5,
         `+${filtered.length - maxVisible} mais...`, {
-          fontSize: '8px', color: '#555555', fontFamily: 'monospace',
+          fontSize: fontSize(8), color: '#555555', fontFamily: 'monospace',
         }).setOrigin(0.5, 1));
     }
   }
@@ -1232,9 +1654,9 @@ export class UIScene extends Phaser.Scene {
     ];
 
     // Título
-    const title = this.add.text(width / 2, 40, 'SPAWN BOSS', {
-      fontSize: '16px', color: '#ff4444', fontFamily: 'monospace', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 3,
+    const title = this.add.text(width / 2, scaled(40), 'SPAWN BOSS', {
+      fontSize: fontSize(16), color: '#ff4444', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(3),
     }).setOrigin(0.5);
     container.add(title);
 
@@ -1261,7 +1683,7 @@ export class UIScene extends Phaser.Scene {
       container.add(gfx);
 
       const label = this.add.text(bx + btnW / 2, by + btnH / 2, boss.label, {
-        fontSize: '11px', color: boss.color, fontFamily: 'monospace', fontStyle: 'bold',
+        fontSize: fontSize(11), color: boss.color, fontFamily: 'monospace', fontStyle: 'bold',
       }).setOrigin(0.5);
       container.add(label);
 
@@ -1280,7 +1702,7 @@ export class UIScene extends Phaser.Scene {
     // Botão fechar
     const closeBtn = this.add.text(width / 2, startY + Math.ceil(bosses.length / cols) * (btnH + gap) + 10,
       '[ FECHAR ]', {
-        fontSize: '12px', color: '#888888', fontFamily: 'monospace',
+        fontSize: fontSize(12), color: '#888888', fontFamily: 'monospace',
       }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     closeBtn.on('pointerover', () => closeBtn.setColor('#ffffff'));
     closeBtn.on('pointerout', () => closeBtn.setColor('#888888'));
@@ -1300,18 +1722,18 @@ export class UIScene extends Phaser.Scene {
     this.cameras.main.shake(400, 0.008);
 
     // ── Title ─────────────────────────────────────────────────────
-    const title = this.add.text(width / 2, 30, 'GAME OVER', {
-      fontSize: '36px', color: '#ff4444', fontFamily: 'monospace', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 6,
+    const title = this.add.text(width / 2, scaled(30), 'GAME OVER', {
+      fontSize: fontSize(36), color: '#ff4444', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(6),
     }).setOrigin(0.5).setAlpha(0);
     this.gameOverContainer.add(title);
     this.tweens.add({ targets: title, alpha: 1, scaleX: { from: 1.5, to: 1 }, scaleY: { from: 1.5, to: 1 }, duration: 400, ease: 'Back.Out' });
 
     // ── Form name ─────────────────────────────────────────────────
     const nameColor = data.starterKey === 'squirtle' ? '#44aaff' : data.starterKey === 'bulbasaur' ? '#22cc44' : '#ff8844';
-    const formText = this.add.text(width / 2, 62, data.formName ?? 'Pokémon', {
-      fontSize: '14px', color: nameColor, fontFamily: 'monospace', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 3,
+    const formText = this.add.text(width / 2, scaled(62), data.formName ?? 'Pokémon', {
+      fontSize: fontSize(14), color: nameColor, fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(3),
     }).setOrigin(0.5).setAlpha(0);
     this.gameOverContainer.add(formText);
 
@@ -1321,31 +1743,31 @@ export class UIScene extends Phaser.Scene {
     const rs = data.runStats;
 
     // ── Stats grid (staggered fade-in) ────────────────────────────
-    const colLeftX = width / 2 - 100;
-    const colRightX = width / 2 + 100;
-    let yPos = 90;
-    const rowH = 22;
+    const colLeftX = width / 2 - scaled(100);
+    const colRightX = width / 2 + scaled(100);
+    let yPos = scaled(90);
+    const rowH = scaled(22);
     let animDelay = 200;
 
     const addStatRow = (x: number, label: string, value: string, color = '#ffffff', isRecord = false): void => {
-      const labelText = this.add.text(x - 5, yPos, label, {
-        fontSize: '11px', color: '#888888', fontFamily: 'monospace',
-        stroke: '#000000', strokeThickness: 2,
+      const labelText = this.add.text(x - scaled(5), yPos, label, {
+        fontSize: fontSize(11), color: '#888888', fontFamily: 'monospace',
+        stroke: '#000000', strokeThickness: scaled(2),
       }).setOrigin(1, 0).setAlpha(0);
       this.gameOverContainer.add(labelText);
 
-      const valueText = this.add.text(x + 5, yPos, value, {
-        fontSize: '12px', color, fontFamily: 'monospace', fontStyle: 'bold',
-        stroke: '#000000', strokeThickness: 2,
+      const valueText = this.add.text(x + scaled(5), yPos, value, {
+        fontSize: fontSize(12), color, fontFamily: 'monospace', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: scaled(2),
       }).setOrigin(0, 0).setAlpha(0);
       this.gameOverContainer.add(valueText);
 
-      this.tweens.add({ targets: [labelText, valueText], alpha: 1, y: yPos - 3, duration: 300, delay: animDelay, ease: 'Power2' });
+      this.tweens.add({ targets: [labelText, valueText], alpha: 1, y: yPos - scaled(3), duration: 300, delay: animDelay, ease: 'Power2' });
 
       if (isRecord) {
-        const recordBadge = this.add.text(x + 5 + value.length * 8 + 8, yPos, 'NOVO RECORDE!', {
-          fontSize: '9px', color: '#ffd700', fontFamily: 'monospace', fontStyle: 'bold',
-          stroke: '#000000', strokeThickness: 2,
+        const recordBadge = this.add.text(x + scaled(5) + value.length * scaled(8) + scaled(8), yPos, 'NOVO RECORDE!', {
+          fontSize: fontSize(9), color: '#ffd700', fontFamily: 'monospace', fontStyle: 'bold',
+          stroke: '#000000', strokeThickness: scaled(2),
         }).setOrigin(0, 0).setAlpha(0);
         this.gameOverContainer.add(recordBadge);
         this.tweens.add({
@@ -1369,7 +1791,7 @@ export class UIScene extends Phaser.Scene {
     addStatRow(colLeftX, 'Best Combo:', `${data.bestCombo ?? 0}x`, data.bestCombo && data.bestCombo >= 50 ? '#ffd700' : '#ffffff');
 
     // Right column
-    yPos = 90;
+    yPos = scaled(90);
     if (rs) {
       addStatRow(colRightX, 'Dano Total:', rs.totalDamageDealt >= 1000 ? `${(rs.totalDamageDealt / 1000).toFixed(1)}k` : `${Math.floor(rs.totalDamageDealt)}`, '#ff8844');
       yPos += rowH;
@@ -1381,86 +1803,86 @@ export class UIScene extends Phaser.Scene {
     }
 
     // ── Kill breakdown (top 5) ────────────────────────────────────
-    yPos = 182;
+    yPos = scaled(182);
     if (rs && Object.keys(rs.killsByType).length > 0) {
       const killLabel = this.add.text(width / 2, yPos, '── KILLS POR TIPO ──', {
-        fontSize: '10px', color: '#666666', fontFamily: 'monospace',
+        fontSize: fontSize(10), color: '#666666', fontFamily: 'monospace',
       }).setOrigin(0.5).setAlpha(0);
       this.gameOverContainer.add(killLabel);
       this.tweens.add({ targets: killLabel, alpha: 1, duration: 300, delay: animDelay });
       animDelay += 60;
-      yPos += 16;
+      yPos += scaled(16);
 
       const sortedKills = Object.entries(rs.killsByType)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5);
 
-      const totalW = sortedKills.length * 65;
-      const startKillX = (width - totalW) / 2 + 32;
+      const totalW = sortedKills.length * scaled(65);
+      const startKillX = (width - totalW) / 2 + scaled(32);
 
       sortedKills.forEach(([type, count], i) => {
-        const kx = startKillX + i * 65;
+        const kx = startKillX + i * scaled(65);
         const name = type.charAt(0).toUpperCase() + type.slice(1);
         const nameT = this.add.text(kx, yPos, name, {
-          fontSize: '9px', color: '#aaaaaa', fontFamily: 'monospace',
+          fontSize: fontSize(9), color: '#aaaaaa', fontFamily: 'monospace',
         }).setOrigin(0.5, 0).setAlpha(0);
-        const countT = this.add.text(kx, yPos + 12, `×${count}`, {
-          fontSize: '11px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
-          stroke: '#000000', strokeThickness: 2,
+        const countT = this.add.text(kx, yPos + scaled(12), `×${count}`, {
+          fontSize: fontSize(11), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+          stroke: '#000000', strokeThickness: scaled(2),
         }).setOrigin(0.5, 0).setAlpha(0);
         this.gameOverContainer.add(nameT);
         this.gameOverContainer.add(countT);
         this.tweens.add({ targets: [nameT, countT], alpha: 1, duration: 200, delay: animDelay + i * 50 });
       });
       animDelay += sortedKills.length * 50 + 100;
-      yPos += 30;
+      yPos += scaled(30);
     }
 
     // ── Attacks used ──────────────────────────────────────────────
-    yPos += 5;
+    yPos += scaled(5);
     if (rs && rs.attacksUsed.length > 0) {
       const atkLabel = this.add.text(width / 2, yPos, '── ATAQUES USADOS ──', {
-        fontSize: '10px', color: '#666666', fontFamily: 'monospace',
+        fontSize: fontSize(10), color: '#666666', fontFamily: 'monospace',
       }).setOrigin(0.5).setAlpha(0);
       this.gameOverContainer.add(atkLabel);
       this.tweens.add({ targets: atkLabel, alpha: 1, duration: 300, delay: animDelay });
       animDelay += 60;
-      yPos += 16;
+      yPos += scaled(16);
 
-      const totalAtkW = rs.attacksUsed.length * 55;
-      const startAtkX = (width - totalAtkW) / 2 + 27;
+      const totalAtkW = rs.attacksUsed.length * scaled(55);
+      const startAtkX = (width - totalAtkW) / 2 + scaled(27);
 
       rs.attacksUsed.forEach((atk, i) => {
-        const ax = startAtkX + i * 55;
+        const ax = startAtkX + i * scaled(55);
         const name = atk.type.charAt(0).toUpperCase() + atk.type.slice(1);
         const atkT = this.add.text(ax, yPos, `${name}\nLv${atk.level}`, {
-          fontSize: '8px', color: '#ff8844', fontFamily: 'monospace', align: 'center',
+          fontSize: fontSize(8), color: '#ff8844', fontFamily: 'monospace', align: 'center',
         }).setOrigin(0.5, 0).setAlpha(0);
         this.gameOverContainer.add(atkT);
         this.tweens.add({ targets: atkT, alpha: 1, duration: 200, delay: animDelay + i * 40 });
       });
       animDelay += rs.attacksUsed.length * 40 + 100;
-      yPos += 28;
+      yPos += scaled(28);
     }
 
     // ── PokéDollars earned (animated counter) ────────────────────
-    yPos += 8;
+    yPos += scaled(8);
     const coinsEarned = data.coinsEarned ?? 0;
     const coinLabel = this.add.text(width / 2, yPos, 'POKÉDOLLARS GANHOS', {
-      fontSize: '10px', color: '#666666', fontFamily: 'monospace',
+      fontSize: fontSize(10), color: '#666666', fontFamily: 'monospace',
     }).setOrigin(0.5).setAlpha(0);
     this.gameOverContainer.add(coinLabel);
 
-    const coinValueText = this.add.text(width / 2, yPos + 16, '₽ 0', {
-      fontSize: '22px', color: '#ffd700', fontFamily: 'monospace', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 4,
+    const coinValueText = this.add.text(width / 2, yPos + scaled(16), '₽ 0', {
+      fontSize: fontSize(22), color: '#ffd700', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(4),
     }).setOrigin(0.5).setAlpha(0);
     this.gameOverContainer.add(coinValueText);
 
     const totalCoins = getCoins();
-    const totalCoinText = this.add.text(width / 2, yPos + 40, `Total: ₽ ${totalCoins}`, {
-      fontSize: '10px', color: '#aa8833', fontFamily: 'monospace',
-      stroke: '#000000', strokeThickness: 2,
+    const totalCoinText = this.add.text(width / 2, yPos + scaled(40), `Total: ₽ ${totalCoins}`, {
+      fontSize: fontSize(10), color: '#aa8833', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: scaled(2),
     }).setOrigin(0.5).setAlpha(0);
     this.gameOverContainer.add(totalCoinText);
 
@@ -1481,14 +1903,14 @@ export class UIScene extends Phaser.Scene {
       },
     });
     animDelay += 200;
-    yPos += 60;
+    yPos += scaled(60);
 
     // ── Buttons ───────────────────────────────────────────────────
-    const btnY = Math.min(yPos + 10, height - 60);
+    const btnY = Math.min(yPos + scaled(10), height - scaled(60));
 
     const restartBtn = this.add.text(width / 2, btnY, '[ TENTAR DE NOVO ]', {
-      fontSize: '18px', color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
-      stroke: '#000000', strokeThickness: 3,
+      fontSize: fontSize(18), color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(3),
     }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setAlpha(0);
     this.gameOverContainer.add(restartBtn);
 
@@ -1500,9 +1922,9 @@ export class UIScene extends Phaser.Scene {
       this.scene.get('GameScene').scene.restart();
     });
 
-    const menuBtn = this.add.text(width / 2, btnY + 30, '[ MENU PRINCIPAL ]', {
-      fontSize: '12px', color: '#888888', fontFamily: 'monospace',
-      stroke: '#000000', strokeThickness: 2,
+    const menuBtn = this.add.text(width / 2, btnY + scaled(30), '[ MENU PRINCIPAL ]', {
+      fontSize: fontSize(12), color: '#888888', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: scaled(2),
     }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setAlpha(0);
     this.gameOverContainer.add(menuBtn);
 

@@ -6,6 +6,7 @@ import type { Enemy } from '../entities/Enemy';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { safeExplode } from '../utils/particles';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Leech Seed: dispara sementes que grudam no inimigo e drenam vida.
@@ -92,22 +93,25 @@ export class LeechSeed implements Attack {
     this.scene.physics.moveToObject(bullet, target, 220);
 
     // Trail verde
-    const trail = this.scene.add.particles(0, 0, 'poison-particle', {
-      follow: bullet,
-      speed: { min: 3, max: 12 },
-      lifespan: 180,
-      scale: { start: 0.8, end: 0 },
-      quantity: 1,
-      frequency: 60,
-      tint: [0x22cc44, 0x88dd44],
-    });
+    let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+    if (shouldShowVfx()) {
+      trail = this.scene.add.particles(0, 0, 'poison-particle', {
+        follow: bullet,
+        speed: { min: 3, max: 12 },
+        lifespan: 180,
+        scale: { start: 0.8, end: 0 },
+        quantity: getVfxQuantity(1),
+        frequency: 60,
+        tint: [0x22cc44, 0x88dd44],
+      });
+    }
 
     // Auto-destruir após 4s (proteção stale timer)
     this.scene.time.delayedCall(4000, () => {
       if (bullet.active && bullet.getData('fireId') === currentFireId) {
         this.killBullet(bullet);
       }
-      trail.destroy();
+      trail?.destroy();
     });
   }
 

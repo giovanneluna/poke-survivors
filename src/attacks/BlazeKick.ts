@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { safeExplode } from '../utils/particles';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 /**
  * Blaze Kick: chute flamejante com AoE de fogo.
@@ -55,12 +56,14 @@ export class BlazeKick implements Attack {
     });
 
     // Anel visual
-    const ring = this.scene.add.circle(tx, ty, this.splashRadius, 0xff6600, 0.25);
-    ring.setDepth(8);
-    this.scene.tweens.add({
-      targets: ring, alpha: 0, scale: 1.5, duration: 300,
-      onComplete: () => ring.destroy(),
-    });
+    if (shouldShowVfx()) {
+      const ring = this.scene.add.circle(tx, ty, this.splashRadius, 0xff6600, 0.25);
+      ring.setDepth(8);
+      this.scene.tweens.add({
+        targets: ring, alpha: 0, scale: 1.5, duration: 300,
+        onComplete: () => ring.destroy(),
+      });
+    }
 
     // Dano: alvo principal + splash
     const splashEnemies = getSpatialGrid().queryRadius(tx, ty, this.splashRadius);

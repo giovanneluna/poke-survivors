@@ -7,6 +7,7 @@ import { SoundManager } from '../audio/SoundManager';
 import { safeExplode } from '../utils/particles';
 import type { GameContext } from './GameContext';
 import { getSpatialGrid } from './SpatialHashGrid';
+import { shouldShowVfx } from './GraphicsSettings';
 
 export class SpawnSystem {
   private spawnTimer!: Phaser.Time.TimerEvent;
@@ -185,6 +186,9 @@ export class SpawnSystem {
     this.spawnTimer = this.ctx.scene.time.addEvent({
       delay: Math.round(wave.spawnRate * spawnMult), loop: true, callback: () => this.spawnEnemy(),
     });
+
+    // Notify EventSystem of wave change
+    this.ctx.scene.events.emit('wave-changed', this.difficultyLevel);
   }
 
   // ── Rattata circle event ─────────────────────────────────────────
@@ -673,14 +677,16 @@ export class SpawnSystem {
         if (scene.anims.exists(tremorAnim)) thrash.play(tremorAnim);
         thrash.once('animationcomplete', () => thrash.destroy());
 
-        const circle = scene.add.circle(boss.x, boss.y, 0, attack.aoeColor ?? 0xff4400, 0.3).setDepth(3);
-        scene.tweens.add({
-          targets: circle,
-          radius: { from: 0, to: radius },
-          alpha: { from: 0.4, to: 0 },
-          duration: 600,
-          onComplete: () => circle.destroy(),
-        });
+        if (shouldShowVfx()) {
+          const circle = scene.add.circle(boss.x, boss.y, 0, attack.aoeColor ?? 0xff4400, 0.3).setDepth(3);
+          scene.tweens.add({
+            targets: circle,
+            radius: { from: 0, to: radius },
+            alpha: { from: 0.4, to: 0 },
+            duration: 600,
+            onComplete: () => circle.destroy(),
+          });
+        }
 
         const dist = Phaser.Math.Distance.Between(boss.x, boss.y, playerX, playerY);
         if (dist < radius) {
@@ -716,14 +722,16 @@ export class SpawnSystem {
             if (scene.anims.exists(landAnim)) stomp.play(landAnim);
             stomp.once('animationcomplete', () => stomp.destroy());
 
-            const circle = scene.add.circle(boss.x, boss.y, 0, attack.aoeColor ?? 0xffaa00, 0.3).setDepth(3);
-            scene.tweens.add({
-              targets: circle,
-              radius: { from: 0, to: radius },
-              alpha: { from: 0.5, to: 0 },
-              duration: 500,
-              onComplete: () => circle.destroy(),
-            });
+            if (shouldShowVfx()) {
+              const circle = scene.add.circle(boss.x, boss.y, 0, attack.aoeColor ?? 0xffaa00, 0.3).setDepth(3);
+              scene.tweens.add({
+                targets: circle,
+                radius: { from: 0, to: radius },
+                alpha: { from: 0.5, to: 0 },
+                duration: 500,
+                onComplete: () => circle.destroy(),
+              });
+            }
 
             const dist = Phaser.Math.Distance.Between(boss.x, boss.y, playerX, playerY);
             if (dist < radius) {
@@ -948,13 +956,15 @@ export class SpawnSystem {
 
         // Visual: partículas de aura
         const auraColor = attack.aoeColor ?? 0xffdd44;
-        const aura = scene.add.circle(boss.x, boss.y, 30, auraColor, 0.3).setDepth(3);
-        scene.tweens.add({
-          targets: aura, scale: { from: 1, to: 2 }, alpha: { from: 0.4, to: 0.1 },
-          duration: 800, yoyo: true, repeat: Math.floor(buffDuration / 1600),
-          onUpdate: () => { if (boss.active) aura.setPosition(boss.x, boss.y); },
-          onComplete: () => aura.destroy(),
-        });
+        if (shouldShowVfx()) {
+          const aura = scene.add.circle(boss.x, boss.y, 30, auraColor, 0.3).setDepth(3);
+          scene.tweens.add({
+            targets: aura, scale: { from: 1, to: 2 }, alpha: { from: 0.4, to: 0.1 },
+            duration: 800, yoyo: true, repeat: Math.floor(buffDuration / 1600),
+            onUpdate: () => { if (boss.active) aura.setPosition(boss.x, boss.y); },
+            onComplete: () => aura.destroy(),
+          });
+        }
 
         if (buffType === 'heal') {
           // Cura: heal instantâneo
@@ -1006,15 +1016,19 @@ export class SpawnSystem {
 
         // Visual: círculo pulsante
         const zoneColor = attack.aoeColor ?? 0x9944ff;
-        const zone = scene.add.circle(zoneX, zoneY, radius, zoneColor, 0.2).setDepth(3);
-        scene.tweens.add({
-          targets: zone, alpha: { from: 0.15, to: 0.35 },
-          duration: 400, yoyo: true, repeat: -1,
-        });
+        let zone: Phaser.GameObjects.Arc | null = null;
+        let border: Phaser.GameObjects.Arc | null = null;
+        if (shouldShowVfx()) {
+          zone = scene.add.circle(zoneX, zoneY, radius, zoneColor, 0.2).setDepth(3);
+          scene.tweens.add({
+            targets: zone, alpha: { from: 0.15, to: 0.35 },
+            duration: 400, yoyo: true, repeat: -1,
+          });
 
-        // Borda do círculo
-        const border = scene.add.circle(zoneX, zoneY, radius).setDepth(3);
-        border.setStrokeStyle(2, zoneColor, 0.5);
+          // Borda do círculo
+          border = scene.add.circle(zoneX, zoneY, radius).setDepth(3);
+          border.setStrokeStyle(2, zoneColor, 0.5);
+        }
 
         // Tick damage/effect
         const zoneTick = scene.time.addEvent({
@@ -1047,10 +1061,13 @@ export class SpawnSystem {
         // Cleanup
         scene.time.delayedCall(duration, () => {
           zoneTick.destroy();
-          scene.tweens.add({
-            targets: [zone, border], alpha: 0, duration: 300,
-            onComplete: () => { zone.destroy(); border.destroy(); },
-          });
+          const fadeTargets = [zone, border].filter(Boolean);
+          if (fadeTargets.length > 0) {
+            scene.tweens.add({
+              targets: fadeTargets, alpha: 0, duration: 300,
+              onComplete: () => { zone?.destroy(); border?.destroy(); },
+            });
+          }
         });
         break;
       }
@@ -1090,14 +1107,16 @@ export class SpawnSystem {
           if (attack.explodeOnEnd) {
             // Explosão AoE no final
             const expRadius = attack.explodeRadius ?? 80;
-            const expCircle = scene.add.circle(proj.x, proj.y, 0, attack.aoeColor ?? 0xff6600, 0.4).setDepth(3);
-            scene.tweens.add({
-              targets: expCircle,
-              radius: { from: 0, to: expRadius },
-              alpha: { from: 0.5, to: 0 },
-              duration: 400,
-              onComplete: () => expCircle.destroy(),
-            });
+            if (shouldShowVfx()) {
+              const expCircle = scene.add.circle(proj.x, proj.y, 0, attack.aoeColor ?? 0xff6600, 0.4).setDepth(3);
+              scene.tweens.add({
+                targets: expCircle,
+                radius: { from: 0, to: expRadius },
+                alpha: { from: 0.5, to: 0 },
+                duration: 400,
+                onComplete: () => expCircle.destroy(),
+              });
+            }
 
             const dist = Phaser.Math.Distance.Between(proj.x, proj.y, player.x, player.y);
             if (dist < expRadius) {

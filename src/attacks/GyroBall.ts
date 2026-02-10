@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 /**
  * Gyro Ball: evolucao do Rapid Spin.
@@ -70,37 +71,39 @@ export class GyroBall implements Attack {
 
   private pulse(): void {
     // Visual: shockwave ring expandindo + fading
-    const ring = this.scene.add.circle(
-      this.player.x, this.player.y, 20, 0x888888, 0
-    );
-    ring.setDepth(7);
-    ring.setStrokeStyle(3, 0xaaaaaa, 0.7);
-    this.scene.tweens.add({
-      targets: ring,
-      scaleX: this.pulseRadius / 20,
-      scaleY: this.pulseRadius / 20,
-      alpha: 0,
-      duration: 500,
-      ease: 'Sine.Out',
-      onComplete: () => ring.destroy(),
-    });
+    if (shouldShowVfx()) {
+      const ring = this.scene.add.circle(
+        this.player.x, this.player.y, 20, 0x888888, 0
+      );
+      ring.setDepth(7);
+      ring.setStrokeStyle(3, 0xaaaaaa, 0.7);
+      this.scene.tweens.add({
+        targets: ring,
+        scaleX: this.pulseRadius / 20,
+        scaleY: this.pulseRadius / 20,
+        alpha: 0,
+        duration: 500,
+        ease: 'Sine.Out',
+        onComplete: () => ring.destroy(),
+      });
 
-    // Segundo anel com delay para efeito visual
-    const ring2 = this.scene.add.circle(
-      this.player.x, this.player.y, 15, 0x6688aa, 0
-    );
-    ring2.setDepth(7);
-    ring2.setStrokeStyle(2, 0x88aacc, 0.5);
-    this.scene.tweens.add({
-      targets: ring2,
-      scaleX: this.pulseRadius / 15,
-      scaleY: this.pulseRadius / 15,
-      alpha: 0,
-      duration: 600,
-      delay: 80,
-      ease: 'Sine.Out',
-      onComplete: () => ring2.destroy(),
-    });
+      // Segundo anel com delay para efeito visual
+      const ring2 = this.scene.add.circle(
+        this.player.x, this.player.y, 15, 0x6688aa, 0
+      );
+      ring2.setDepth(7);
+      ring2.setStrokeStyle(2, 0x88aacc, 0.5);
+      this.scene.tweens.add({
+        targets: ring2,
+        scaleX: this.pulseRadius / 15,
+        scaleY: this.pulseRadius / 15,
+        alpha: 0,
+        duration: 600,
+        delay: 80,
+        ease: 'Sine.Out',
+        onComplete: () => ring2.destroy(),
+      });
+    }
 
     // Dano AoE no pulso (40% do dano base) com bonus em slowed
     const enemies = getSpatialGrid().queryRadius(this.player.x, this.player.y, this.pulseRadius);

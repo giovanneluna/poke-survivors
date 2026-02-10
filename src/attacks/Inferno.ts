@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Inferno: evolução do Ember.
@@ -88,15 +89,18 @@ export class Inferno implements Attack {
       const oldTrail = bullet.getData('trail') as Phaser.GameObjects.Particles.ParticleEmitter | null;
       if (oldTrail) oldTrail.destroy();
 
-      const trail = this.scene.add.particles(0, 0, 'fire-particle', {
-        follow: bullet,
-        speed: { min: 10, max: 30 },
-        lifespan: 250,
-        scale: { start: 1.5, end: 0 },
-        quantity: 2,
-        frequency: 40,
-        tint: [0xff2200, 0xff6600, 0xffcc00],
-      });
+      let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+      if (shouldShowVfx()) {
+        trail = this.scene.add.particles(0, 0, 'fire-particle', {
+          follow: bullet,
+          speed: { min: 10, max: 30 },
+          lifespan: 250,
+          scale: { start: 1.5, end: 0 },
+          quantity: getVfxQuantity(2),
+          frequency: 40,
+          tint: [0xff2200, 0xff6600, 0xffcc00],
+        });
+      }
       bullet.setData('trail', trail);
 
       this.scene.time.delayedCall(3000, () => {
@@ -108,7 +112,7 @@ export class Inferno implements Attack {
         // Destruir trail se ainda pertence a este disparo
         const currentTrail = bullet.getData('trail') as Phaser.GameObjects.Particles.ParticleEmitter | null;
         if (currentTrail === trail) {
-          trail.destroy();
+          trail?.destroy();
           bullet.setData('trail', null);
         }
       });

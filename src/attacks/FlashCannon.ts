@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { safeExplode } from '../utils/particles';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Flash Cannon: tiro piercing dos canhoes do Blastoise.
@@ -119,15 +120,18 @@ export class FlashCannon implements Attack {
       this.scene.physics.moveToObject(bullet, target, 350);
 
       // Trail de particulas brancas
-      const trail = this.scene.add.particles(0, 0, 'water-particle', {
-        follow: bullet,
-        speed: { min: 5, max: 20 },
-        lifespan: 150,
-        scale: { start: 0.8, end: 0 },
-        quantity: 1,
-        frequency: 40,
-        tint: [0xdddddd, 0xffffff, 0xcccccc],
-      });
+      let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+      if (shouldShowVfx()) {
+        trail = this.scene.add.particles(0, 0, 'water-particle', {
+          follow: bullet,
+          speed: { min: 5, max: 20 },
+          lifespan: 150,
+          scale: { start: 0.8, end: 0 },
+          quantity: getVfxQuantity(1),
+          frequency: 40,
+          tint: [0xdddddd, 0xffffff, 0xcccccc],
+        });
+      }
 
       // Auto-destruir apos 2.5s
       this.scene.time.delayedCall(2500, () => {
@@ -145,7 +149,7 @@ export class FlashCannon implements Attack {
           body.checkCollision.none = true;
           body.enable = false;
         }
-        trail.destroy();
+        trail?.destroy();
       });
     }
   }

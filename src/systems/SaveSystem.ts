@@ -14,6 +14,24 @@ export interface PokedexEntry {
   readonly firstSeen: number; // timestamp
 }
 
+export interface LifetimeStats {
+  totalRuns: number;
+  totalDeaths: number;
+  totalKills: number;
+  bossesKilled: number;
+  totalDamageDealt: number;
+  totalCoinsEarned: number;
+  totalCoinsSpent: number;
+  totalTimePlayed: number;       // seconds
+  distanceTraveled: number;      // pixels
+  berriesCollected: number;
+  xpCollected: number;
+  bestCombo: number;
+  starterRuns: Record<string, number>;
+  favoriteAttack: { name: string; damage: number };
+  highestEvolution: string;
+}
+
 export interface SaveData {
   version: number;
   coins: number;
@@ -24,8 +42,11 @@ export interface SaveData {
     bestKills: number;
     bestLevel: number;
   };
+  stats: LifetimeStats;
   settings: {
     muted: boolean;
+    quality: 'normal' | 'low';
+    vfxIntensity: number; // 0–100
   };
 }
 
@@ -34,6 +55,26 @@ export interface SaveData {
 let data: SaveData | null = null;
 
 // ── Internal helpers ─────────────────────────────────────────────────────
+
+function createFreshStats(): LifetimeStats {
+  return {
+    totalRuns: 0,
+    totalDeaths: 0,
+    totalKills: 0,
+    bossesKilled: 0,
+    totalDamageDealt: 0,
+    totalCoinsEarned: 0,
+    totalCoinsSpent: 0,
+    totalTimePlayed: 0,
+    distanceTraveled: 0,
+    berriesCollected: 0,
+    xpCollected: 0,
+    bestCombo: 0,
+    starterRuns: {},
+    favoriteAttack: { name: '', damage: 0 },
+    highestEvolution: '',
+  };
+}
 
 function createFreshSave(): SaveData {
   return {
@@ -46,8 +87,11 @@ function createFreshSave(): SaveData {
       bestKills: 0,
       bestLevel: 0,
     },
+    stats: createFreshStats(),
     settings: {
       muted: false,
+      quality: 'normal',
+      vfxIntensity: 100,
     },
   };
 }
@@ -89,7 +133,10 @@ export function initSaveSystem(): void {
         data.powerUps ??= {};
         data.pokedex ??= {};
         data.records ??= { bestTime: 0, bestKills: 0, bestLevel: 0 };
-        data.settings ??= { muted: false };
+        data.stats ??= createFreshStats();
+        data.settings ??= { muted: false, quality: 'normal', vfxIntensity: 100 };
+        data.settings.quality ??= 'normal';
+        data.settings.vfxIntensity ??= 100;
         return;
       }
     }
@@ -176,6 +223,7 @@ export function buyPowerUp(id: string, cost: number): boolean {
   if (d.coins < cost) return false;
   d.coins -= cost;
   d.powerUps[id] = (d.powerUps[id] ?? 0) + 1;
+  d.stats.totalCoinsSpent += cost;
   persist();
   return true;
 }
@@ -190,6 +238,172 @@ export function setMuted(muted: boolean): void {
   const d = ensureLoaded();
   d.settings.muted = muted;
   persist();
+}
+
+export function getQuality(): 'normal' | 'low' {
+  return ensureLoaded().settings.quality;
+}
+
+export function setQuality(quality: 'normal' | 'low'): void {
+  const d = ensureLoaded();
+  d.settings.quality = quality;
+  persist();
+}
+
+export function getVfxIntensity(): number {
+  return ensureLoaded().settings.vfxIntensity;
+}
+
+export function setVfxIntensity(value: number): void {
+  const d = ensureLoaded();
+  d.settings.vfxIntensity = Math.max(0, Math.min(100, Math.round(value)));
+  persist();
+}
+
+// ── Lifetime Stats ──────────────────────────────────────────────────────
+
+export interface RunEndData {
+  readonly kills: number;
+  readonly bossesDefeated: number;
+  readonly damageDealt: number;
+  readonly coinsEarned: number;
+  readonly timePlayed: number;
+  readonly distance: number;
+  readonly berries: number;
+  readonly xp: number;
+  readonly combo: number;
+  readonly starterKey: string;
+  readonly formName: string;
+  readonly damageByAttack: Readonly<Record<string, number>>;
+}
+
+/** Accumulate a finished run's stats into lifetime counters. Call once at game over. */
+export function accumulateRunStats(run: RunEndData): void {
+  const d = ensureLoaded();
+  const s = d.stats;
+
+  s.totalRuns++;
+  s.totalDeaths++;
+  s.totalKills += run.kills;
+  s.bossesKilled += run.bossesDefeated;
+  s.totalDamageDealt += run.damageDealt;
+  s.totalCoinsEarned += run.coinsEarned;
+  s.totalTimePlayed += run.timePlayed;
+  s.distanceTraveled += run.distance;
+  s.berriesCollected += run.berries;
+  s.xpCollected += run.xp;
+
+  if (run.combo > s.bestCombo) s.bestCombo = run.combo;
+
+  // Starter usage
+  s.starterRuns[run.starterKey] = (s.starterRuns[run.starterKey] ?? 0) + 1;
+
+  // Highest evolution
+  const FORM_RANK: Record<string, number> = { base: 0, stage1: 1, stage2: 2 };
+  const currentRank = FORM_RANK[s.highestEvolution] ?? -1;
+  const runFormKey = run.formName; // "Charizard", "Blastoise", etc
+  // Use formName if it's a higher-tier form
+  if (run.formName && run.formName !== s.highestEvolution) {
+    // Simple heuristic: stage2 names are always longer forms
+    if (currentRank < 2) s.highestEvolution = runFormKey;
+  }
+
+  // Favorite attack (most total damage across all runs)
+  for (const [atkName, dmg] of Object.entries(run.damageByAttack)) {
+    // We track the single best attack by accumulated damage
+    // For simplicity, just check this run's top attacker vs stored
+    if (dmg > s.favoriteAttack.damage) {
+      s.favoriteAttack = { name: atkName, damage: Math.round(dmg) };
+    }
+  }
+
+  persist();
+}
+
+export function getLifetimeStats(): Readonly<LifetimeStats> {
+  return { ...ensureLoaded().stats };
+}
+
+// ── Export / Import ──────────────────────────────────────────────────────
+
+/** Export save data as a base64-encoded string. */
+export function exportSaveCode(): string {
+  const d = ensureLoaded();
+  const json = JSON.stringify(d);
+  return btoa(unescape(encodeURIComponent(json)));
+}
+
+/** Download save data as a .txt file. */
+export function downloadSaveFile(): void {
+  const code = exportSaveCode();
+  const blob = new Blob([code], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `poke-survivors-save-${Date.now()}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/** Import save data from a base64-encoded string. Returns true on success. */
+export function importSaveCode(code: string): boolean {
+  try {
+    const trimmed = code.trim();
+    const json = decodeURIComponent(escape(atob(trimmed)));
+    const parsed: unknown = JSON.parse(json);
+    if (
+      parsed === null ||
+      typeof parsed !== 'object' ||
+      !('version' in parsed) ||
+      typeof (parsed as Record<string, unknown>).version !== 'number'
+    ) {
+      return false;
+    }
+    data = parsed as SaveData;
+    // Patch missing fields
+    data.coins ??= 0;
+    data.powerUps ??= {};
+    data.pokedex ??= {};
+    data.records ??= { bestTime: 0, bestKills: 0, bestLevel: 0 };
+    data.stats ??= createFreshStats();
+    data.settings ??= { muted: false, quality: 'normal', vfxIntensity: 100 };
+    data.settings.quality ??= 'normal';
+    data.settings.vfxIntensity ??= 100;
+    persist();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Trigger a file picker and import the selected .txt file. Returns a Promise<boolean>. */
+export function importSaveFile(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,.json';
+    input.style.display = 'none';
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      if (!file) { resolve(false); return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const content = reader.result as string;
+        resolve(importSaveCode(content));
+      };
+      reader.onerror = () => resolve(false);
+      reader.readAsText(file);
+      document.body.removeChild(input);
+    });
+    input.addEventListener('cancel', () => {
+      document.body.removeChild(input);
+      resolve(false);
+    });
+    document.body.appendChild(input);
+    input.click();
+  });
 }
 
 // ── Reset ────────────────────────────────────────────────────────────────

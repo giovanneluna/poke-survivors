@@ -153,6 +153,10 @@ Geradas no `BootScene.generateTextures()` — não precisam de arquivo externo:
 - Boss drops: `gacha-box` (pokeball dourada 32x32)
 - Shards (title screen): `shard-fire`, `shard-water`, `shard-grass`, `shard-gold`
 
-### 6. SFX (Procedural — sem arquivos)
+### 6. Sites de Referência para Sprites
+- **The Spriters Resource:** https://www.spriters-resource.com/ — Repositório enorme de sprites ripped de jogos oficiais. Buscar por "Pokémon" para encontrar sprites de qualquer geração, incluindo overworld, battle, menus, itens, etc.
+- **PMDCollab Sprite Explorer:** https://sprites.pmdcollab.org/#/ — Interface visual para navegar TODAS as sprites do PMDCollab (Pokémon Mystery Dungeon). Permite buscar por nome/dex, ver animações (Walk, Idle, Attack, etc.), verificar formas alternativas (mega, shiny, gender), e baixar spritesheets. **Usar este site para descobrir se uma sprite existe ANTES de tentar baixar via URL.**
+
+### 7. SFX (Procedural — sem arquivos)
 Gerados via Web Audio API no `SoundManager` (`src/audio/SoundManager.ts`).
 Sem arquivos de áudio — tudo é sintetizado em runtime com `OscillatorNode` + `GainNode`.

@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 interface ActiveCone {
   readonly sprite: Phaser.GameObjects.Sprite;
@@ -66,18 +67,20 @@ export class DragonBreath implements Attack {
     });
 
     // Particulas draconicas
-    const emitter = this.scene.add.particles(
-      this.player.x + offsetX, this.player.y + offsetY, 'dragon-particle', {
-        speed: { min: 120, max: 220 },
-        angle: { min: dirAngleDeg - this.coneAngleDeg / 2, max: dirAngleDeg + this.coneAngleDeg / 2 },
-        lifespan: 300, quantity: 10,
-        scale: { start: 1.5, end: 0 },
-        tint: [0x7744ff, 0x9966ff, 0xcc88ff],
-        emitting: false,
-      },
-    );
-    emitter.explode();
-    this.scene.time.delayedCall(400, () => emitter.destroy());
+    if (shouldShowVfx()) {
+      const emitter = this.scene.add.particles(
+        this.player.x + offsetX, this.player.y + offsetY, 'dragon-particle', {
+          speed: { min: 120, max: 220 },
+          angle: { min: dirAngleDeg - this.coneAngleDeg / 2, max: dirAngleDeg + this.coneAngleDeg / 2 },
+          lifespan: 300, quantity: getVfxQuantity(10),
+          scale: { start: 1.5, end: 0 },
+          tint: [0x7744ff, 0x9966ff, 0xcc88ff],
+          emitting: false,
+        },
+      );
+      emitter.explode();
+      this.scene.time.delayedCall(400, () => emitter.destroy());
+    }
 
     // Dano contínuo via activeCone (update detecta inimigos a cada frame)
     this.activeCone = {

@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Leaf Storm: tempestade de folhas em area devastadora.
@@ -64,15 +65,18 @@ export class LeafStorm implements Attack {
     });
 
     // Particulas verdes
-    const leafEmitter = this.scene.add.particles(cx, cy, 'fire-particle', {
-      speed: { min: 30, max: 80 },
-      lifespan: 400,
-      quantity: 3,
-      frequency: 100,
-      scale: { start: 1.5, end: 0 },
-      tint: [0x44dd66, 0x22bb44, 0x66ff88],
-      angle: { min: 0, max: 360 },
-    });
+    let leafEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+    if (shouldShowVfx()) {
+      leafEmitter = this.scene.add.particles(cx, cy, 'fire-particle', {
+        speed: { min: 30, max: 80 },
+        lifespan: 400,
+        quantity: getVfxQuantity(3),
+        frequency: 100,
+        scale: { start: 1.5, end: 0 },
+        tint: [0x44dd66, 0x22bb44, 0x66ff88],
+        angle: { min: 0, max: 360 },
+      });
+    }
 
     // Tick de dano a cada 250ms
     const hitSet = new Set<number>();
@@ -109,7 +113,7 @@ export class LeafStorm implements Attack {
 
     const cleanup = (): void => {
       tickEvent.destroy();
-      leafEmitter.destroy();
+      leafEmitter?.destroy();
       this.scene.tweens.add({
         targets: stormSprite,
         alpha: 0,

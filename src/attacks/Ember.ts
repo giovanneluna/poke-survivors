@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Ember: dispara bolas de fogo no inimigo mais próximo.
@@ -95,15 +96,18 @@ export class Ember implements Attack {
       this.scene.physics.moveToObject(bullet, target, 300);
 
       // Partícula trail
-      const trail = this.scene.add.particles(0, 0, 'fire-particle', {
-        follow: bullet,
-        speed: { min: 5, max: 20 },
-        lifespan: 200,
-        scale: { start: 1, end: 0 },
-        quantity: 1,
-        frequency: 50,
-        tint: [0xff6600, 0xff4400, 0xffaa00],
-      });
+      let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+      if (shouldShowVfx()) {
+        trail = this.scene.add.particles(0, 0, 'fire-particle', {
+          follow: bullet,
+          speed: { min: 5, max: 20 },
+          lifespan: 200,
+          scale: { start: 1, end: 0 },
+          quantity: getVfxQuantity(1),
+          frequency: 50,
+          tint: [0xff6600, 0xff4400, 0xffaa00],
+        });
+      }
 
       // Auto-destruir após 3s (só se ainda for o mesmo disparo)
       this.scene.time.delayedCall(3000, () => {
@@ -112,7 +116,7 @@ export class Ember implements Attack {
           body.checkCollision.none = true;
           body.enable = false;
         }
-        trail.destroy();
+        trail?.destroy();
       });
     }
   }

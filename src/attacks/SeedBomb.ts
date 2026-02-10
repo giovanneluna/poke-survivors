@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { safeExplode } from '../utils/particles';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 /**
  * Seed Bomb: sementes explosivas em posicoes aleatorias perto do jogador.
@@ -60,16 +61,18 @@ export class SeedBomb implements Attack {
           });
 
           // Circulo de impacto
-          const ring = this.scene.add.circle(bx, by, this.explosionRadius * 0.6, 0x44dd66, 0.3);
-          ring.setDepth(5);
-          this.scene.tweens.add({
-            targets: ring,
-            alpha: 0,
-            scaleX: 1.5,
-            scaleY: 1.5,
-            duration: 300,
-            onComplete: () => ring.destroy(),
-          });
+          if (shouldShowVfx()) {
+            const ring = this.scene.add.circle(bx, by, this.explosionRadius * 0.6, 0x44dd66, 0.3);
+            ring.setDepth(5);
+            this.scene.tweens.add({
+              targets: ring,
+              alpha: 0,
+              scaleX: 1.5,
+              scaleY: 1.5,
+              duration: 300,
+              onComplete: () => ring.destroy(),
+            });
+          }
 
           // Dano AoE
           const enemies = getSpatialGrid().queryRadius(bx, by, this.explosionRadius);

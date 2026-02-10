@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 /**
  * Scald: evolucao do Water Gun.
@@ -89,15 +90,18 @@ export class Scald implements Attack {
       this.scene.physics.moveToObject(bullet, target, 280);
 
       // Trail de particulas de vapor
-      const trail = this.scene.add.particles(0, 0, 'water-particle', {
-        follow: bullet,
-        speed: { min: 10, max: 30 },
-        lifespan: 250,
-        scale: { start: 1.5, end: 0 },
-        quantity: 2,
-        frequency: 40,
-        tint: [0x88ccff, 0xaaddff, 0xffffff],
-      });
+      let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+      if (shouldShowVfx()) {
+        trail = this.scene.add.particles(0, 0, 'water-particle', {
+          follow: bullet,
+          speed: { min: 10, max: 30 },
+          lifespan: 250,
+          scale: { start: 1.5, end: 0 },
+          quantity: 2,
+          frequency: 40,
+          tint: [0x88ccff, 0xaaddff, 0xffffff],
+        });
+      }
 
       // Auto-destruir apos 3s
       this.scene.time.delayedCall(3000, () => {
@@ -106,7 +110,7 @@ export class Scald implements Attack {
           body.checkCollision.none = true;
           body.enable = false;
         }
-        trail.destroy();
+        trail?.destroy();
       });
     }
   }

@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { safeExplode } from '../utils/particles';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 /**
  * Hydro Cannon: ultimate devastador do Blastoise.
@@ -105,15 +106,17 @@ export class HydroCannon implements Attack {
   /** Explosao principal: sprite animado + dano AoE + screen shake */
   private createMainBlast(x: number, y: number): void {
     // Shadow/alvo no chao
-    const shadow = this.scene.add.circle(x, y, this.radius * 0.5, 0x2266dd, 0.2);
-    shadow.setDepth(5);
-    this.scene.tweens.add({
-      targets: shadow,
-      alpha: 0.5,
-      duration: 300,
-      yoyo: true,
-      onComplete: () => shadow.destroy(),
-    });
+    if (shouldShowVfx()) {
+      const shadow = this.scene.add.circle(x, y, this.radius * 0.5, 0x2266dd, 0.2);
+      shadow.setDepth(5);
+      this.scene.tweens.add({
+        targets: shadow,
+        alpha: 0.5,
+        duration: 300,
+        yoyo: true,
+        onComplete: () => shadow.destroy(),
+      });
+    }
 
     // Sprite de hydro pump animado
     const blastSprite = this.scene.add.sprite(x, y - 40, 'atk-hydro-pump');
@@ -152,14 +155,16 @@ export class HydroCannon implements Attack {
     });
 
     // Crater visual
-    const crater = this.scene.add.circle(x, y, this.radius * 0.6, 0x224488, 0.25);
-    crater.setDepth(4);
-    this.scene.tweens.add({
-      targets: crater,
-      alpha: 0,
-      duration: 2000,
-      onComplete: () => crater.destroy(),
-    });
+    if (shouldShowVfx()) {
+      const crater = this.scene.add.circle(x, y, this.radius * 0.6, 0x224488, 0.25);
+      crater.setDepth(4);
+      this.scene.tweens.add({
+        targets: crater,
+        alpha: 0,
+        duration: 2000,
+        onComplete: () => crater.destroy(),
+      });
+    }
 
     // Screen shake
     this.scene.cameras.main.shake(200, 0.005);

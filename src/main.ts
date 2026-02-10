@@ -8,11 +8,20 @@ import { UIScene } from './scenes/UIScene';
 import { ShowcaseScene } from './scenes/ShowcaseScene';
 import { PowerUpScene } from './scenes/PowerUpScene';
 import { PokedexScene } from './scenes/PokedexScene';
+import { StatsScene } from './scenes/StatsScene';
+import { SaveScene } from './scenes/SaveScene';
+import { initSaveSystem } from './systems/SaveSystem';
+import { getQualityMode, getQualityScale } from './systems/GraphicsSettings';
+
+// Ler quality ANTES de criar o Game — afeta scale mode e resolução
+initSaveSystem();
+const isLow = getQualityMode() === 'low';
+const qScale = getQualityScale();
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.WEBGL,
-  width: GAME.width,
-  height: GAME.height,
+  width: isLow ? Math.floor(window.innerWidth * qScale) : GAME.width,
+  height: isLow ? Math.floor(window.innerHeight * qScale) : GAME.height,
   backgroundColor: '#0f0f23',
   parent: document.body,
   pixelArt: true,
@@ -24,13 +33,12 @@ const config: Phaser.Types.Core.GameConfig = {
     },
   },
   scale: {
-    mode: Phaser.Scale.RESIZE,
+    mode: isLow ? Phaser.Scale.FIT : Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     expandParent: true,
-    width: '100%',
-    height: '100%',
+    ...(isLow ? {} : { width: '100%', height: '100%' }),
   },
-  scene: [BootScene, TitleScene, SelectScene, PowerUpScene, PokedexScene, GameScene, UIScene, ShowcaseScene],
+  scene: [BootScene, TitleScene, SelectScene, PowerUpScene, PokedexScene, StatsScene, SaveScene, GameScene, UIScene, ShowcaseScene],
 };
 
 const game = new Phaser.Game(config);

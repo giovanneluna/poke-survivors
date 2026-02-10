@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { safeExplode } from '../utils/particles';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Energy Ball: esfera de energia que ricocheteia entre inimigos.
@@ -105,22 +106,25 @@ export class EnergyBall implements Attack {
       this.scene.physics.moveToObject(bullet, target, this.speed);
 
       // Trail de partículas verdes
-      const trail = this.scene.add.particles(0, 0, 'fire-particle', {
-        follow: bullet,
-        speed: { min: 5, max: 20 },
-        lifespan: 200,
-        scale: { start: 1, end: 0 },
-        quantity: 1,
-        frequency: 50,
-        tint: [0x22cc44, 0x88ff88],
-      });
+      let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+      if (shouldShowVfx()) {
+        trail = this.scene.add.particles(0, 0, 'fire-particle', {
+          follow: bullet,
+          speed: { min: 5, max: 20 },
+          lifespan: 200,
+          scale: { start: 1, end: 0 },
+          quantity: getVfxQuantity(1),
+          frequency: 50,
+          tint: [0x22cc44, 0x88ff88],
+        });
+      }
 
       // Auto-destruir após lifetime (stale protection via fireId)
       this.scene.time.delayedCall(3000, () => {
         if (bullet.active && bullet.getData('fireId') === currentFireId) {
           this.killBullet(bullet);
         }
-        trail.destroy();
+        trail?.destroy();
       });
     }
   }

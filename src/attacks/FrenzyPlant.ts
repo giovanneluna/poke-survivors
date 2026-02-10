@@ -5,6 +5,7 @@ import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
 import { safeExplode } from '../utils/particles';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 /**
  * Frenzy Plant: raízes gigantes irrompem do chão no cluster de inimigos mais denso.
@@ -76,15 +77,17 @@ export class FrenzyPlant implements Attack {
     });
 
     // Shadow/alvo no chão
-    const shadow = this.scene.add.circle(tx, ty, this.radius * 0.5, 0x228822, 0.2);
-    shadow.setDepth(5);
-    this.scene.tweens.add({
-      targets: shadow,
-      alpha: 0.5,
-      duration: 300,
-      yoyo: true,
-      onComplete: () => shadow.destroy(),
-    });
+    if (shouldShowVfx()) {
+      const shadow = this.scene.add.circle(tx, ty, this.radius * 0.5, 0x228822, 0.2);
+      shadow.setDepth(5);
+      this.scene.tweens.add({
+        targets: shadow,
+        alpha: 0.5,
+        duration: 300,
+        yoyo: true,
+        onComplete: () => shadow.destroy(),
+      });
+    }
 
     // Sprite de raízes (ingrain)
     const rootSprite = this.scene.add.sprite(tx, ty, 'atk-ingrain');

@@ -24,6 +24,8 @@ import { ENEMY_TYPES, getTypeEffectiveness } from "../data/type-chart"
 import type { EnemyType } from "../types"
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
+  private static nextUid = 1
+
   private hp: number
   private readonly maxHp: number
   private readonly speed: number
@@ -79,6 +81,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     this.setScale(config.scale)
     this.setDepth(5)
+    this.setData('uid', Enemy.nextUid++)
 
     const body = this.body as Phaser.Physics.Arcade.Body
     body.setSize(16, 16)

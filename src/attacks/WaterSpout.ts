@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 /**
  * Water Spout: evolucao do Whirlpool (area -> projetil).
@@ -88,15 +89,18 @@ export class WaterSpout implements Attack {
       bullet.setRotation(angle);
 
       // Trail de particulas pesadas
-      const trail = this.scene.add.particles(0, 0, 'water-particle', {
-        follow: bullet,
-        speed: { min: 10, max: 40 },
-        lifespan: 250,
-        scale: { start: 2, end: 0 },
-        quantity: 2,
-        frequency: 40,
-        tint: [0x0044ff, 0x3388ff],
-      });
+      let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+      if (shouldShowVfx()) {
+        trail = this.scene.add.particles(0, 0, 'water-particle', {
+          follow: bullet,
+          speed: { min: 10, max: 40 },
+          lifespan: 250,
+          scale: { start: 2, end: 0 },
+          quantity: 2,
+          frequency: 40,
+          tint: [0x0044ff, 0x3388ff],
+        });
+      }
 
       // Auto-destruir apos 3s
       this.scene.time.delayedCall(3000, () => {
@@ -107,7 +111,7 @@ export class WaterSpout implements Attack {
           }
           this.killBullet(bullet);
         }
-        trail.destroy();
+        trail?.destroy();
       });
     }
   }
@@ -169,18 +173,22 @@ export class WaterSpout implements Attack {
     const totalTicks = Math.floor(duration / tickMs);
 
     // Visual: circulo pulsante
-    const vortex = this.scene.add.circle(x, y, radius, 0x3388ff, 0.3).setDepth(3);
+    let vortex: Phaser.GameObjects.Arc | null = null;
+    let vortexParticles: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+    if (shouldShowVfx()) {
+      vortex = this.scene.add.circle(x, y, radius, 0x3388ff, 0.3).setDepth(3);
 
-    // Particulas rotativas
-    const vortexParticles = this.scene.add.particles(x, y, 'water-particle', {
-      speed: { min: 20, max: 50 },
-      lifespan: 300,
-      scale: { start: 1.5, end: 0 },
-      quantity: 1,
-      frequency: 100,
-      tint: [0x0044ff, 0x3388ff, 0x44aaff],
-      angle: { min: 0, max: 360 },
-    });
+      // Particulas rotativas
+      vortexParticles = this.scene.add.particles(x, y, 'water-particle', {
+        speed: { min: 20, max: 50 },
+        lifespan: 300,
+        scale: { start: 1.5, end: 0 },
+        quantity: 1,
+        frequency: 100,
+        tint: [0x0044ff, 0x3388ff, 0x44aaff],
+        angle: { min: 0, max: 360 },
+      });
+    }
 
     let tickCount = 0;
     const tickEvent = this.scene.time.addEvent({
@@ -209,17 +217,19 @@ export class WaterSpout implements Attack {
     });
 
     // Fade out visual
-    this.scene.tweens.add({
-      targets: vortex,
-      alpha: 0,
-      scaleX: 0.3,
-      scaleY: 0.3,
-      duration,
-      onComplete: () => {
-        vortex.destroy();
-        vortexParticles.destroy();
-      },
-    });
+    if (vortex) {
+      this.scene.tweens.add({
+        targets: vortex,
+        alpha: 0,
+        scaleX: 0.3,
+        scaleY: 0.3,
+        duration,
+        onComplete: () => {
+          vortex?.destroy();
+          vortexParticles?.destroy();
+        },
+      });
+    }
   }
 
   private killBullet(bullet: Phaser.Physics.Arcade.Sprite): void {

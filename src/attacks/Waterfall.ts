@@ -4,6 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx } from '../systems/GraphicsSettings';
 
 type CardinalDir = 'up' | 'down' | 'left' | 'right';
 
@@ -145,12 +146,14 @@ export class Waterfall implements Attack {
         this.scene.time.delayedCall(450, () => splashPart.destroy());
 
         // Zona de agua visual (circulo azul translucido)
-        const waterZone = this.scene.add.circle(p.x, p.y, 14, 0x3388ff, 0.3);
-        waterZone.setDepth(6);
-        this.scene.tweens.add({
-          targets: waterZone, alpha: 0, duration: this.trailDuration,
-          onComplete: () => waterZone.destroy(),
-        });
+        if (shouldShowVfx()) {
+          const waterZone = this.scene.add.circle(p.x, p.y, 14, 0x3388ff, 0.3);
+          waterZone.setDepth(6);
+          this.scene.tweens.add({
+            targets: waterZone, alpha: 0, duration: this.trailDuration,
+            onComplete: () => waterZone.destroy(),
+          });
+        }
       });
     }
 

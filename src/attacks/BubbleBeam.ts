@@ -3,6 +3,7 @@ import type { Attack, ArcadeGroup } from '../types';
 import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
+import { shouldShowVfx, getVfxQuantity } from '../systems/GraphicsSettings';
 
 /**
  * Bubble Beam: evolucao do Bubble.
@@ -90,22 +91,25 @@ export class BubbleBeam implements Attack {
       );
 
       // Trail de particulas
-      const trail = this.scene.add.particles(0, 0, 'water-particle', {
-        follow: bubble,
-        speed: { min: 3, max: 12 },
-        lifespan: 200,
-        scale: { start: 0.8, end: 0 },
-        quantity: 1,
-        frequency: 50,
-        tint: [0x44aaff, 0x88ccff, 0xaaddff],
-      });
+      let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+      if (shouldShowVfx()) {
+        trail = this.scene.add.particles(0, 0, 'water-particle', {
+          follow: bubble,
+          speed: { min: 3, max: 12 },
+          lifespan: 200,
+          scale: { start: 0.8, end: 0 },
+          quantity: getVfxQuantity(1),
+          frequency: 50,
+          tint: [0x44aaff, 0x88ccff, 0xaaddff],
+        });
+      }
 
       // Auto-destruir apos 2s com efeito de slow AoE
       this.scene.time.delayedCall(2000, () => {
         if (bubble.active && bubble.getData('fireId') === currentFireId) {
           this.popBubble(bubble);
         }
-        trail.destroy();
+        trail?.destroy();
       });
     }
   }

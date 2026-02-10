@@ -3,6 +3,7 @@ import { SoundManager } from '../audio/SoundManager';
 import { getCoins, getPowerUpLevel, buyPowerUp } from '../systems/SaveSystem';
 import { POWER_UPS, getNextCost } from '../data/meta-progression';
 import type { PowerUpDef } from '../data/meta-progression';
+import { fontSize, scaled } from '../utils/ui-scale';
 
 export class PowerUpScene extends Phaser.Scene {
   private uiContainer: Phaser.GameObjects.Container | null = null;
@@ -21,33 +22,34 @@ export class PowerUpScene extends Phaser.Scene {
     bg.fillRect(0, 0, width, height);
 
     bg.lineStyle(1, 0xffffff, 0.03);
-    for (let x = 0; x < width; x += 40) bg.lineBetween(x, 0, x, height);
-    for (let y = 0; y < height; y += 40) bg.lineBetween(0, y, width, y);
+    const gridStep = scaled(40);
+    for (let x = 0; x < width; x += gridStep) bg.lineBetween(x, 0, x, height);
+    for (let y = 0; y < height; y += gridStep) bg.lineBetween(0, y, width, y);
 
     // ── Header ──────────────────────────────────────────────────────
-    this.add.text(width / 2, 30, 'MELHORIAS PERMANENTES', {
-      fontSize: '22px',
+    this.add.text(width / 2, scaled(30), 'MELHORIAS PERMANENTES', {
+      fontSize: fontSize(22),
       color: '#ffcc00',
       fontFamily: 'monospace',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 4,
+      strokeThickness: scaled(4),
     }).setOrigin(0.5).setDepth(10);
 
-    this.add.text(width / 2, 55, 'Invista moedas para ficar mais forte a cada run', {
-      fontSize: '10px',
+    this.add.text(width / 2, scaled(55), 'Invista moedas para ficar mais forte a cada run', {
+      fontSize: fontSize(10),
       color: '#888888',
       fontFamily: 'monospace',
     }).setOrigin(0.5).setDepth(10);
 
     // ── Coin display ────────────────────────────────────────────────
-    this.coinText = this.add.text(width - 20, 30, '', {
-      fontSize: '16px',
+    this.coinText = this.add.text(width - scaled(20), scaled(30), '', {
+      fontSize: fontSize(16),
       color: '#ffcc00',
       fontFamily: 'monospace',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3,
+      strokeThickness: scaled(3),
     }).setOrigin(1, 0.5).setDepth(10);
     this.updateCoinDisplay();
 
@@ -56,9 +58,9 @@ export class PowerUpScene extends Phaser.Scene {
     this.buildCards();
 
     // ── Botao VOLTAR ────────────────────────────────────────────────
-    const btnW = 160;
-    const btnH = 40;
-    const btnY = height - 40;
+    const btnW = scaled(160);
+    const btnH = scaled(40);
+    const btnY = height - scaled(40);
 
     const btnGfx = this.add.graphics().setDepth(10);
     const drawBack = (hover: boolean): void => {
@@ -73,12 +75,12 @@ export class PowerUpScene extends Phaser.Scene {
     drawBack(false);
 
     const btnText = this.add.text(width / 2, btnY, '<- VOLTAR', {
-      fontSize: '14px',
+      fontSize: fontSize(14),
       color: '#ffffff',
       fontFamily: 'monospace',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 2,
+      strokeThickness: scaled(2),
     }).setOrigin(0.5).setDepth(11);
 
     const btnHit = this.add.rectangle(width / 2, btnY, btnW, btnH, 0xffffff, 0)
@@ -95,7 +97,7 @@ export class PowerUpScene extends Phaser.Scene {
     });
     btnHit.on('pointerdown', () => {
       SoundManager.playClick();
-      this.scene.start('SelectScene');
+      this.scene.start('TitleScene');
     });
 
     // ── Fade in ─────────────────────────────────────────────────────
@@ -115,14 +117,14 @@ export class PowerUpScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     const cols = 4;
     const rows = 2;
-    const cardW = 170;
-    const cardH = 120;
-    const gapX = 14;
-    const gapY = 14;
+    const cardW = scaled(170);
+    const cardH = scaled(120);
+    const gapX = scaled(14);
+    const gapY = scaled(14);
     const totalW = cols * cardW + (cols - 1) * gapX;
     const totalH = rows * cardH + (rows - 1) * gapY;
     const startX = (width - totalW) / 2;
-    const startY = (height - totalH) / 2 - 5;
+    const startY = (height - totalH) / 2 - scaled(5);
 
     const coins = getCoins();
 
@@ -172,41 +174,41 @@ export class PowerUpScene extends Phaser.Scene {
     this.uiContainer.add(gfx);
 
     // ── Icone ────────────────────────────────────────────────────────
-    const iconX = cx - cardW / 2 + 28;
-    const iconY = cy - cardH / 2 + 30;
+    const iconX = cx - cardW / 2 + scaled(28);
+    const iconY = cy - cardH / 2 + scaled(30);
     if (this.textures.exists(def.icon)) {
-      const icon = this.add.image(iconX, iconY, def.icon).setScale(2).setDepth(6);
+      const icon = this.add.image(iconX, iconY, def.icon).setScale(scaled(2)).setDepth(6);
       this.uiContainer.add(icon);
     } else {
       const placeholder = this.add.text(iconX, iconY, '?', {
-        fontSize: '20px', color: '#666666', fontFamily: 'monospace', fontStyle: 'bold',
+        fontSize: fontSize(20), color: '#666666', fontFamily: 'monospace', fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(6);
       this.uiContainer.add(placeholder);
     }
 
     // ── Nome ─────────────────────────────────────────────────────────
-    const nameText = this.add.text(cx + 10, cy - cardH / 2 + 16, def.name, {
-      fontSize: '11px',
+    const nameText = this.add.text(cx + scaled(10), cy - cardH / 2 + scaled(16), def.name, {
+      fontSize: fontSize(11),
       color: '#ffffff',
       fontFamily: 'monospace',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 2,
+      strokeThickness: scaled(2),
     }).setOrigin(0.5, 0).setDepth(6);
     this.uiContainer.add(nameText);
 
     // ── Efeito por nivel ─────────────────────────────────────────────
-    this.uiContainer.add(this.add.text(cx + 10, cy - cardH / 2 + 32, def.effect, {
-      fontSize: '9px',
+    this.uiContainer.add(this.add.text(cx + scaled(10), cy - cardH / 2 + scaled(32), def.effect, {
+      fontSize: fontSize(9),
       color: '#aaaaaa',
       fontFamily: 'monospace',
     }).setOrigin(0.5, 0).setDepth(6));
 
     // ── Level bar ────────────────────────────────────────────────────
-    const barY = cy + 12;
-    const barStartX = cx - cardW / 2 + 14;
-    const squareSize = 10;
-    const squareGap = 3;
+    const barY = cy + scaled(12);
+    const barStartX = cx - cardW / 2 + scaled(14);
+    const squareSize = scaled(10);
+    const squareGap = scaled(3);
 
     for (let i = 0; i < def.maxLevel; i++) {
       const sx = barStartX + i * (squareSize + squareGap);
@@ -227,32 +229,39 @@ export class PowerUpScene extends Phaser.Scene {
       this.uiContainer.add(barGfx);
     }
 
+    // ── Card hover hitbox (added before buy button so buy is on top for input) ──
+    const cardHit = this.add.rectangle(cx, cy, cardW, cardH, 0xffffff, 0)
+      .setInteractive().setDepth(5);
+    cardHit.on('pointerover', () => drawCard(true));
+    cardHit.on('pointerout', () => drawCard(false));
+    this.uiContainer.add(cardHit);
+
     // ── Cost / Max label ─────────────────────────────────────────────
-    const costY = cy + cardH / 2 - 18;
+    const costY = cy + cardH / 2 - scaled(18);
     if (isMaxed) {
       this.uiContainer.add(this.add.text(cx, costY, 'MAXIMO', {
-        fontSize: '11px',
+        fontSize: fontSize(11),
         color: '#44bb44',
         fontFamily: 'monospace',
         fontStyle: 'bold',
         stroke: '#000000',
-        strokeThickness: 2,
+        strokeThickness: scaled(2),
       }).setOrigin(0.5).setDepth(6));
     } else {
       const costColor = canAfford ? '#ffcc00' : '#666666';
-      this.uiContainer.add(this.add.text(cx - 20, costY, `₽ ${cost}`, {
-        fontSize: '11px',
+      this.uiContainer.add(this.add.text(cx - scaled(20), costY, `₽ ${cost}`, {
+        fontSize: fontSize(11),
         color: costColor,
         fontFamily: 'monospace',
         fontStyle: 'bold',
         stroke: '#000000',
-        strokeThickness: 2,
+        strokeThickness: scaled(2),
       }).setOrigin(0.5).setDepth(6));
 
       // ── Buy button ─────────────────────────────────────────────
-      const buyW = 50;
-      const buyH = 20;
-      const buyX = cx + cardW / 2 - 40;
+      const buyW = scaled(50);
+      const buyH = scaled(20);
+      const buyX = cx + cardW / 2 - scaled(40);
 
       const buyGfx = this.add.graphics().setDepth(6);
       const drawBuy = (hover: boolean): void => {
@@ -271,7 +280,7 @@ export class PowerUpScene extends Phaser.Scene {
       this.uiContainer.add(buyGfx);
 
       const buyLabel = this.add.text(buyX, costY, canAfford ? 'COMPRAR' : '---', {
-        fontSize: '8px',
+        fontSize: fontSize(8),
         color: canAfford ? '#ffffff' : '#555555',
         fontFamily: 'monospace',
         fontStyle: 'bold',
@@ -295,11 +304,5 @@ export class PowerUpScene extends Phaser.Scene {
       }
     }
 
-    // ── Card hover hitbox ────────────────────────────────────────────
-    const cardHit = this.add.rectangle(cx, cy, cardW, cardH, 0xffffff, 0)
-      .setInteractive().setDepth(5);
-    cardHit.on('pointerover', () => drawCard(true));
-    cardHit.on('pointerout', () => drawCard(false));
-    this.uiContainer.add(cardHit);
   }
 }

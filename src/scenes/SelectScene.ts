@@ -4,6 +4,7 @@ import type { StarterConfig } from '../config';
 import type { DevConfig, Difficulty, PokemonForm } from '../types';
 import { SoundManager } from '../audio/SoundManager';
 import { getCoins, initSaveSystem } from '../systems/SaveSystem';
+import { fontSize, scaled } from '../utils/ui-scale';
 
 export class SelectScene extends Phaser.Scene {
   private selectedIndex = 0;
@@ -20,7 +21,13 @@ export class SelectScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.selectedIndex = 0;
+    this.cards = [];
+    this.cardGraphics = [];
     this.phaseOverlay = null;
+    this.difficultyOverlay = null;
+    this.devConfigOverlay = null;
+    this.wipOverlay = null;
     const { width, height } = this.cameras.main;
 
     // ── Background ───────────────────────────────────────────────────
@@ -34,8 +41,8 @@ export class SelectScene extends Phaser.Scene {
     for (let y = 0; y < height; y += 40) bg.lineBetween(0, y, width, y);
 
     // ── Título ───────────────────────────────────────────────────────
-    this.add.text(width / 2, 35, 'ESCOLHA SEU POKÉMON', {
-      fontSize: '24px',
+    this.add.text(width / 2, scaled(35), 'ESCOLHA SEU POKÉMON', {
+      fontSize: fontSize(24),
       color: '#ffcc00',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -43,35 +50,35 @@ export class SelectScene extends Phaser.Scene {
       strokeThickness: 4,
     }).setOrigin(0.5).setDepth(10);
 
-    this.add.text(width / 2, 60, 'Selecione seu starter e comece a aventura!', {
-      fontSize: '10px',
+    this.add.text(width / 2, scaled(60), 'Selecione seu starter e comece a aventura!', {
+      fontSize: fontSize(10),
       color: '#888888',
       fontFamily: 'monospace',
     }).setOrigin(0.5).setDepth(10);
 
     // ── Cards de personagem ──────────────────────────────────────────
-    const cardWidth = 200;
-    const cardHeight = 340;
-    const gap = 30;
+    const cardWidth = scaled(200);
+    const cardHeight = scaled(340);
+    const gap = scaled(30);
     const totalWidth = STARTERS.length * cardWidth + (STARTERS.length - 1) * gap;
     const startX = (width - totalWidth) / 2;
 
     STARTERS.forEach((starter, i) => {
       const cx = startX + i * (cardWidth + gap) + cardWidth / 2;
-      const cy = height / 2 + 20;
+      const cy = height / 2 + scaled(20);
       this.createCharacterCard(starter, i, cx, cy, cardWidth, cardHeight);
     });
 
     // ── Botão "COMEÇAR" ──────────────────────────────────────────────
-    const btnY = height - 55;
-    const btnW = 200;
-    const btnH = 45;
+    const btnY = height - scaled(55);
+    const btnW = scaled(200);
+    const btnH = scaled(45);
 
     const btnBg = this.add.graphics().setDepth(10);
     this.drawStartButton(btnBg, width / 2, btnY, btnW, btnH, false);
 
     const btnText = this.add.text(width / 2, btnY, 'COMEÇAR!', {
-      fontSize: '18px',
+      fontSize: fontSize(18),
       color: '#ffffff',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -106,8 +113,8 @@ export class SelectScene extends Phaser.Scene {
     });
 
     // ── Botão "Voltar" ───────────────────────────────────────────────
-    const backBtn = this.add.text(20, height - 25, '<- Voltar', {
-      fontSize: '12px',
+    const backBtn = this.add.text(scaled(20), height - scaled(25), '<- Voltar', {
+      fontSize: fontSize(12),
       color: '#666666',
       fontFamily: 'monospace',
     }).setDepth(10).setInteractive({ useHandCursor: true });
@@ -120,44 +127,11 @@ export class SelectScene extends Phaser.Scene {
     initSaveSystem();
     const coins = getCoins();
     if (coins > 0) {
-      this.add.text(width - 20, 15, `₽ ${coins}`, {
-        fontSize: '14px', color: '#ffcc00', fontFamily: 'monospace',
+      this.add.text(width - scaled(20), scaled(15), `₽ ${coins}`, {
+        fontSize: fontSize(14), color: '#ffcc00', fontFamily: 'monospace',
         fontStyle: 'bold', stroke: '#000000', strokeThickness: 3,
       }).setOrigin(1, 0.5).setDepth(10);
     }
-
-    // ── Botões secundários (MELHORIAS + POKÉDEX) ─────────────────────
-    const secBtnW = 140;
-    const secBtnH = 32;
-    const secBtnY = btnY + 32;
-    const secGap = 8;
-
-    // Helper para criar botão secundário
-    const createSecBtn = (x: number, label: string, color: number, hoverColor: number, textColor: string, targetScene: string): void => {
-      const gfx = this.add.graphics().setDepth(10);
-      const draw = (hover: boolean): void => {
-        gfx.clear();
-        gfx.fillStyle(0x000000, 0.4);
-        gfx.fillRoundedRect(x - secBtnW / 2 + 2, secBtnY - secBtnH / 2 + 3, secBtnW, secBtnH, 8);
-        gfx.fillStyle(hover ? hoverColor : color, 0.95);
-        gfx.fillRoundedRect(x - secBtnW / 2, secBtnY - secBtnH / 2, secBtnW, secBtnH, 8);
-        gfx.lineStyle(2, hover ? 0x8888aa : 0x555577);
-        gfx.strokeRoundedRect(x - secBtnW / 2, secBtnY - secBtnH / 2, secBtnW, secBtnH, 8);
-      };
-      draw(false);
-      const txt = this.add.text(x, secBtnY, label, {
-        fontSize: '12px', color: textColor, fontFamily: 'monospace',
-        fontStyle: 'bold', stroke: '#000000', strokeThickness: 2,
-      }).setOrigin(0.5).setDepth(11);
-      const hit = this.add.rectangle(x, secBtnY, secBtnW, secBtnH, 0xffffff, 0)
-        .setInteractive({ useHandCursor: true }).setDepth(12);
-      hit.on('pointerover', () => { draw(true); txt.setColor('#ffcc00'); SoundManager.playHover(); });
-      hit.on('pointerout', () => { draw(false); txt.setColor(textColor); });
-      hit.on('pointerdown', () => { SoundManager.playClick(); this.scene.start(targetScene); });
-    };
-
-    createSecBtn(width / 2 - secBtnW / 2 - secGap / 2, 'MELHORIAS', 0x1a1a44, 0x2a2a55, '#aaaaff', 'PowerUpScene');
-    createSecBtn(width / 2 + secBtnW / 2 + secGap / 2, 'POKÉDEX', 0x2a1122, 0x442244, '#ff6688', 'PokedexScene');
 
     // ── Seleção inicial ──────────────────────────────────────────────
     this.selectCard(0);
@@ -178,46 +152,46 @@ export class SelectScene extends Phaser.Scene {
     this.wipOverlay.add(bg);
 
     // Ícone de alerta
-    this.wipOverlay.add(this.add.text(width / 2, height / 2 - 70, '!', {
-      fontSize: '40px', color: '#ff8800', fontFamily: 'monospace', fontStyle: 'bold',
+    this.wipOverlay.add(this.add.text(width / 2, height / 2 - scaled(70), '!', {
+      fontSize: fontSize(40), color: '#ff8800', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 6,
     }).setOrigin(0.5));
 
-    this.wipOverlay.add(this.add.text(width / 2, height / 2 - 30, 'EM DESENVOLVIMENTO', {
-      fontSize: '18px', color: '#ff8800', fontFamily: 'monospace', fontStyle: 'bold',
+    this.wipOverlay.add(this.add.text(width / 2, height / 2 - scaled(30), 'EM DESENVOLVIMENTO', {
+      fontSize: fontSize(18), color: '#ff8800', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5));
 
-    this.wipOverlay.add(this.add.text(width / 2, height / 2 + 5, 'Bulbasaur ainda não está completo.\nAlguns ataques e efeitos podem\nnão funcionar corretamente.', {
-      fontSize: '12px', color: '#aaaaaa', fontFamily: 'monospace',
-      align: 'center', lineSpacing: 4,
+    this.wipOverlay.add(this.add.text(width / 2, height / 2 + scaled(5), 'Bulbasaur ainda não está completo.\nAlguns ataques e efeitos podem\nnão funcionar corretamente.', {
+      fontSize: fontSize(12), color: '#aaaaaa', fontFamily: 'monospace',
+      align: 'center', lineSpacing: scaled(4),
     }).setOrigin(0.5));
 
-    this.wipOverlay.add(this.add.text(width / 2, height / 2 + 45, 'Deseja continuar mesmo assim?', {
-      fontSize: '12px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+    this.wipOverlay.add(this.add.text(width / 2, height / 2 + scaled(45), 'Deseja continuar mesmo assim?', {
+      fontSize: fontSize(12), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5));
 
     // Botão SIM
     const yesGfx = this.add.graphics();
-    const btnW = 120;
-    const btnH = 35;
-    const btnY = height / 2 + 85;
+    const btnW = scaled(120);
+    const btnH = scaled(35);
+    const btnY = height / 2 + scaled(85);
     const drawYes = (hover: boolean): void => {
       yesGfx.clear();
       yesGfx.fillStyle(hover ? 0x44bb44 : 0x228822, 0.95);
-      yesGfx.fillRoundedRect(width / 2 - btnW - 10, btnY - btnH / 2, btnW, btnH, 8);
+      yesGfx.fillRoundedRect(width / 2 - btnW - scaled(10), btnY - btnH / 2, btnW, btnH, 8);
       yesGfx.lineStyle(2, hover ? 0x66dd66 : 0x33aa33);
-      yesGfx.strokeRoundedRect(width / 2 - btnW - 10, btnY - btnH / 2, btnW, btnH, 8);
+      yesGfx.strokeRoundedRect(width / 2 - btnW - scaled(10), btnY - btnH / 2, btnW, btnH, 8);
     };
     drawYes(false);
     this.wipOverlay.add(yesGfx);
 
-    const yesText = this.add.text(width / 2 - btnW / 2 - 10, btnY, 'SIM, JOGAR', {
-      fontSize: '12px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+    const yesText = this.add.text(width / 2 - btnW / 2 - scaled(10), btnY, 'SIM, JOGAR', {
+      fontSize: fontSize(12), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.wipOverlay.add(yesText);
 
-    const yesHit = this.add.rectangle(width / 2 - btnW / 2 - 10, btnY, btnW, btnH, 0xffffff, 0)
+    const yesHit = this.add.rectangle(width / 2 - btnW / 2 - scaled(10), btnY, btnW, btnH, 0xffffff, 0)
       .setInteractive({ useHandCursor: true });
     yesHit.on('pointerover', () => { drawYes(true); SoundManager.playHover(); });
     yesHit.on('pointerout', () => drawYes(false));
@@ -234,19 +208,19 @@ export class SelectScene extends Phaser.Scene {
     const drawNo = (hover: boolean): void => {
       noGfx.clear();
       noGfx.fillStyle(hover ? 0x664444 : 0x442222, 0.95);
-      noGfx.fillRoundedRect(width / 2 + 10, btnY - btnH / 2, btnW, btnH, 8);
+      noGfx.fillRoundedRect(width / 2 + scaled(10), btnY - btnH / 2, btnW, btnH, 8);
       noGfx.lineStyle(2, hover ? 0x886666 : 0x553333);
-      noGfx.strokeRoundedRect(width / 2 + 10, btnY - btnH / 2, btnW, btnH, 8);
+      noGfx.strokeRoundedRect(width / 2 + scaled(10), btnY - btnH / 2, btnW, btnH, 8);
     };
     drawNo(false);
     this.wipOverlay.add(noGfx);
 
-    const noText = this.add.text(width / 2 + btnW / 2 + 10, btnY, 'VOLTAR', {
-      fontSize: '12px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+    const noText = this.add.text(width / 2 + btnW / 2 + scaled(10), btnY, 'VOLTAR', {
+      fontSize: fontSize(12), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.wipOverlay.add(noText);
 
-    const noHit = this.add.rectangle(width / 2 + btnW / 2 + 10, btnY, btnW, btnH, 0xffffff, 0)
+    const noHit = this.add.rectangle(width / 2 + btnW / 2 + scaled(10), btnY, btnW, btnH, 0xffffff, 0)
       .setInteractive({ useHandCursor: true });
     noHit.on('pointerover', () => { drawNo(true); SoundManager.playHover(); });
     noHit.on('pointerout', () => drawNo(false));
@@ -278,8 +252,8 @@ export class SelectScene extends Phaser.Scene {
     this.phaseOverlay.add(bg);
 
     // Título
-    this.phaseOverlay.add(this.add.text(width / 2, height / 2 - 120, 'SELECIONE A FASE', {
-      fontSize: '22px', color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
+    this.phaseOverlay.add(this.add.text(width / 2, height / 2 - scaled(120), 'SELECIONE A FASE', {
+      fontSize: fontSize(22), color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5));
 
@@ -287,15 +261,15 @@ export class SelectScene extends Phaser.Scene {
     const host = window.location.hostname;
     const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
 
-    const cardY = height / 2 + 10;
-    const card1X = isLocal ? width / 2 - 130 : width / 2;
+    const cardY = height / 2 + scaled(10);
+    const card1X = isLocal ? width / 2 - scaled(130) : width / 2;
     this.createPhaseCard(card1X, cardY, 'FASE 1', 'FIRE RED', 0xff4400, 0xff6622,
       'Jogo completo com\ninimigos, bosses\ne evoluções.', () => {
         this.showDifficultySelection();
       });
 
     if (isLocal) {
-      const card2X = width / 2 + 130;
+      const card2X = width / 2 + scaled(130);
       this.createPhaseCard(card2X, cardY, 'FASE DEV', 'DEBUGGER', 0x44aaff, 0x66ccff,
         'Cenários de teste\npré-configurados\npara debugging.', () => {
           this.showDevConfigOverlay();
@@ -303,8 +277,8 @@ export class SelectScene extends Phaser.Scene {
     }
 
     // Botão cancelar
-    const cancelBtn = this.add.text(width / 2, height / 2 + 145, 'Cancelar', {
-      fontSize: '12px', color: '#666666', fontFamily: 'monospace',
+    const cancelBtn = this.add.text(width / 2, height / 2 + scaled(145), 'Cancelar', {
+      fontSize: fontSize(12), color: '#666666', fontFamily: 'monospace',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     cancelBtn.on('pointerover', () => cancelBtn.setColor('#ffffff'));
     cancelBtn.on('pointerout', () => cancelBtn.setColor('#666666'));
@@ -330,8 +304,8 @@ export class SelectScene extends Phaser.Scene {
   ): void {
     if (!this.phaseOverlay) return;
 
-    const cardW = 200;
-    const cardH = 180;
+    const cardW = scaled(200);
+    const cardH = scaled(180);
 
     const gfx = this.add.graphics();
     const drawCard = (hover: boolean): void => {
@@ -347,28 +321,28 @@ export class SelectScene extends Phaser.Scene {
       gfx.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
       // Barra superior colorida
       gfx.fillStyle(color, hover ? 0.4 : 0.2);
-      gfx.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, 40, { tl: 12, tr: 12, bl: 0, br: 0 });
+      gfx.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, scaled(40), { tl: 12, tr: 12, bl: 0, br: 0 });
     };
 
     drawCard(false);
     this.phaseOverlay.add(gfx);
 
     // Título
-    this.phaseOverlay.add(this.add.text(cx, cy - cardH / 2 + 14, title, {
-      fontSize: '14px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+    this.phaseOverlay.add(this.add.text(cx, cy - cardH / 2 + scaled(14), title, {
+      fontSize: fontSize(14), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5));
 
     // Subtítulo
     const subColor = color === 0xff4400 ? '#ff6622' : '#66ccff';
-    this.phaseOverlay.add(this.add.text(cx, cy - cardH / 2 + 32, subtitle, {
-      fontSize: '10px', color: subColor, fontFamily: 'monospace', fontStyle: 'bold',
+    this.phaseOverlay.add(this.add.text(cx, cy - cardH / 2 + scaled(32), subtitle, {
+      fontSize: fontSize(10), color: subColor, fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5));
 
     // Descrição
-    this.phaseOverlay.add(this.add.text(cx, cy + 10, description, {
-      fontSize: '11px', color: '#aaaaaa', fontFamily: 'monospace',
-      align: 'center', lineSpacing: 4,
+    this.phaseOverlay.add(this.add.text(cx, cy + scaled(10), description, {
+      fontSize: fontSize(11), color: '#aaaaaa', fontFamily: 'monospace',
+      align: 'center', lineSpacing: scaled(4),
     }).setOrigin(0.5));
 
     // Hitbox interativo
@@ -415,22 +389,22 @@ export class SelectScene extends Phaser.Scene {
     this.difficultyOverlay.add(bg);
 
     // Título
-    this.difficultyOverlay.add(this.add.text(width / 2, height / 2 - 130, 'DIFICULDADE', {
-      fontSize: '22px', color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
+    this.difficultyOverlay.add(this.add.text(width / 2, height / 2 - scaled(130), 'DIFICULDADE', {
+      fontSize: fontSize(22), color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5));
 
-    this.difficultyOverlay.add(this.add.text(width / 2, height / 2 - 105, 'Escolha o nível de desafio', {
-      fontSize: '10px', color: '#888888', fontFamily: 'monospace',
+    this.difficultyOverlay.add(this.add.text(width / 2, height / 2 - scaled(105), 'Escolha o nível de desafio', {
+      fontSize: fontSize(10), color: '#888888', fontFamily: 'monospace',
     }).setOrigin(0.5));
 
     // Cards de dificuldade
     const difficulties: Difficulty[] = ['easy', 'medium', 'hard'];
-    const cardW = 160;
-    const gap = 20;
+    const cardW = scaled(160);
+    const gap = scaled(20);
     const totalW = difficulties.length * cardW + (difficulties.length - 1) * gap;
     const startX = (width - totalW) / 2 + cardW / 2;
-    const cardY = height / 2 + 10;
+    const cardY = height / 2 + scaled(10);
 
     difficulties.forEach((diff, i) => {
       const cfg = DIFFICULTY[diff];
@@ -439,8 +413,8 @@ export class SelectScene extends Phaser.Scene {
     });
 
     // Botão voltar
-    const backBtn = this.add.text(width / 2, height / 2 + 140, '<- Voltar', {
-      fontSize: '12px', color: '#666666', fontFamily: 'monospace',
+    const backBtn = this.add.text(width / 2, height / 2 + scaled(140), '<- Voltar', {
+      fontSize: fontSize(12), color: '#666666', fontFamily: 'monospace',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     backBtn.on('pointerover', () => { backBtn.setColor('#ffffff'); SoundManager.playHover(); });
     backBtn.on('pointerout', () => backBtn.setColor('#666666'));
@@ -460,7 +434,7 @@ export class SelectScene extends Phaser.Scene {
   ): void {
     if (!this.difficultyOverlay) return;
 
-    const cardH = 180;
+    const cardH = scaled(180);
     const gfx = this.add.graphics();
 
     const drawCard = (hover: boolean): void => {
@@ -476,29 +450,29 @@ export class SelectScene extends Phaser.Scene {
       gfx.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
       // Barra superior colorida
       gfx.fillStyle(cfg.color, hover ? 0.4 : 0.2);
-      gfx.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, 40, { tl: 12, tr: 12, bl: 0, br: 0 });
+      gfx.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, scaled(40), { tl: 12, tr: 12, bl: 0, br: 0 });
     };
 
     drawCard(false);
     this.difficultyOverlay.add(gfx);
 
     // Label
-    this.difficultyOverlay.add(this.add.text(cx, cy - cardH / 2 + 20, cfg.label, {
-      fontSize: '16px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+    this.difficultyOverlay.add(this.add.text(cx, cy - cardH / 2 + scaled(20), cfg.label, {
+      fontSize: fontSize(16), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5));
 
     // Descrição
-    this.difficultyOverlay.add(this.add.text(cx, cy + 5, cfg.description, {
-      fontSize: '11px', color: '#aaaaaa', fontFamily: 'monospace',
-      align: 'center', lineSpacing: 6,
+    this.difficultyOverlay.add(this.add.text(cx, cy + scaled(5), cfg.description, {
+      fontSize: fontSize(11), color: '#aaaaaa', fontFamily: 'monospace',
+      align: 'center', lineSpacing: scaled(6),
     }).setOrigin(0.5));
 
     // XP badge
     const xpLabel = cfg.xpMultiplier > 1 ? `XP x${cfg.xpMultiplier}` : 'XP x1';
     const xpColor = cfg.xpMultiplier >= 2 ? '#44ff44' : cfg.xpMultiplier >= 1.5 ? '#ffcc00' : '#aaaaaa';
-    this.difficultyOverlay.add(this.add.text(cx, cy + cardH / 2 - 25, xpLabel, {
-      fontSize: '13px', color: xpColor, fontFamily: 'monospace', fontStyle: 'bold',
+    this.difficultyOverlay.add(this.add.text(cx, cy + cardH / 2 - scaled(25), xpLabel, {
+      fontSize: fontSize(13), color: xpColor, fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5));
 
@@ -537,8 +511,8 @@ export class SelectScene extends Phaser.Scene {
     this.devConfigOverlay.add(bg);
 
     // Title
-    this.devConfigOverlay.add(this.add.text(width / 2, 30, 'DEV MODE', {
-      fontSize: '22px', color: '#44ff44', fontFamily: 'monospace', fontStyle: 'bold',
+    this.devConfigOverlay.add(this.add.text(width / 2, scaled(30), 'DEV MODE', {
+      fontSize: fontSize(22), color: '#44ff44', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5));
 
@@ -549,21 +523,21 @@ export class SelectScene extends Phaser.Scene {
     let godMode = true;
 
     const panelX = width / 2;
-    let yPos = 70;
+    let yPos = scaled(70);
 
     // ── Starter selection ───────────────────────────────────────
     this.devConfigOverlay.add(this.add.text(panelX, yPos, 'POKÉMON', {
-      fontSize: '12px', color: '#888888', fontFamily: 'monospace',
+      fontSize: fontSize(12), color: '#888888', fontFamily: 'monospace',
     }).setOrigin(0.5));
-    yPos += 20;
+    yPos += scaled(20);
 
     const starterBtns: Phaser.GameObjects.Text[] = [];
     const starterNames = STARTERS.map(s => s.name);
-    const starterStartX = panelX - ((starterNames.length - 1) * 80) / 2;
+    const starterStartX = panelX - ((starterNames.length - 1) * scaled(80)) / 2;
 
     starterNames.forEach((name, i) => {
-      const btn = this.add.text(starterStartX + i * 80, yPos, name, {
-        fontSize: '13px',
+      const btn = this.add.text(starterStartX + i * scaled(80), yPos, name, {
+        fontSize: fontSize(13),
         color: i === selectedStarter ? '#44ff44' : '#666666',
         fontFamily: 'monospace', fontStyle: 'bold',
         stroke: '#000000', strokeThickness: 2,
@@ -576,22 +550,22 @@ export class SelectScene extends Phaser.Scene {
       starterBtns.push(btn);
       this.devConfigOverlay!.add(btn);
     });
-    yPos += 35;
+    yPos += scaled(35);
 
     // ── Form selection ──────────────────────────────────────────
     this.devConfigOverlay.add(this.add.text(panelX, yPos, 'FORMA', {
-      fontSize: '12px', color: '#888888', fontFamily: 'monospace',
+      fontSize: fontSize(12), color: '#888888', fontFamily: 'monospace',
     }).setOrigin(0.5));
-    yPos += 20;
+    yPos += scaled(20);
 
     const forms: PokemonForm[] = ['base', 'stage1', 'stage2'];
     const formLabels = ['Base', 'Stage 1', 'Stage 2'];
     const formBtns: Phaser.GameObjects.Text[] = [];
-    const formStartX = panelX - 100;
+    const formStartX = panelX - scaled(100);
 
     forms.forEach((form, i) => {
-      const btn = this.add.text(formStartX + i * 100, yPos, formLabels[i], {
-        fontSize: '13px',
+      const btn = this.add.text(formStartX + i * scaled(100), yPos, formLabels[i], {
+        fontSize: fontSize(13),
         color: i === 0 ? '#44ff44' : '#666666',
         fontFamily: 'monospace', fontStyle: 'bold',
         stroke: '#000000', strokeThickness: 2,
@@ -608,25 +582,25 @@ export class SelectScene extends Phaser.Scene {
       formBtns.push(btn);
       this.devConfigOverlay!.add(btn);
     });
-    yPos += 35;
+    yPos += scaled(35);
 
     // ── Level ───────────────────────────────────────────────────
     this.devConfigOverlay.add(this.add.text(panelX, yPos, 'LEVEL', {
-      fontSize: '12px', color: '#888888', fontFamily: 'monospace',
+      fontSize: fontSize(12), color: '#888888', fontFamily: 'monospace',
     }).setOrigin(0.5));
-    yPos += 20;
+    yPos += scaled(20);
 
-    const minusBtn = this.add.text(panelX - 60, yPos, '[-]', {
-      fontSize: '16px', color: '#ff6666', fontFamily: 'monospace', fontStyle: 'bold',
+    const minusBtn = this.add.text(panelX - scaled(60), yPos, '[-]', {
+      fontSize: fontSize(16), color: '#ff6666', fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     const levelDisplay = this.add.text(panelX, yPos, `${selectedLevel}`, {
-      fontSize: '18px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      fontSize: fontSize(18), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5);
 
-    const plusBtn = this.add.text(panelX + 60, yPos, '[+]', {
-      fontSize: '16px', color: '#66ff66', fontFamily: 'monospace', fontStyle: 'bold',
+    const plusBtn = this.add.text(panelX + scaled(60), yPos, '[+]', {
+      fontSize: fontSize(16), color: '#66ff66', fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     minusBtn.on('pointerdown', () => {
@@ -643,11 +617,11 @@ export class SelectScene extends Phaser.Scene {
     this.devConfigOverlay.add(minusBtn);
     this.devConfigOverlay.add(levelDisplay);
     this.devConfigOverlay.add(plusBtn);
-    yPos += 35;
+    yPos += scaled(35);
 
     // ── God Mode ────────────────────────────────────────────────
     const godBtn = this.add.text(panelX, yPos, `GOD MODE: ${godMode ? 'ON' : 'OFF'}`, {
-      fontSize: '13px',
+      fontSize: fontSize(13),
       color: godMode ? '#44ff44' : '#ff4444',
       fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 2,
@@ -659,12 +633,12 @@ export class SelectScene extends Phaser.Scene {
       SoundManager.playClick();
     });
     this.devConfigOverlay.add(godBtn);
-    yPos += 40;
+    yPos += scaled(40);
 
     // ── Start button ────────────────────────────────────────────
     const startGfx = this.add.graphics();
-    const startBtnW = 180;
-    const startBtnH = 40;
+    const startBtnW = scaled(180);
+    const startBtnH = scaled(40);
     const drawStart = (hover: boolean): void => {
       startGfx.clear();
       startGfx.fillStyle(hover ? 0x44bb44 : 0x228822, 0.95);
@@ -676,7 +650,7 @@ export class SelectScene extends Phaser.Scene {
     this.devConfigOverlay.add(startGfx);
 
     const startText = this.add.text(panelX, yPos, 'START DEV MODE', {
-      fontSize: '14px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      fontSize: fontSize(14), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5);
     this.devConfigOverlay.add(startText);
@@ -698,11 +672,11 @@ export class SelectScene extends Phaser.Scene {
       this.startGame(true, devConfig);
     });
     this.devConfigOverlay.add(startHit);
-    yPos += 50;
+    yPos += scaled(50);
 
     // ── Skills VIEW ────────────────────────────────────────────
     const skillsBtn = this.add.text(panelX, yPos, 'Skills VIEW', {
-      fontSize: '12px', color: '#ffaa00', fontFamily: 'monospace', fontStyle: 'bold',
+      fontSize: fontSize(12), color: '#ffaa00', fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     skillsBtn.on('pointerover', () => skillsBtn.setColor('#ffdd44'));
     skillsBtn.on('pointerout', () => skillsBtn.setColor('#ffaa00'));
@@ -712,11 +686,11 @@ export class SelectScene extends Phaser.Scene {
       this.scene.start('ShowcaseScene');
     });
     this.devConfigOverlay.add(skillsBtn);
-    yPos += 22;
+    yPos += scaled(22);
 
     // ── Back to debugger ────────────────────────────────────────
     const debugBtn = this.add.text(panelX, yPos, 'Debugger (cenários)', {
-      fontSize: '11px', color: '#44aaff', fontFamily: 'monospace',
+      fontSize: fontSize(11), color: '#44aaff', fontFamily: 'monospace',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     debugBtn.on('pointerover', () => debugBtn.setColor('#88ccff'));
     debugBtn.on('pointerout', () => debugBtn.setColor('#44aaff'));
@@ -728,8 +702,8 @@ export class SelectScene extends Phaser.Scene {
     this.devConfigOverlay.add(debugBtn);
 
     // ── Cancel ──────────────────────────────────────────────────
-    const cancelBtn = this.add.text(panelX, yPos + 25, 'Cancelar', {
-      fontSize: '11px', color: '#666666', fontFamily: 'monospace',
+    const cancelBtn = this.add.text(panelX, yPos + scaled(25), 'Cancelar', {
+      fontSize: fontSize(11), color: '#666666', fontFamily: 'monospace',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     cancelBtn.on('pointerover', () => cancelBtn.setColor('#ffffff'));
     cancelBtn.on('pointerout', () => cancelBtn.setColor('#666666'));
@@ -772,7 +746,7 @@ export class SelectScene extends Phaser.Scene {
     container.add(cardGfx);
 
     // ── Sprite do Pokémon ────────────────────────────────────────────
-    const sprite = this.add.sprite(cx, cy - 60, starter.sprite.key);
+    const sprite = this.add.sprite(cx, cy - scaled(60), starter.sprite.key);
     sprite.setScale(3);
 
     if (!starter.unlocked) {
@@ -792,13 +766,13 @@ export class SelectScene extends Phaser.Scene {
     container.add(sprite);
 
     // Sombra
-    const shadow = this.add.image(cx, cy - 25, 'shadow').setScale(3).setAlpha(starter.unlocked ? 0.3 : 0.1);
+    const shadow = this.add.image(cx, cy - scaled(25), 'shadow').setScale(3).setAlpha(starter.unlocked ? 0.3 : 0.1);
     container.add(shadow);
 
     // ── Nome ─────────────────────────────────────────────────────────
     const nameColor = starter.unlocked ? '#ffffff' : '#444444';
-    const nameText = this.add.text(cx, cy + 15, starter.name.toUpperCase(), {
-      fontSize: '16px',
+    const nameText = this.add.text(cx, cy + scaled(15), starter.name.toUpperCase(), {
+      fontSize: fontSize(16),
       color: nameColor,
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -812,14 +786,14 @@ export class SelectScene extends Phaser.Scene {
     const typeColor = typeColors[starter.type] ?? 0x888888;
 
     const typeBadge = this.add.graphics();
-    const badgeW = 70;
-    const badgeH = 20;
+    const badgeW = scaled(70);
+    const badgeH = scaled(20);
     typeBadge.fillStyle(starter.unlocked ? typeColor : 0x333333, 0.8);
-    typeBadge.fillRoundedRect(cx - badgeW / 2, cy + 32, badgeW, badgeH, 5);
+    typeBadge.fillRoundedRect(cx - badgeW / 2, cy + scaled(32), badgeW, badgeH, 5);
     container.add(typeBadge);
 
-    const typeText = this.add.text(cx, cy + 42, starter.type.toUpperCase(), {
-      fontSize: '10px',
+    const typeText = this.add.text(cx, cy + scaled(42), starter.type.toUpperCase(), {
+      fontSize: fontSize(10),
       color: starter.unlocked ? '#ffffff' : '#555555',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -828,11 +802,11 @@ export class SelectScene extends Phaser.Scene {
 
     // ── Descrição ────────────────────────────────────────────────────
     if (starter.unlocked) {
-      const desc = this.add.text(cx, cy + 70, starter.description, {
-        fontSize: '9px',
+      const desc = this.add.text(cx, cy + scaled(70), starter.description, {
+        fontSize: fontSize(9),
         color: '#aaaaaa',
         fontFamily: 'monospace',
-        wordWrap: { width: cardWidth - 30 },
+        wordWrap: { width: cardWidth - scaled(30) },
         align: 'center',
       }).setOrigin(0.5, 0);
       container.add(desc);
@@ -841,26 +815,26 @@ export class SelectScene extends Phaser.Scene {
     // ── Badge WIP ───────────────────────────────────────────────────
     if (starter.key === 'bulbasaur') {
       const wipBadgeGfx = this.add.graphics();
-      const wipW = 50;
-      const wipH = 18;
+      const wipW = scaled(50);
+      const wipH = scaled(18);
       wipBadgeGfx.fillStyle(0xff8800, 0.9);
-      wipBadgeGfx.fillRoundedRect(cx + cardWidth / 2 - wipW - 8, cy - cardHeight / 2 + 8, wipW, wipH, 4);
+      wipBadgeGfx.fillRoundedRect(cx + cardWidth / 2 - wipW - scaled(8), cy - cardHeight / 2 + scaled(8), wipW, wipH, 4);
       container.add(wipBadgeGfx);
-      const wipLabel = this.add.text(cx + cardWidth / 2 - wipW / 2 - 8, cy - cardHeight / 2 + 17, 'WIP', {
-        fontSize: '10px', color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      const wipLabel = this.add.text(cx + cardWidth / 2 - wipW / 2 - scaled(8), cy - cardHeight / 2 + scaled(17), 'WIP', {
+        fontSize: fontSize(10), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
       }).setOrigin(0.5);
       container.add(wipLabel);
     }
 
     // ── Overlay de lock ──────────────────────────────────────────────
     if (!starter.unlocked) {
-      const lockText = this.add.text(cx, cy + 75, 'X', {
-        fontSize: '28px', color: '#444444', fontFamily: 'monospace', fontStyle: 'bold',
+      const lockText = this.add.text(cx, cy + scaled(75), 'X', {
+        fontSize: fontSize(28), color: '#444444', fontFamily: 'monospace', fontStyle: 'bold',
       }).setOrigin(0.5);
       container.add(lockText);
 
-      const lockedLabel = this.add.text(cx, cy + 105, 'EM BREVE', {
-        fontSize: '11px',
+      const lockedLabel = this.add.text(cx, cy + scaled(105), 'EM BREVE', {
+        fontSize: fontSize(11),
         color: '#666666',
         fontFamily: 'monospace',
         fontStyle: 'bold',
@@ -908,21 +882,21 @@ export class SelectScene extends Phaser.Scene {
     const prevIndex = this.selectedIndex;
     this.selectedIndex = index;
 
-    const cardWidth = 200;
-    const cardHeight = 340;
-    const gap = 30;
+    const cardWidth = scaled(200);
+    const cardHeight = scaled(340);
+    const gap = scaled(30);
     const { width } = this.cameras.main;
     const totalWidth = STARTERS.length * cardWidth + (STARTERS.length - 1) * gap;
     const startX = (width - totalWidth) / 2;
 
     if (prevIndex !== index && STARTERS[prevIndex].unlocked) {
       const prevCx = startX + prevIndex * (cardWidth + gap) + cardWidth / 2;
-      const prevCy = this.cameras.main.height / 2 + 20;
+      const prevCy = this.cameras.main.height / 2 + scaled(20);
       this.drawCard(this.cardGraphics[prevIndex], prevCx, prevCy, cardWidth, cardHeight, true, false);
     }
 
     const cx = startX + index * (cardWidth + gap) + cardWidth / 2;
-    const cy = this.cameras.main.height / 2 + 20;
+    const cy = this.cameras.main.height / 2 + scaled(20);
     this.drawCard(this.cardGraphics[index], cx, cy, cardWidth, cardHeight, true, true);
   }
 
