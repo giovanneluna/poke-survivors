@@ -14,6 +14,7 @@ export const NIDOKING: BossConfig = {
   resistance: 0.2,
   hpRegenPerSec: 10,
   archetype: 'tank',
+  categoryResistance: { orbital: 0.3 },
   bossAttacks: [{
     name: 'Thrash',
     pattern: 'aoe-tremor',

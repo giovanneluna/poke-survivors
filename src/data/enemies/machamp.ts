@@ -14,6 +14,7 @@ export const MACHAMP: BossConfig = {
   resistance: 0.25,
   hpRegenPerSec: 10,
   archetype: 'striker',
+  categoryResistance: { orbital: 0.3 },
   bossAttacks: [{
     name: 'Dynamic Punch',
     pattern: 'aoe-tremor',

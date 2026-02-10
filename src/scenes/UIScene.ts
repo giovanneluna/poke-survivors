@@ -137,12 +137,12 @@ export class UIScene extends Phaser.Scene {
       ...this.textStyle, fontSize: fontSize(9), color: '#aaaaaa',
     }).setDepth(100);
 
-    this.killsText = this.add.text(width - scaled(10), scaled(10), 'Kills: 0', {
-      ...this.textStyle,
+    this.coinText = this.add.text(width - scaled(10), scaled(10), '₽ 0', {
+      ...this.textStyle, fontSize: fontSize(11), color: '#ffd700',
     }).setOrigin(1, 0).setDepth(100);
 
-    this.coinText = this.add.text(width - scaled(10), scaled(28), '₽ 0', {
-      ...this.textStyle, fontSize: fontSize(11), color: '#ffd700',
+    this.killsText = this.add.text(width - scaled(10), scaled(28), 'Kills: 0', {
+      ...this.textStyle,
     }).setOrigin(1, 0).setDepth(100);
 
     this.timerText = this.add.text(width / 2, scaled(10), '0:00', {
@@ -1433,6 +1433,45 @@ export class UIScene extends Phaser.Scene {
     });
     yPos += Math.ceil(utilBtns.length / 2) * 25 + 10;
 
+    // ── Time controls ──────────────────────────────────────────
+    const currentTime = gs.getGameTime();
+    const mins = Math.floor(currentTime / 60000);
+    const secs = Math.floor((currentTime % 60000) / 1000);
+    const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+    this.devPanelContainer.add(this.add.text(panelX + 10, yPos, `TEMPO: ${timeStr}`, {
+      fontSize: fontSize(9), color: '#888888', fontFamily: 'monospace',
+    }));
+    yPos += 14;
+
+    const timeSkips = [
+      { label: '+1 min', ms: 60_000, color: '#44aaff' },
+      { label: '+3 min', ms: 180_000, color: '#44aaff' },
+      { label: '+5 min', ms: 300_000, color: '#44aaff' },
+      { label: 'Reset', ms: -(currentTime), color: '#ff6666' },
+    ];
+    const timeBtnW = (panelW - 20) / 4 - 3;
+    timeSkips.forEach((ts, i) => {
+      const bx = panelX + 10 + i * (timeBtnW + 4);
+      const tGfx = this.add.graphics();
+      tGfx.fillStyle(0x1a1a3e, 0.9);
+      tGfx.fillRoundedRect(bx, yPos, timeBtnW, 18, 3);
+      this.devPanelContainer.add(tGfx);
+
+      this.devPanelContainer.add(this.add.text(bx + timeBtnW / 2, yPos + 9, ts.label, {
+        fontSize: fontSize(8), color: ts.color, fontFamily: 'monospace', fontStyle: 'bold',
+      }).setOrigin(0.5));
+
+      const tHit = this.add.rectangle(bx + timeBtnW / 2, yPos + 9, timeBtnW, 18, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true });
+      tHit.on('pointerdown', () => {
+        SoundManager.playClick();
+        gs.advanceTime(ts.ms);
+        this.rebuildDevPanel();
+      });
+      this.devPanelContainer.add(tHit);
+    });
+    yPos += 26;
+
     // ── Form buttons ─────────────────────────────────────────────
     this.devPanelContainer.add(this.add.text(panelX + 10, yPos, 'FORMA:', {
       fontSize: fontSize(9), color: '#888888', fontFamily: 'monospace',
@@ -1761,9 +1800,13 @@ export class UIScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     this.gameOverContainer.removeAll(true);
 
-    // ── Background ────────────────────────────────────────────────
+    // ── Background (interactive to block clicks below) ──────────
     const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.9);
+    bg.setInteractive();
     this.gameOverContainer.add(bg);
+
+    // Show container FIRST so even if rendering fails, player sees something
+    this.gameOverContainer.setVisible(true);
 
     // ── Camera shake ──────────────────────────────────────────────
     this.cameras.main.shake(400, 0.008);
@@ -1944,7 +1987,7 @@ export class UIScene extends Phaser.Scene {
           duration: Math.min(1500, coinsEarned * 5),
           ease: 'Power2',
           onUpdate: () => {
-            coinValueText.setText(`₽ ${Math.floor(counter.value)}`);
+            if (coinValueText.active) coinValueText.setText(`₽ ${Math.floor(counter.value)}`);
           },
         });
       },
@@ -1984,7 +2027,5 @@ export class UIScene extends Phaser.Scene {
     });
 
     this.tweens.add({ targets: [restartBtn, menuBtn], alpha: 1, duration: 400, delay: animDelay + 300 });
-
-    this.gameOverContainer.setVisible(true);
   }
 }

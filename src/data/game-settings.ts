@@ -33,26 +33,29 @@ export const XP_GEM = {
 export const DIFFICULTY: Readonly<Record<Difficulty, DifficultyConfig>> = {
   easy: {
     label: 'FÁCIL',
-    description: 'Menos inimigos\nMais XP por kill',
+    description: 'Menos inimigos\nMais XP · Menos ₽',
     color: 0x44bb44,
     spawnRateMultiplier: 1.5,
     maxEnemiesMultiplier: 0.5,
     xpMultiplier: 2.0,
+    coinMultiplier: 0.1,
   },
   medium: {
     label: 'MÉDIO',
-    description: 'Inimigos moderados\nXP alto',
+    description: 'Inimigos moderados\nXP alto · ₽ ×0.5',
     color: 0xffaa00,
     spawnRateMultiplier: 1.25,
     maxEnemiesMultiplier: 0.75,
     xpMultiplier: 1.5,
+    coinMultiplier: 0.5,
   },
   hard: {
     label: 'DIFÍCIL',
-    description: 'Máximo de inimigos\nXP padrão',
+    description: 'Máximo de inimigos\nXP e ₽ padrão',
     color: 0xff4444,
     spawnRateMultiplier: 1.0,
     maxEnemiesMultiplier: 1.0,
     xpMultiplier: 1.0,
+    coinMultiplier: 1.0,
   },
 } as const;

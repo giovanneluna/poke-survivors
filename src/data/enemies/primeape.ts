@@ -14,6 +14,7 @@ export const PRIMEAPE: BossConfig = {
   resistance: 0.1,
   hpRegenPerSec: 5,
   archetype: 'striker',
+  categoryResistance: { orbital: 0.3 },
   bossAttacks: [{
     name: 'Close Combat',
     pattern: 'charge',

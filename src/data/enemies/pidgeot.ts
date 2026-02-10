@@ -14,6 +14,7 @@ export const PIDGEOT: BossConfig = {
   resistance: 0.1,
   hpRegenPerSec: 10,
   archetype: 'skirmisher',
+  categoryResistance: { orbital: 0.3 },
   bossAttacks: [{
     name: "Hurricane",
     pattern: "aoe-land",

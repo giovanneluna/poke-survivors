@@ -14,6 +14,7 @@ export const GENGAR: BossConfig = {
   resistance: 0.2,
   hpRegenPerSec: 25,
   archetype: 'caster',
+  categoryResistance: { orbital: 0.3 },
   bossAttacks: [{
     name: 'Shadow Storm',
     pattern: 'teleport-fan',

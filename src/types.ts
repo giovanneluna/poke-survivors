@@ -57,6 +57,7 @@ export interface DifficultyConfig {
   readonly spawnRateMultiplier: number;
   readonly maxEnemiesMultiplier: number;
   readonly xpMultiplier: number;
+  readonly coinMultiplier: number;
 }
 
 // ── Tipos de Elemento ─────────────────────────────────────────────
@@ -261,6 +262,7 @@ export interface BossConfig extends EnemyConfig {
   readonly resistance: number;
   readonly hpRegenPerSec: number;
   readonly archetype: BossArchetype;
+  readonly categoryResistance?: Partial<Record<AttackCategory, number>>;
 }
 
 // ── Phase Config ────────────────────────────────────────────────────

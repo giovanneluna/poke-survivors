@@ -20,6 +20,7 @@ import {
 } from "../systems/DamageTracker"
 import { safeExplode } from "../utils/particles"
 import { ATTACKS } from "../config"
+import { ATTACK_CATEGORIES } from "../data/attacks/categories"
 import { ENEMY_TYPES, getTypeEffectiveness } from "../data/type-chart"
 import type { EnemyType } from "../types"
 
@@ -220,6 +221,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     return 0
   }
 
+  /** Override in Boss to return category-specific resistance map */
+  getCategoryResistance(): Partial<Record<string, number>> | undefined {
+    return undefined
+  }
+
   tryTeleport(playerX: number, playerY: number, time: number): boolean {
     if (!this.teleportConfig || !this.active) return false
     if (time - this.lastTeleportTime < this.teleportConfig.cooldownMs)
@@ -272,6 +278,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const resist = this.getResistance()
     if (resist > 0) {
       finalAmount = Math.max(1, Math.floor(finalAmount * (1 - resist)))
+    }
+
+    // ── Category Resistance (orbital/aura — bosses) ─────
+    const catResistMap = this.getCategoryResistance()
+    if (catResistMap) {
+      const src = getDamageSource()
+      if (src && src in ATTACK_CATEGORIES) {
+        const cat = ATTACK_CATEGORIES[src as keyof typeof ATTACK_CATEGORIES]
+        const catResist = catResistMap[cat]
+        if (catResist && catResist > 0) {
+          finalAmount = Math.max(1, Math.floor(finalAmount * (1 - catResist)))
+        }
+      }
     }
 
     // ── Type Effectiveness ─────

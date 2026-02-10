@@ -706,6 +706,14 @@ export class SpawnSystem {
         const radius = attack.aoeRadius ?? 180;
         boss.setTint(attack.tintColor ?? 0xffdd00);
 
+        // Indicador de range ANTES do pulo (warning circle)
+        const warningCircle = scene.add.circle(boss.x, boss.y, radius, 0xff0000, 0.08).setDepth(2);
+        warningCircle.setStrokeStyle(2, 0xff4444, 0.4);
+        scene.tweens.add({
+          targets: warningCircle, alpha: { from: 0.08, to: 0.2 },
+          duration: 200, yoyo: true, repeat: 1,
+        });
+
         scene.tweens.add({
           targets: boss,
           y: boss.y - 80,
@@ -713,6 +721,7 @@ export class SpawnSystem {
           ease: 'Quad.Out',
           yoyo: true,
           onComplete: () => {
+            warningCircle.destroy();
             if (!boss.active) return;
             boss.clearTint();
             SoundManager.playBossLand();

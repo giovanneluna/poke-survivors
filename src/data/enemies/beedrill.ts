@@ -14,6 +14,7 @@ export const BEEDRILL: BossConfig = {
   resistance: 0.05,
   hpRegenPerSec: 0,
   archetype: 'striker',
+  categoryResistance: { orbital: 0.7, aura: 0.7 },
   bossAttacks: [{
     name: 'Twineedle',
     pattern: 'charge',

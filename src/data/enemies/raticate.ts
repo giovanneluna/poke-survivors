@@ -14,6 +14,7 @@ export const RATICATE: BossConfig = {
   resistance: 0,
   hpRegenPerSec: 0,
   archetype: 'skirmisher',
+  categoryResistance: { orbital: 0.3 },
   bossAttacks: [{
     name: "Hyper Fang",
     pattern: "charge",

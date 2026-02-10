@@ -14,6 +14,7 @@ export const VILEPLUME: BossConfig = {
   resistance: 0.15,
   hpRegenPerSec: 20,
   archetype: 'caster',
+  categoryResistance: { orbital: 0.3 },
   contactEffect: {
     type: 'poison',
     durationMs: 6000,

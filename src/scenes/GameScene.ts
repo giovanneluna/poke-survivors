@@ -602,10 +602,11 @@ export class GameScene extends Phaser.Scene {
     const runStats = tracker.getRunStats()
     const timeSeconds = Math.floor(this.gameTime / 1000)
 
-    // ── PokéDollars = collected coins + small time/level bonus ─────
+    // ── PokéDollars = (collected coins + bonus) × difficulty multiplier
     const collectedCoins = this.pickupSystem.getRunCoins()
     const bonusCoins = Math.floor(timeSeconds * 0.5 + runStats.levelReached * 5)
-    const coinsEarned = collectedCoins + bonusCoins
+    const diffConfig = DIFFICULTY[this.difficulty]
+    const coinsEarned = Math.floor((collectedCoins + bonusCoins) * diffConfig.coinMultiplier)
 
     // ── Save to persistent storage ─────────────────────────────────
     addCoins(coinsEarned)
@@ -775,6 +776,13 @@ export class GameScene extends Phaser.Scene {
   }
   getSpawnSystem(): SpawnSystem {
     return this.spawnSystem
+  }
+  getGameTime(): number {
+    return this.gameTime
+  }
+  advanceTime(ms: number): void {
+    this.gameTime += ms
+    this.emitStats()
   }
 
   private isBossAlive(): boolean {

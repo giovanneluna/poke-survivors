@@ -117,7 +117,7 @@ export class DragonRush implements Attack {
         }
 
         // Stun para os que estão no raio
-        if (!killed && inStunRadius) {
+        if (!killed && inStunRadius && enemy.active && enemy.body) {
           enemy.setTint(0x7744ff);
           const body = enemy.body as Phaser.Physics.Arcade.Body;
           body.setVelocity(0, 0);

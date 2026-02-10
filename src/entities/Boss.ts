@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { BossConfig, BossAttackConfig, BossArchetype } from '../types';
+import type { BossConfig, BossAttackConfig, BossArchetype, AttackCategory } from '../types';
 import { Enemy } from './Enemy';
 
 export class Boss extends Enemy {
@@ -7,6 +7,7 @@ export class Boss extends Enemy {
   readonly resistance: number;
   readonly hpRegenPerSec: number;
   readonly archetype: BossArchetype;
+  private readonly _categoryResistance?: Partial<Record<AttackCategory, number>>;
 
   /** Cooldown tracking per attack (index → last fire timestamp) */
   private readonly attackCooldowns: number[];
@@ -17,6 +18,7 @@ export class Boss extends Enemy {
     this.resistance = config.resistance;
     this.hpRegenPerSec = config.hpRegenPerSec;
     this.archetype = config.archetype;
+    this._categoryResistance = config.categoryResistance;
     this.name = config.name;
     this.attackCooldowns = new Array(config.bossAttacks.length).fill(0);
   }
@@ -36,6 +38,10 @@ export class Boss extends Enemy {
   // ── Resistance applied via Enemy.takeDamage override ────────────
   override getResistance(): number {
     return this.resistance;
+  }
+
+  override getCategoryResistance(): Partial<Record<string, number>> | undefined {
+    return this._categoryResistance;
   }
 
   // ── Multi-attack selection ──────────────────────────────────────

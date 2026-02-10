@@ -14,6 +14,7 @@ export const FEAROW: BossConfig = {
   resistance: 0.05,
   hpRegenPerSec: 0,
   archetype: 'skirmisher',
+  categoryResistance: { orbital: 0.3 },
   bossAttacks: [{
     name: "Air Slash",
     pattern: "fan",

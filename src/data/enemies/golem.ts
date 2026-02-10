@@ -14,6 +14,7 @@ export const GOLEM: BossConfig = {
   resistance: 0.35,
   hpRegenPerSec: 15,
   archetype: 'tank',
+  categoryResistance: { orbital: 0.3 },
   bossAttacks: [{
     name: 'Explosion',
     pattern: 'aoe-tremor',

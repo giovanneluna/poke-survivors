@@ -62,6 +62,7 @@ class EventSystemImpl {
   private activeEclipse: ActiveEclipse | null = null;
   private activeSwarm: ActiveSwarm | null = null;
   private currentWaveIndex = 0;
+  private lastGameTime = 0;
 
   // ── Constants ──
   private static readonly HEAL_ZONE_RADIUS = 80;
@@ -163,6 +164,8 @@ class EventSystemImpl {
   // ── Update (chamado todo frame) ──────────────────────────────────────
 
   update(gameTime: number, _delta: number): void {
+    this.lastGameTime = gameTime;
+
     // Check timed events
     for (const evt of this.events) {
       if (evt.trigger !== 'timed') continue;
@@ -602,9 +605,8 @@ class EventSystemImpl {
   forceEvent(eventId: string): void {
     const evt = this.events.find(e => e.id === eventId);
     if (!evt) return;
-    const gameTime = this.ctx.scene.time.now;
-    evt.lastFiredAt = gameTime;
-    evt.execute(this.ctx, gameTime);
+    evt.lastFiredAt = this.lastGameTime;
+    evt.execute(this.ctx, this.lastGameTime);
   }
 
   // ── Cleanup ──────────────────────────────────────────────────────────

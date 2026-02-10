@@ -12,6 +12,7 @@ export const ALAKAZAM_BOSS: BossConfig = {
   scale: 2.0,
   isBoss: true,
   archetype: 'caster',
+  categoryResistance: { orbital: 0.3 },
   resistance: 0.3,
   hpRegenPerSec: 30,
   teleport: {

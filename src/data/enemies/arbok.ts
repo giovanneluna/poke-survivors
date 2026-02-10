@@ -14,6 +14,7 @@ export const ARBOK: BossConfig = {
   resistance: 0.1,
   hpRegenPerSec: 5,
   archetype: 'caster',
+  categoryResistance: { orbital: 0.3 },
   bossAttacks: [{
     name: 'Gunk Shot',
     pattern: 'fan',
