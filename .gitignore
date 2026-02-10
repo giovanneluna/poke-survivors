@@ -29,3 +29,6 @@ dist-ssr
 
 # Tauri (Rust build cache ~500MB+)
 src-tauri/target/
+
+# Ralph (temp files)
+scripts/ralph/.last-branch

@@ -1,0 +1,16 @@
+# Ralph Progress Log
+Started: 2026-02-10
+
+## Codebase Patterns
+- Phaser 3.90 + TypeScript strict + Vite
+- Attacks implement interface Attack (type, level, update, upgrade, destroy)
+- ALWAYS use `safeExplode()` from `src/utils/particles.ts` — never `scene.add.particles().explode()`
+- ALWAYS null-guard `enemy.body`: cast as `Body | null`, check before accessing velocity
+- ALWAYS call `setTexture()` + `body.reset()` + `play()` when getting sprite from shared pool
+- ALWAYS wrap VFX (trails, circles, emitters) in `if (shouldShowVfx()) { ... }` guard
+- NEVER create `scene.time.delayedCall()` inside periodic loops — use Set/Map for state + batch cleanup
+- Use SpatialHashGrid `queryRadius()` / `getActiveEnemies()` — never iterate all enemies manually
+- Config in `src/config.ts`, types in `src/types.ts`
+- Quality check: `npx tsc --noEmit`
+
+---

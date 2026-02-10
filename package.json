@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "ralph": "bash scripts/ralph/ralph.sh --tool claude",
+    "ralph:20": "bash scripts/ralph/ralph.sh --tool claude 20"
   },
   "dependencies": {
     "@tauri-apps/plugin-shell": "^2.3.5",
