@@ -2,8 +2,30 @@ import Phaser from "phaser"
 import { SoundManager } from "../audio/SoundManager"
 import { getCoins, initSaveSystem } from "../systems/SaveSystem"
 import { fontSize, scaled } from "../utils/ui-scale"
+import { CHANGELOG, CURRENT_VERSION } from "../data/changelog"
+import type { ChangeTag } from "../data/changelog"
+
+const CL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
+function fmtDate(iso: string): string {
+  const [y, m, d] = iso.split("-")
+  return `${parseInt(d, 10)} ${CL_MONTHS[parseInt(m, 10) - 1]} ${y}`
+}
+
+const TAG_COLORS: Record<ChangeTag, string> = {
+  NEW: "#44ff88",
+  FIX: "#44aaff",
+  BALANCE: "#ffaa44",
+  REMOVE: "#ff4444",
+}
 
 export class TitleScene extends Phaser.Scene {
+  private clOverlay: Phaser.GameObjects.GameObject[] = []
+  private clContainer: Phaser.GameObjects.Container | undefined
+  private clContentTop = 0
+  private clScrollOffset = 0
+  private clMaxScroll = 0
+
   constructor() {
     super({ key: "TitleScene" })
   }
@@ -483,19 +505,24 @@ export class TitleScene extends Phaser.Scene {
       })
     }
 
-    // ── Versão ───────────────────────────────────────────────────────
-    const versionBadge = this.add.graphics().setDepth(10)
-    const badgeW = scaled(90)
-    const badgeH = scaled(20)
+    // ── Versão (clicável → abre changelog) ────────────────────────
+    const badgeW = scaled(110)
+    const badgeH = scaled(22)
     const badgeX = width / 2 - badgeW / 2
     const badgeY = height - 55
-    versionBadge.fillStyle(0xff6600, 0.25)
-    versionBadge.fillRoundedRect(badgeX, badgeY, badgeW, badgeH, 5)
-    versionBadge.lineStyle(1, 0xff6600, 0.6)
-    versionBadge.strokeRoundedRect(badgeX, badgeY, badgeW, badgeH, 5)
+
+    const versionBadge = this.add.graphics().setDepth(10)
+    const drawBadge = (hover: boolean): void => {
+      versionBadge.clear()
+      versionBadge.fillStyle(hover ? 0xff8800 : 0xff6600, hover ? 0.4 : 0.25)
+      versionBadge.fillRoundedRect(badgeX, badgeY, badgeW, badgeH, 5)
+      versionBadge.lineStyle(1, hover ? 0xffaa44 : 0xff6600, hover ? 0.9 : 0.6)
+      versionBadge.strokeRoundedRect(badgeX, badgeY, badgeW, badgeH, 5)
+    }
+    drawBadge(false)
 
     const versionText = this.add
-      .text(width / 2, badgeY + badgeH / 2, "BETA 0.34", {
+      .text(width / 2, badgeY + badgeH / 2, `BETA ${CURRENT_VERSION} ▸`, {
         fontSize: fontSize(11),
         color: "#ff8844",
         fontFamily: "monospace",
@@ -504,13 +531,23 @@ export class TitleScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(10)
 
-    this.tweens.add({
-      targets: versionText,
-      alpha: 0.6,
-      duration: 1500,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.InOut",
+    const badgeHit = this.add
+      .rectangle(width / 2, badgeY + badgeH / 2, badgeW, badgeH, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(12)
+
+    badgeHit.on("pointerover", () => {
+      drawBadge(true)
+      versionText.setColor("#ffcc00")
+      SoundManager.playHover()
+    })
+    badgeHit.on("pointerout", () => {
+      drawBadge(false)
+      versionText.setColor("#ff8844")
+    })
+    badgeHit.on("pointerdown", () => {
+      SoundManager.playClick()
+      this.showChangelog()
     })
 
     // ── Créditos ─────────────────────────────────────────────────────
@@ -541,6 +578,216 @@ export class TitleScene extends Phaser.Scene {
     // ── Fade in ──────────────────────────────────────────────────────
     this.cameras.main.fadeIn(600, 0, 0, 0)
   }
+
+  // ── Changelog Overlay ───────────────────────────────────────────
+
+  private showChangelog(): void {
+    if (this.clOverlay.length > 0) return
+    const { width, height } = this.cameras.main
+
+    // Backdrop
+    const backdrop = this.add
+      .rectangle(width / 2, height / 2, width, height, 0x000000, 0.85)
+      .setDepth(50)
+      .setInteractive()
+    backdrop.on("pointerdown", () => this.hideChangelog())
+    this.clOverlay.push(backdrop)
+
+    // Panel dimensions
+    const pw = Math.min(width * 0.85, scaled(500))
+    const ph = height * 0.8
+    const px = (width - pw) / 2
+    const py = (height - ph) / 2
+
+    // Panel background
+    const panel = this.add.graphics().setDepth(51)
+    panel.fillStyle(0x1a1a2e, 0.98)
+    panel.fillRoundedRect(px, py, pw, ph, 12)
+    panel.lineStyle(2, 0xff8844, 0.8)
+    panel.strokeRoundedRect(px, py, pw, ph, 12)
+    // Inner glow line
+    panel.lineStyle(1, 0xff6600, 0.15)
+    panel.strokeRoundedRect(px + 3, py + 3, pw - 6, ph - 6, 10)
+    this.clOverlay.push(panel)
+
+    // Panel hitbox (absorbs clicks so backdrop doesn't close)
+    const panelHit = this.add
+      .rectangle(width / 2, height / 2, pw, ph, 0xffffff, 0)
+      .setDepth(51)
+      .setInteractive()
+    this.clOverlay.push(panelHit)
+
+    // Header
+    const header = this.add
+      .text(width / 2, py + scaled(18), "WHAT'S NEW", {
+        fontSize: fontSize(18),
+        color: "#ff8844",
+        fontFamily: "monospace",
+        fontStyle: "bold",
+        stroke: "#000000",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(52)
+    this.clOverlay.push(header)
+
+    // Separator below header
+    const sepGfx = this.add.graphics().setDepth(52)
+    sepGfx.lineStyle(1, 0xff6600, 0.3)
+    sepGfx.lineBetween(px + scaled(15), py + scaled(40), px + pw - scaled(15), py + scaled(40))
+    this.clOverlay.push(sepGfx)
+
+    // Close button
+    const closeBtn = this.add
+      .text(px + pw - scaled(12), py + scaled(8), "[X]", {
+        fontSize: fontSize(11),
+        color: "#ff4444",
+        fontFamily: "monospace",
+        fontStyle: "bold",
+      })
+      .setOrigin(1, 0)
+      .setDepth(53)
+      .setInteractive({ useHandCursor: true })
+    closeBtn.on("pointerover", () => closeBtn.setColor("#ff8888"))
+    closeBtn.on("pointerout", () => closeBtn.setColor("#ff4444"))
+    closeBtn.on("pointerdown", () => this.hideChangelog())
+    this.clOverlay.push(closeBtn)
+
+    // Content area
+    const contentTop = py + scaled(48)
+    const contentH = ph - scaled(60)
+    const contentW = pw - scaled(30)
+    const contentX = px + scaled(15)
+    this.clContentTop = contentTop
+
+    // Container for scrollable content
+    const container = this.add.container(contentX, contentTop).setDepth(52)
+    this.clContainer = container
+
+    // Build changelog entries
+    let cy = 0
+    for (const ver of CHANGELOG) {
+      // Version header
+      const verHead = this.add.text(0, cy, `▸ v${ver.version} — ${fmtDate(ver.date)}`, {
+        fontSize: fontSize(12),
+        color: "#ffcc00",
+        fontFamily: "monospace",
+        fontStyle: "bold",
+      })
+      container.add(verHead)
+      cy += scaled(18)
+
+      // Thin separator
+      const dashCount = Math.floor(contentW / (scaled(6.5)))
+      const sep = this.add.text(0, cy, "─".repeat(Math.min(dashCount, 60)), {
+        fontSize: fontSize(7),
+        color: "#333344",
+        fontFamily: "monospace",
+      })
+      container.add(sep)
+      cy += scaled(10)
+
+      // Entries
+      for (const entry of ver.entries) {
+        const tagColor = TAG_COLORS[entry.tag]
+
+        const tagTxt = this.add.text(scaled(2), cy, `[${entry.tag}]`, {
+          fontSize: fontSize(9),
+          color: tagColor,
+          fontFamily: "monospace",
+          fontStyle: "bold",
+        })
+        container.add(tagTxt)
+
+        const entryTxt = this.add.text(scaled(68), cy, entry.text, {
+          fontSize: fontSize(9),
+          color: "#cccccc",
+          fontFamily: "monospace",
+          wordWrap: { width: contentW - scaled(72) },
+        })
+        container.add(entryTxt)
+        cy += Math.max(scaled(15), entryTxt.height + scaled(3))
+      }
+
+      cy += scaled(12)
+    }
+
+    // Geometry mask
+    const maskShape = this.make.graphics({ x: 0, y: 0 })
+    maskShape.fillRect(contentX - 2, contentTop, contentW + 4, contentH)
+    const mask = maskShape.createGeometryMask()
+    container.setMask(mask)
+    this.clOverlay.push(container, maskShape)
+
+    // Scroll state
+    this.clScrollOffset = 0
+    this.clMaxScroll = Math.max(0, cy - contentH)
+
+    // Scroll hint if content overflows
+    if (this.clMaxScroll > 0) {
+      const hint = this.add
+        .text(width / 2, py + ph - scaled(12), "▼ scroll ▼", {
+          fontSize: fontSize(8),
+          color: "#666666",
+          fontFamily: "monospace",
+        })
+        .setOrigin(0.5)
+        .setDepth(52)
+      this.clOverlay.push(hint)
+    }
+
+    // Mouse wheel handler
+    this.input.on("wheel", this.onClWheel, this)
+
+    // Keyboard: ESC to close, UP/DOWN to scroll
+    this.input.keyboard?.on("keydown-ESC", this.onClEsc, this)
+    this.input.keyboard?.on("keydown-UP", this.onClUp, this)
+    this.input.keyboard?.on("keydown-DOWN", this.onClDown, this)
+  }
+
+  private hideChangelog(): void {
+    for (const obj of this.clOverlay) {
+      obj.destroy()
+    }
+    this.clOverlay = []
+    this.clContainer = undefined
+    this.clScrollOffset = 0
+
+    this.input.off("wheel", this.onClWheel, this)
+    this.input.keyboard?.off("keydown-ESC", this.onClEsc, this)
+    this.input.keyboard?.off("keydown-UP", this.onClUp, this)
+    this.input.keyboard?.off("keydown-DOWN", this.onClDown, this)
+  }
+
+  private onClWheel = (
+    _p: Phaser.Input.Pointer,
+    _g: Phaser.GameObjects.GameObject[],
+    _dx: number,
+    dy: number,
+  ): void => {
+    this.clScrollTo(this.clScrollOffset + dy * 0.5)
+  }
+
+  private onClEsc = (): void => {
+    this.hideChangelog()
+  }
+
+  private onClUp = (): void => {
+    this.clScrollTo(this.clScrollOffset - scaled(30))
+  }
+
+  private onClDown = (): void => {
+    this.clScrollTo(this.clScrollOffset + scaled(30))
+  }
+
+  private clScrollTo(offset: number): void {
+    this.clScrollOffset = Phaser.Math.Clamp(offset, 0, this.clMaxScroll)
+    if (this.clContainer) {
+      this.clContainer.y = this.clContentTop - this.clScrollOffset
+    }
+  }
+
+  // ── Helper methods ────────────────────────────────────────────────
 
   private drawPokeball(
     x: number,

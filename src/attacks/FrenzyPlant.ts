@@ -32,7 +32,7 @@ export class FrenzyPlant implements Attack {
     this.cooldown = ATTACKS.frenzyPlant.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.summon(),
     });
@@ -145,7 +145,7 @@ export class FrenzyPlant implements Attack {
     this.cooldown = Math.max(5000, this.cooldown - 400);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.summon(),
     });

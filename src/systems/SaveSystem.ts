@@ -32,6 +32,17 @@ export interface LifetimeStats {
   highestEvolution: string;
 }
 
+export interface LastRunData {
+  readonly starterKey: string;
+  readonly formName: string;
+  readonly level: number;
+  readonly kills: number;
+  readonly time: number; // seconds
+  readonly coinsEarned: number;
+  readonly difficulty: string;
+  readonly date: number; // timestamp
+}
+
 export interface SaveData {
   version: number;
   coins: number;
@@ -42,6 +53,7 @@ export interface SaveData {
     bestKills: number;
     bestLevel: number;
   };
+  lastRun?: LastRunData;
   stats: LifetimeStats;
   settings: {
     muted: boolean;
@@ -209,6 +221,18 @@ export function updateRecord(
     return true;
   }
   return false;
+}
+
+// ── Last Run ────────────────────────────────────────────────────────
+
+export function saveLastRun(run: LastRunData): void {
+  const d = ensureLoaded();
+  d.lastRun = run;
+  persist();
+}
+
+export function getLastRun(): LastRunData | undefined {
+  return ensureLoaded().lastRun;
 }
 
 // ── Power-ups ────────────────────────────────────────────────────────────

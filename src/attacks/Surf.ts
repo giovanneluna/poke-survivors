@@ -23,6 +23,7 @@ export class Surf implements Attack {
   private maxRadius = 150;
   private pushForce = 200;
   private readonly waveDuration = 1500;
+  private pendingCleanups: Array<() => void> = [];
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -31,7 +32,7 @@ export class Surf implements Attack {
     this.cooldown = ATTACKS.surf.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.wave(),
     });
@@ -130,10 +131,17 @@ export class Surf implements Attack {
       },
     });
 
+    let cleaned = false;
     const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
       tickEvent.destroy();
       ring.destroy();
+      if (surfSprite.active) surfSprite.destroy();
+      const idx = this.pendingCleanups.indexOf(cleanup);
+      if (idx !== -1) this.pendingCleanups.splice(idx, 1);
     };
+    this.pendingCleanups.push(cleanup);
 
     // Safety cleanup
     this.scene.time.delayedCall(this.waveDuration + 500, cleanup);
@@ -149,7 +157,7 @@ export class Surf implements Attack {
     this.cooldown = Math.max(3500, this.cooldown - 400);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.wave(),
     });
@@ -157,5 +165,7 @@ export class Surf implements Attack {
 
   destroy(): void {
     this.timer.destroy();
+    for (const fn of [...this.pendingCleanups]) fn();
+    this.pendingCleanups.length = 0;
   }
 }

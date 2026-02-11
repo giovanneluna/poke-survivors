@@ -9,6 +9,7 @@ interface ActiveCone {
   sprite: Phaser.GameObjects.Sprite;
   hitEnemies: Set<number>;
   dirAngleRad: number;
+  followFn: () => void;
 }
 
 /**
@@ -41,7 +42,7 @@ export class HydroPump implements Attack {
     this.cooldown = ATTACKS.hydroPump.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });
@@ -71,6 +72,7 @@ export class HydroPump implements Attack {
       sprite: beam,
       hitEnemies: new Set(),
       dirAngleRad,
+      followFn: followBeam,
     };
 
     beam.once('animationcomplete', () => {
@@ -140,7 +142,7 @@ export class HydroPump implements Attack {
     this.cooldown = Math.max(1600, this.cooldown - 200);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });
@@ -148,6 +150,10 @@ export class HydroPump implements Attack {
 
   destroy(): void {
     this.timer.destroy();
-    this.activeCone = null;
+    if (this.activeCone) {
+      this.scene.events.off('update', this.activeCone.followFn);
+      if (this.activeCone.sprite.active) this.activeCone.sprite.destroy();
+      this.activeCone = null;
+    }
   }
 }

@@ -69,7 +69,7 @@ export class Crabhammer implements Attack {
     this.cooldown = ATTACKS.crabhammer.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.swipe(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.swipe(),
     });
   }
 
@@ -197,10 +197,10 @@ export class Crabhammer implements Attack {
     this.damage += 6;
     this.range += 5;
     this.critChance = Math.min(0.70, this.critChance + 0.03);
-    this.cooldown = Math.max(350, this.cooldown - 40);
+    this.cooldown = Math.max(1500, this.cooldown - 40);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.swipe(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.swipe(),
     });
   }
 

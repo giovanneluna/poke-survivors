@@ -33,12 +33,12 @@ export const XP_GEM = {
 export const DIFFICULTY: Readonly<Record<Difficulty, DifficultyConfig>> = {
   easy: {
     label: 'FÁCIL',
-    description: 'Menos inimigos\nMais XP · Menos ₽',
+    description: 'Menos inimigos\nMais XP · ₽ ×0.3',
     color: 0x44bb44,
     spawnRateMultiplier: 1.5,
     maxEnemiesMultiplier: 0.5,
     xpMultiplier: 2.0,
-    coinMultiplier: 0.1,
+    coinMultiplier: 0.3,
   },
   medium: {
     label: 'MÉDIO',

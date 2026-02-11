@@ -59,6 +59,7 @@ export class UIScene extends Phaser.Scene {
   private lastAttacksHash = '';
   private levelUpContainer!: Phaser.GameObjects.Container;
   private gameOverContainer!: Phaser.GameObjects.Container;
+  private victoryContainer!: Phaser.GameObjects.Container;
   private evolutionContainer!: Phaser.GameObjects.Container;
   private bossHpContainer!: Phaser.GameObjects.Container;
   private gachaContainer!: Phaser.GameObjects.Container;
@@ -163,6 +164,7 @@ export class UIScene extends Phaser.Scene {
 
     this.levelUpContainer = this.add.container(0, 0).setDepth(200).setVisible(false);
     this.gameOverContainer = this.add.container(0, 0).setDepth(200).setVisible(false);
+    this.victoryContainer = this.add.container(0, 0).setDepth(200).setVisible(false);
     this.evolutionContainer = this.add.container(0, 0).setDepth(250).setVisible(false);
     this.bossHpContainer = this.add.container(0, 0).setDepth(150).setVisible(false);
     this.gachaContainer = this.add.container(0, 0).setDepth(300).setVisible(false);
@@ -243,6 +245,7 @@ export class UIScene extends Phaser.Scene {
     gameScene.events.on('stats-update', (stats: StatsData) => this.updateHUD(stats));
     gameScene.events.on('level-up', (options: UpgradeOption[], level: number, rerolls: number) => this.showLevelUp(options, level, rerolls));
     gameScene.events.on('game-over', (data: GameOverData) => this.showGameOver(data));
+    this.events.on('show-victory', (data: GameOverData) => this.showVictory(data));
     gameScene.events.on('pokemon-evolved', (data: { fromName: string; toName: string; form: string; newSlots: number }) => {
       this.showEvolutionOverlay(data.fromName, data.toName);
     });
@@ -1288,8 +1291,8 @@ export class UIScene extends Phaser.Scene {
       rewardName = 'HELD ITEM!';
       rewardColor = '#44aaff';
     } else if (roll < 70) {
-      rewardType = 'rareCandy';
-      rewardName = 'RARE CANDY!';
+      rewardType = 'coinLarge';
+      rewardName = 'BIG COINS!';
       rewardColor = '#FFD700';
     } else if (roll < 85) {
       rewardType = 'evolutionStone';
@@ -1827,6 +1830,164 @@ export class UIScene extends Phaser.Scene {
     closeBtn.on('pointerout', () => closeBtn.setColor('#888888'));
     closeBtn.on('pointerdown', () => { SoundManager.playClick(); container.destroy(); });
     container.add(closeBtn);
+  }
+
+  // ── Victory Screen — "FASE 1 COMPLETA" ──────────────────────────
+  private showVictory(data: GameOverData): void {
+    const { width, height } = this.cameras.main;
+    this.victoryContainer.removeAll(true);
+
+    const bg = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.85);
+    bg.setInteractive();
+    this.victoryContainer.add(bg);
+    this.victoryContainer.setVisible(true);
+
+    // ── Title ─────────────────────────────────────────────────────
+    const title = this.add.text(width / 2, scaled(25), 'FASE 1 COMPLETA!', {
+      fontSize: fontSize(30), color: '#ffd700', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(6),
+    }).setOrigin(0.5).setAlpha(0);
+    this.victoryContainer.add(title);
+    this.tweens.add({ targets: title, alpha: 1, scaleX: { from: 1.5, to: 1 }, scaleY: { from: 1.5, to: 1 }, duration: 500, ease: 'Back.Out' });
+
+    const subtitle = this.add.text(width / 2, scaled(55), 'FIRE RED', {
+      fontSize: fontSize(14), color: '#ff6644', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(3),
+    }).setOrigin(0.5).setAlpha(0);
+    this.victoryContainer.add(subtitle);
+    this.tweens.add({ targets: subtitle, alpha: 1, duration: 400, delay: 300 });
+
+    // ── Form name ─────────────────────────────────────────────────
+    const nameColor = data.starterKey === 'squirtle' ? '#44aaff' : data.starterKey === 'bulbasaur' ? '#22cc44' : '#ff8844';
+    const formText = this.add.text(width / 2, scaled(72), data.formName ?? 'Pokemon', {
+      fontSize: fontSize(12), color: nameColor, fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(2),
+    }).setOrigin(0.5).setAlpha(0);
+    this.victoryContainer.add(formText);
+    this.tweens.add({ targets: formText, alpha: 1, duration: 300, delay: 500 });
+
+    const minutes = Math.floor(data.time / 60);
+    const seconds = data.time % 60;
+    const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const rs = data.runStats;
+
+    // ── Stats grid ────────────────────────────────────────────────
+    const colLeftX = width / 2 - scaled(100);
+    const colRightX = width / 2 + scaled(100);
+    let yPos = scaled(98);
+    const rowH = scaled(22);
+    let animDelay = 500;
+
+    const addStatRow = (x: number, label: string, value: string, color = '#ffffff'): void => {
+      const labelT = this.add.text(x - scaled(5), yPos, label, {
+        fontSize: fontSize(11), color: '#888888', fontFamily: 'monospace',
+        stroke: '#000000', strokeThickness: scaled(2),
+      }).setOrigin(1, 0).setAlpha(0);
+      this.victoryContainer.add(labelT);
+
+      const valueT = this.add.text(x + scaled(5), yPos, value, {
+        fontSize: fontSize(12), color, fontFamily: 'monospace', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: scaled(2),
+      }).setOrigin(0, 0).setAlpha(0);
+      this.victoryContainer.add(valueT);
+
+      this.tweens.add({ targets: [labelT, valueT], alpha: 1, y: yPos - scaled(3), duration: 300, delay: animDelay, ease: 'Power2' });
+      animDelay += 80;
+    };
+
+    addStatRow(colLeftX, 'Tempo:', timeStr, '#ffffff');
+    yPos += rowH;
+    addStatRow(colLeftX, 'Level:', `${data.level}`, '#ffcc00');
+    yPos += rowH;
+    addStatRow(colLeftX, 'Kills:', `${data.kills}`, '#ff6666');
+    yPos += rowH;
+    addStatRow(colLeftX, 'Best Combo:', `${data.bestCombo ?? 0}x`, '#ffffff');
+
+    yPos = scaled(98);
+    if (rs) {
+      addStatRow(colRightX, 'Dano Total:', rs.totalDamageDealt >= 1000 ? `${(rs.totalDamageDealt / 1000).toFixed(1)}k` : `${Math.floor(rs.totalDamageDealt)}`, '#ff8844');
+      yPos += rowH;
+      addStatRow(colRightX, 'Bosses:', `${rs.bossesDefeated.length}`, '#ffdd44');
+      yPos += rowH;
+      addStatRow(colRightX, 'Berries:', `${rs.berriesCollected}`, '#44ff44');
+      yPos += rowH;
+      addStatRow(colRightX, 'XP:', `${rs.xpCollected}`, '#44bbff');
+    }
+
+    // ── PokeDollars earned ──────────────────────────────────────
+    yPos = scaled(192);
+    const coinsEarned = data.coinsEarned ?? 0;
+    const coinLabel = this.add.text(width / 2, yPos, 'POKÉDOLLARS GANHOS', {
+      fontSize: fontSize(10), color: '#666666', fontFamily: 'monospace',
+    }).setOrigin(0.5).setAlpha(0);
+    this.victoryContainer.add(coinLabel);
+
+    const coinValueText = this.add.text(width / 2, yPos + scaled(16), '₽ 0', {
+      fontSize: fontSize(22), color: '#ffd700', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(4),
+    }).setOrigin(0.5).setAlpha(0);
+    this.victoryContainer.add(coinValueText);
+
+    this.tweens.add({
+      targets: [coinLabel, coinValueText], alpha: 1, duration: 300, delay: animDelay,
+      onComplete: () => {
+        const counter = { value: 0 };
+        this.tweens.add({
+          targets: counter,
+          value: coinsEarned,
+          duration: Math.min(1500, coinsEarned * 5),
+          ease: 'Power2',
+          onUpdate: () => {
+            if (coinValueText.active) coinValueText.setText(`₽ ${Math.floor(counter.value)}`);
+          },
+        });
+      },
+    });
+    animDelay += 300;
+
+    // ── Victory message ────────────────────────────────────────────
+    yPos += scaled(50);
+    const victoryMsg = this.add.text(width / 2, yPos, 'Todos os bosses foram derrotados!\nVoce pode continuar jogando livremente.', {
+      fontSize: fontSize(10), color: '#aaaaaa', fontFamily: 'monospace', align: 'center',
+      stroke: '#000000', strokeThickness: scaled(2),
+    }).setOrigin(0.5).setAlpha(0);
+    this.victoryContainer.add(victoryMsg);
+    this.tweens.add({ targets: victoryMsg, alpha: 1, duration: 300, delay: animDelay });
+
+    // ── Buttons ─────────────────────────────────────────────────
+    const btnY = Math.min(yPos + scaled(40), height - scaled(60));
+
+    const continueBtn = this.add.text(width / 2, btnY, '[ CONTINUAR ]', {
+      fontSize: fontSize(18), color: '#44ff44', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: scaled(3),
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setAlpha(0);
+    this.victoryContainer.add(continueBtn);
+
+    continueBtn.on('pointerover', () => { continueBtn.setColor('#ffffff'); SoundManager.playHover(); });
+    continueBtn.on('pointerout', () => continueBtn.setColor('#44ff44'));
+    continueBtn.on('pointerdown', () => {
+      SoundManager.playClick();
+      this.victoryContainer.setVisible(false);
+      this.victoryContainer.removeAll(true);
+      this.scene.get('GameScene').events.emit('resume-game');
+    });
+
+    const menuBtn = this.add.text(width / 2, btnY + scaled(30), '[ MENU PRINCIPAL ]', {
+      fontSize: fontSize(12), color: '#888888', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: scaled(2),
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setAlpha(0);
+    this.victoryContainer.add(menuBtn);
+
+    menuBtn.on('pointerover', () => { menuBtn.setColor('#ffffff'); SoundManager.playHover(); });
+    menuBtn.on('pointerout', () => menuBtn.setColor('#888888'));
+    menuBtn.on('pointerdown', () => {
+      SoundManager.playClick();
+      this.events.emit('victory-quit');
+      this.scene.stop('GameScene');
+      this.scene.start('TitleScene');
+    });
+
+    this.tweens.add({ targets: [continueBtn, menuBtn], alpha: 1, duration: 400, delay: animDelay + 300 });
   }
 
   private showGameOver(data: GameOverData): void {

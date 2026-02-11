@@ -26,6 +26,7 @@ export class Whirlpool implements Attack {
   private duration = 2500;
   private readonly slowMultiplier = 0.4;
   private readonly slowDurationMs = 1000;
+  private pendingCleanups: Array<() => void> = [];
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -34,7 +35,7 @@ export class Whirlpool implements Attack {
     this.cooldown = ATTACKS.whirlpool.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.summon(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.summon(),
     });
   }
 
@@ -148,7 +149,10 @@ export class Whirlpool implements Attack {
       },
     });
 
+    let cleaned = false;
     const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
       tickEvent.destroy();
       waterEmitter?.destroy();
 
@@ -162,15 +166,20 @@ export class Whirlpool implements Attack {
       enemiesInside.clear();
 
       // Fade out visual
-      this.scene.tweens.add({
-        targets: [vortex, innerRing],
-        alpha: 0, scale: 0.3, duration: 300,
-        onComplete: () => {
-          vortex.destroy();
-          innerRing.destroy();
-        },
-      });
+      if (vortex.active) {
+        this.scene.tweens.add({
+          targets: [vortex, innerRing],
+          alpha: 0, scale: 0.3, duration: 300,
+          onComplete: () => {
+            if (vortex.active) vortex.destroy();
+            if (innerRing.active) innerRing.destroy();
+          },
+        });
+      }
+      const idx = this.pendingCleanups.indexOf(cleanup);
+      if (idx !== -1) this.pendingCleanups.splice(idx, 1);
     };
+    this.pendingCleanups.push(cleanup);
 
     // Safety cleanup
     this.scene.time.delayedCall(this.duration + 500, cleanup);
@@ -205,9 +214,13 @@ export class Whirlpool implements Attack {
     this.cooldown = Math.max(2500, this.cooldown - 300);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.summon(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.summon(),
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.timer.destroy();
+    for (const fn of [...this.pendingCleanups]) fn();
+    this.pendingCleanups.length = 0;
+  }
 }

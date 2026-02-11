@@ -31,7 +31,7 @@ export class SeedBomb implements Attack {
     this.cooldown = ATTACKS.seedBomb.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.launch(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.launch(),
     });
   }
 
@@ -103,10 +103,10 @@ export class SeedBomb implements Attack {
     if (this.level % 3 === 0 && this.bombCount < 6) {
       this.bombCount++;
     }
-    this.cooldown = Math.max(800, this.cooldown - 80);
+    this.cooldown = Math.max(900, this.cooldown - 80);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.launch(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.launch(),
     });
   }
 

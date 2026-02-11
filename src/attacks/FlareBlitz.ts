@@ -31,7 +31,7 @@ export class FlareBlitz implements Attack {
     this.cooldown = ATTACKS.flareBlitz.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.blitz(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.blitz(),
     });
   }
 
@@ -132,7 +132,7 @@ export class FlareBlitz implements Attack {
     this.cooldown = Math.max(2500, this.cooldown - 200);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.blitz(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.blitz(),
     });
   }
 

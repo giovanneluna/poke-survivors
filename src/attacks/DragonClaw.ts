@@ -37,7 +37,7 @@ export class DragonClaw implements Attack {
     this.cooldown = ATTACKS.dragonClaw.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.strike(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.strike(),
     });
   }
 
@@ -122,10 +122,10 @@ export class DragonClaw implements Attack {
     this.damage += 4;
     this.range += 5;
     if (this.level % 3 === 0) this.hitCount++;
-    this.cooldown = Math.max(600, this.cooldown - 80);
+    this.cooldown = Math.max(900, this.cooldown - 80);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.strike(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.strike(),
     });
   }
 

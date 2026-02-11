@@ -36,7 +36,7 @@ export class VineWhip implements Attack {
     this.cooldown = ATTACKS.vineWhip.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.swipe(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.swipe(),
     });
   }
 
@@ -108,10 +108,10 @@ export class VineWhip implements Attack {
     this.level++;
     this.damage += 4;
     this.range += 8;
-    this.cooldown = Math.max(400, this.cooldown - 60);
+    this.cooldown = Math.max(600, this.cooldown - 60);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.swipe(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.swipe(),
     });
   }
 

@@ -32,7 +32,7 @@ export class HydroCannon implements Attack {
     this.cooldown = ATTACKS.hydroCannon.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.blast(),
     });
@@ -240,7 +240,7 @@ export class HydroCannon implements Attack {
     this.cooldown = Math.max(6000, this.cooldown - 800);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.blast(),
     });

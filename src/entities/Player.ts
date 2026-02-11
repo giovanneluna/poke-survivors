@@ -83,6 +83,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       hpRegen: 3,
       xpMultiplier: 1,
       projectileBonus: 0,
+      attackSpeedBonus: 0,
       xp: 0,
       xpToNext: PLAYER.baseXpToLevel,
       level: 1,
@@ -248,6 +249,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   heal(amount: number): void {
     this.stats.hp = Math.min(this.stats.maxHp, this.stats.hp + amount)
+  }
+
+  getAdjustedCooldown(cooldown: number): number {
+    const bonus = this.stats.attackSpeedBonus;
+    if (bonus <= 0) return cooldown;
+    return Math.max(100, Math.floor(cooldown * (1 - bonus)));
   }
 
   setInvincible(until: number): void {

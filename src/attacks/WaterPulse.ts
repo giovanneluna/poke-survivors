@@ -39,7 +39,7 @@ export class WaterPulse implements Attack {
     });
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });
@@ -189,10 +189,10 @@ export class WaterPulse implements Attack {
     if (this.level % 3 === 0) {
       this.projectileCount++;
     }
-    this.cooldown = Math.max(600, this.cooldown - 150);
+    this.cooldown = Math.max(900, this.cooldown - 150);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });

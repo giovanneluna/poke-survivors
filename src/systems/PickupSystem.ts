@@ -19,6 +19,12 @@ export class PickupSystem {
   constructor(private readonly ctx: GameContext) {}
 
   getRunCoins(): number { return this.runCoins; }
+  resetRunCoins(): void { this.runCoins = 0; this.ctx.scene.events.emit('coins-changed', 0); }
+
+  addCoins(amount: number): void {
+    this.runCoins += amount;
+    this.ctx.scene.events.emit('coins-changed', this.runCoins);
+  }
 
   // ── XP Gems (tiered) ──────────────────────────────────────────────
   private static readonly XP_TIERS: ReadonlyArray<{ threshold: number; texture: string; value: number; scale: number }> = [
@@ -131,7 +137,7 @@ export class PickupSystem {
   dropHeldItem(x: number, y: number): void {
     const items: HeldItemType[] = [
       'charcoal', 'wideLens', 'choiceSpecs', 'dragonFang', 'sharpBeak',
-      'scopeLens', 'razorClaw', 'shellBell', 'focusBand', 'quickClaw', 'leftovers',
+      'scopeLens', 'razorClaw', 'shellBell', 'focusBand', 'quickClaw', 'leftovers', 'quickPowder',
     ];
     const available = items.filter(i => !this.ctx.player.hasHeldItem(i));
     if (available.length === 0) {
@@ -161,6 +167,7 @@ export class PickupSystem {
       bigRoot: 'item-big-root',
       blackSludge: 'item-black-sludge',
       leafStone: 'item-leaf-stone',
+      quickPowder: 'item-quick-powder',
     };
 
     const pickup = new Pickup(this.ctx.scene, x, y, 'oranBerry', textureMap[item] ?? 'item-charcoal');
@@ -285,9 +292,15 @@ export class PickupSystem {
         break;
 
       case 'duplicator':
+        if (player.stats.projectileBonus >= 3) {
+          SoundManager.playPickupItem();
+          this.showPickupNotification('MAX PROJ! +50₽', 0xffcc00);
+          this.addCoins(50);
+          break;
+        }
         player.stats.projectileBonus += 1;
         SoundManager.playPickupItem();
-        this.showPickupNotification('DUPLICATOR! +1 Projétil!', 0x44dd44);
+        this.showPickupNotification(`DUPLICATOR! +1 Projétil (${player.stats.projectileBonus}/3)`, 0x44dd44);
         break;
 
       case 'friendBall':

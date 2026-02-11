@@ -25,7 +25,7 @@ export const PHASE4: PhaseConfig = {
     { enemies: [{ type: 'electrode', weight: 1 }, { type: 'alakazam', weight: 2 }, { type: 'hypno', weight: 2 }, { type: 'marowak', weight: 1 }],
       spawnRate: 125, maxEnemies: 50 },
 
-    // ── BOSS: Beedrill ×2 @ 33:00 ──
+    // ── BOSS: Pidgeot @ 31:00 ──
 
     // Wave 66 (33:00): Post-boss — Electrode mais presente
     { enemies: [{ type: 'electrode', weight: 1 }, { type: 'venomoth', weight: 1 }, { type: 'parasect', weight: 1 }, { type: 'hypno', weight: 1 }],
@@ -46,7 +46,8 @@ export const PHASE4: PhaseConfig = {
     { enemies: [{ type: 'electrode', weight: 1 }, { type: 'venomoth', weight: 1 }, { type: 'alakazam', weight: 2 }, { type: 'hypno', weight: 2 }],
       spawnRate: 95, maxEnemies: 62 },
 
-    // ── BOSS: Gengar ×2 @ 36:00 ──
+    // ── BOSS: Golem @ 34:00 ──
+    // ── BOSS: Machamp @ 37:00 ──
 
     // Wave 72 (36:00): Endgame push
     { enemies: [{ type: 'alakazam', weight: 2 }, { type: 'electrode', weight: 1 }, { type: 'marowak', weight: 2 }, { type: 'machoke', weight: 1 }],
@@ -67,7 +68,7 @@ export const PHASE4: PhaseConfig = {
     { enemies: [{ type: 'alakazam', weight: 2 }, { type: 'electrode', weight: 1 }, { type: 'hypno', weight: 2 }, { type: 'venomoth', weight: 1 }],
       spawnRate: 68, maxEnemies: 78 },
 
-    // ── BOSS: Snorlax ×2 @ 39:00 ──
+    // ── Pre-Final Boss ──
 
     // Wave 78 (39:00): Final wave — elite mix
     { enemies: [{ type: 'alakazam', weight: 2 }, { type: 'electrode', weight: 1 }, { type: 'hypno', weight: 2 }, { type: 'marowak', weight: 1 }, { type: 'venomoth', weight: 1 }],
@@ -78,16 +79,10 @@ export const PHASE4: PhaseConfig = {
   ],
 
   bosses: [
-    { type: 'beedrill', timeSeconds: 1800, count: 2, hpMultiplier: 1.5, dmgMultiplier: 1.3 },
-    { type: 'gengar',   timeSeconds: 1980, count: 2, hpMultiplier: 1.5, dmgMultiplier: 1.3 },
-    { type: 'snorlax',  timeSeconds: 2160, count: 2, hpMultiplier: 1.5, dmgMultiplier: 1.3 },
-    { type: 'machamp',  timeSeconds: 2250, hpMultiplier: 1.5, dmgMultiplier: 1.3 },
-    { type: 'nidoking', timeSeconds: 2340, hpMultiplier: 2, dmgMultiplier: 1.5 },
-    { type: 'machamp',  timeSeconds: 2342, hpMultiplier: 2, dmgMultiplier: 1.5 },
-    { type: 'gengar',   timeSeconds: 2344, hpMultiplier: 2, dmgMultiplier: 1.5 },
-    { type: 'snorlax',  timeSeconds: 2346, hpMultiplier: 2, dmgMultiplier: 1.5 },
-    { type: 'golem',    timeSeconds: 2348, hpMultiplier: 2, dmgMultiplier: 1.5 },
+    { type: 'pidgeot',       timeSeconds: 2400 },   // 40:00
+    { type: 'golem',         timeSeconds: 2640 },   // 44:00
+    { type: 'machamp',       timeSeconds: 2880 },   // 48:00
     // ── BOSS FINAL: Alakazam — Caster Supremo ──
-    { type: 'alakazam-boss', timeSeconds: 2400 },
+    { type: 'alakazam-boss', timeSeconds: 3120 },   // 52:00
   ],
 };

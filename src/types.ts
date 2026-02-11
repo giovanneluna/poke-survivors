@@ -11,6 +11,7 @@ export interface PokemonFormConfig {
   readonly maxAttackSlots: number;
   readonly maxPassiveSlots: number;
   readonly passiveTier: 1 | 2 | 3;
+  readonly types?: readonly string[];
 }
 
 // ── Tipos de Ataque (todos, incluindo evoluções) ─────────────────
@@ -104,7 +105,8 @@ export type HeldItemType =
   | 'scopeLens' | 'razorClaw' | 'focusBand' | 'metronome' | 'magnet'
   | 'mysticWater' | 'neverMeltIce'
   | 'miracleSeed' | 'bigRoot' | 'blackSludge' | 'leafStone'
-  | 'revive';
+  | 'revive'
+  | 'quickPowder';
 
 export type PickupType = 'oranBerry' | 'sitrusBerry' | 'liechiBerry' | 'salacBerry' | 'magnetBurst' | 'rareCandy' | 'pokeballBomb' | 'gachaBox' | 'xpShare' | 'duplicator' | 'friendBall' | 'coinSmall' | 'coinMedium' | 'coinLarge';
 export type DestructibleType = 'tallGrass' | 'berryBush' | 'rockSmash' | 'treasureChest';
@@ -288,7 +290,7 @@ export interface PhaseConfig {
 }
 
 // ── Gacha Rewards ───────────────────────────────────────────────────
-export type GachaRewardType = 'skillUpgrade' | 'heldItem' | 'rareCandy' | 'evolutionStone' | 'maxRevive' | 'revive';
+export type GachaRewardType = 'skillUpgrade' | 'heldItem' | 'rareCandy' | 'evolutionStone' | 'maxRevive' | 'revive' | 'coinLarge';
 
 // ── Held Items (Passivos) ──────────────────────────────────────────
 export interface HeldItemConfig {
@@ -378,6 +380,7 @@ export interface PlayerState {
   hpRegen: number;
   xpMultiplier: number;
   projectileBonus: number;
+  attackSpeedBonus: number;
   xp: number;
   xpToNext: number;
   level: number;
@@ -406,6 +409,7 @@ export interface UpgradeOption {
   readonly description: string;
   readonly icon: string;
   readonly color: number;
+  readonly requiredType?: string;
 }
 
 // ── Wave de inimigos ───────────────────────────────────────────────

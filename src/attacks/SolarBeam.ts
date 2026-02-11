@@ -41,7 +41,7 @@ export class SolarBeam implements Attack {
     });
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });
@@ -176,7 +176,7 @@ export class SolarBeam implements Attack {
     this.cooldown = Math.max(2500, this.cooldown - 200);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });

@@ -35,6 +35,7 @@ import {
   addCoins,
   updateRecord,
   accumulateRunStats,
+  saveLastRun,
   getPowerUpLevel,
 } from "../systems/SaveSystem"
 import { Boss } from "../entities/Boss"
@@ -53,6 +54,8 @@ export class GameScene extends Phaser.Scene {
   private rerollLocked = false
   private joystick: VirtualJoystick | null = null
   private debugMode = false
+  private runSaved = false
+  private onBeforeUnload: (() => void) | null = null
   private starterKey = "charmander"
   private difficulty: Difficulty = "hard"
   private starterConfig!: StarterConfig
@@ -115,7 +118,7 @@ export class GameScene extends Phaser.Scene {
     this.player.stats.speed *= 1 + getPowerUpLevel("speed") * 0.05
     this.player.stats.baseSpeed = this.player.stats.speed
     this.player.stats.xpMultiplier *= 1 + getPowerUpLevel("xpGain") * 0.1
-    this.player.stats.magnetRange += getPowerUpLevel("magnetRange") * 10
+    this.player.stats.magnetRange += getPowerUpLevel("magnetRange") * 5
     this.player.stats.revives += getPowerUpLevel("revival")
     this.player.stats.rerolls += getPowerUpLevel("reroll")
 
@@ -452,6 +455,113 @@ export class GameScene extends Phaser.Scene {
       )
     })
 
+    // ── F5 save guard — salva coins ao recarregar a página ─────────
+    this.runSaved = false
+    this.onBeforeUnload = (): void => {
+      if (this.runSaved) return
+      this.runSaved = true
+      const collectedCoins = this.pickupSystem.getRunCoins()
+      if (collectedCoins > 0) addCoins(collectedCoins)
+    }
+    window.addEventListener("beforeunload", this.onBeforeUnload)
+    this.events.once("shutdown", () => {
+      if (this.onBeforeUnload) {
+        window.removeEventListener("beforeunload", this.onBeforeUnload)
+        this.onBeforeUnload = null
+      }
+    })
+
+    // ── Phase-complete: todos os bosses derrotados ────────────────
+    this.events.on("phase-complete", () => {
+      this.isPaused = true
+      this.physics.pause()
+      this.time.paused = true
+
+      const tracker = getStatsTracker()
+      tracker.setLevel(this.player.stats.level)
+      tracker.setForm(this.player.stats.form)
+      tracker.setAttacks(
+        this.player
+          .getAllAttacks()
+          .map((a) => ({ type: a.type, level: a.level })),
+      )
+      tracker.setItems(this.player.getHeldItems())
+
+      const runStats = tracker.getRunStats()
+      const timeSeconds = Math.floor(this.gameTime / 1000)
+      const collectedCoins = this.pickupSystem.getRunCoins()
+      const bonusCoins = Math.floor(
+        timeSeconds * 0.5 + runStats.levelReached * 5,
+      )
+      const diffConfig = DIFFICULTY[this.difficulty]
+      const coinsEarned = Math.floor(
+        (collectedCoins + bonusCoins) * diffConfig.coinMultiplier,
+      )
+
+      // Salvar coins imediatamente (stats serão salvos no game over ou menu)
+      addCoins(coinsEarned)
+      this.pickupSystem.resetRunCoins()
+
+      const bestCombo = getComboSystem().getBestCombo()
+      const formName =
+        this.starterConfig.forms.find(
+          (f) => f.form === this.player.stats.form,
+        )?.name ?? this.starterConfig.name
+
+      this.scene.get("UIScene").events.emit("show-victory", {
+        level: this.player.stats.level,
+        kills: this.player.stats.kills,
+        time: timeSeconds,
+        runStats,
+        coinsEarned,
+        bestCombo,
+        starterKey: this.starterKey,
+        formName,
+      })
+    })
+
+    // ── Victory quit: jogador sai pelo menu principal após vitória ──
+    this.scene.get("UIScene").events.on("victory-quit", () => {
+      // Salvar stats finais antes de sair
+      const tracker = getStatsTracker()
+      const runStats = tracker.getRunStats()
+      const timeSeconds = Math.floor(this.gameTime / 1000)
+      accumulateRunStats({
+        kills: runStats.totalKills,
+        bossesDefeated: runStats.bossesDefeated.length,
+        damageDealt: runStats.totalDamageDealt,
+        coinsEarned: 0,
+        timePlayed: timeSeconds,
+        distance: runStats.distanceTraveled,
+        berries: runStats.berriesCollected,
+        xp: runStats.xpCollected,
+        combo: getComboSystem().getBestCombo(),
+        starterKey: this.starterKey,
+        formName:
+          this.starterConfig.forms.find(
+            (f) => f.form === this.player.stats.form,
+          )?.name ?? this.starterConfig.name,
+        damageByAttack: runStats.damageByAttack,
+      })
+      const formName =
+        this.starterConfig.forms.find(
+          (f) => f.form === this.player.stats.form,
+        )?.name ?? this.starterConfig.name
+      saveLastRun({
+        starterKey: this.starterKey,
+        formName,
+        level: runStats.levelReached,
+        kills: runStats.totalKills,
+        time: timeSeconds,
+        coinsEarned: 0,
+        difficulty: this.difficulty,
+        date: Date.now(),
+      })
+      getMusicManager()?.fadeOut(1000)
+      getEventSystem().destroy()
+      clearSpores()
+    })
+
     // ── Initial state ───────────────────────────────────────────────
     this.gameTime = 0
     this.emitStats()
@@ -589,6 +699,12 @@ export class GameScene extends Phaser.Scene {
     this.physics.pause()
     SoundManager.playGameOver()
 
+    // Remove F5 save handler (coins serão salvos abaixo)
+    if (this.onBeforeUnload) {
+      window.removeEventListener("beforeunload", this.onBeforeUnload)
+      this.onBeforeUnload = null
+    }
+
     // ── Finalize run stats ─────────────────────────────────────────
     const tracker = getStatsTracker()
     tracker.setLevel(this.player.stats.level)
@@ -626,6 +742,18 @@ export class GameScene extends Phaser.Scene {
         ?.name ?? this.starterConfig.name,
       damageByAttack: runStats.damageByAttack,
     })
+    const formName = this.starterConfig.forms.find((f) => f.form === this.player.stats.form)
+      ?.name ?? this.starterConfig.name
+    saveLastRun({
+      starterKey: this.starterKey,
+      formName,
+      level: runStats.levelReached,
+      kills: runStats.totalKills,
+      time: timeSeconds,
+      coinsEarned,
+      difficulty: this.difficulty,
+      date: Date.now(),
+    })
     const newRecords = {
       time: updateRecord("bestTime", timeSeconds),
       kills: updateRecord("bestKills", runStats.totalKills),
@@ -649,9 +777,7 @@ export class GameScene extends Phaser.Scene {
       newRecords,
       bestCombo,
       starterKey: this.starterKey,
-      formName:
-        this.starterConfig.forms.find((f) => f.form === this.player.stats.form)
-          ?.name ?? this.starterConfig.name,
+      formName,
     })
   }
 

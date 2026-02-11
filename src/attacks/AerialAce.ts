@@ -32,7 +32,7 @@ export class AerialAce implements Attack {
     this.cooldown = ATTACKS.aerialAce.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.launch(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.launch(),
     });
   }
 
@@ -130,10 +130,10 @@ export class AerialAce implements Attack {
     this.damage += 5;
     this.speed += 20;
     if (this.level % 2 === 0) this.bladeCount++;
-    this.cooldown = Math.max(600, this.cooldown - 80);
+    this.cooldown = Math.max(1500, this.cooldown - 80);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.launch(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.launch(),
     });
   }
 

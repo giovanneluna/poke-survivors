@@ -30,7 +30,7 @@ export class FireFang implements Attack {
     this.cooldown = ATTACKS.fireFang.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.bite(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.bite(),
     });
   }
 
@@ -74,10 +74,10 @@ export class FireFang implements Attack {
     this.damage += 4;
     this.range += 8;
     this.burnChance = Math.min(0.6, this.burnChance + 0.05);
-    this.cooldown = Math.max(500, this.cooldown - 60);
+    this.cooldown = Math.max(600, this.cooldown - 60);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.bite(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.bite(),
     });
   }
 

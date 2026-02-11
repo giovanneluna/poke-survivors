@@ -34,7 +34,7 @@ export class PetalBlizzard implements Attack {
     this.cooldown = ATTACKS.petalBlizzard.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.storm(),
     });
@@ -148,7 +148,7 @@ export class PetalBlizzard implements Attack {
     }
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.storm(),
     });

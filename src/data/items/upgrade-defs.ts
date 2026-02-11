@@ -38,13 +38,13 @@ export const UPGRADE_DEFS: Readonly<Record<string, UpgradeOption>> = {
   // Stats passivos
   maxHpUp:         { id: 'maxHpUp',         name: 'Leftovers',     description: '+10 HP máximo, +0.5 HP/s regen', icon: 'item-leftovers',  color: 0xff4444 },
   speedUp:         { id: 'speedUp',         name: 'Quick Claw',    description: '+15% velocidade de movimento', icon: 'item-quick-claw',   color: 0x44aaff },
-  magnetUp:        { id: 'magnetUp',        name: 'Magnet',        description: '+40% alcance de coleta de XP', icon: 'item-magnet',       color: 0xaa44ff },
+  magnetUp:        { id: 'magnetUp',        name: 'Magnet',        description: '+12 alcance de coleta de XP (max 90)', icon: 'item-magnet',       color: 0xaa44ff },
   // Held Items como upgrades
-  itemCharcoal:    { id: 'itemCharcoal',    name: 'Charcoal',      description: '+10% dano de fogo',            icon: 'item-charcoal',     color: 0xff6600 },
+  itemCharcoal:    { id: 'itemCharcoal',    name: 'Charcoal',      description: '+10% dano de fogo',            icon: 'item-charcoal',     color: 0xff6600, requiredType: 'fire' },
   itemWideLens:    { id: 'itemWideLens',    name: 'Wide Lens',     description: '+10% área de efeito',          icon: 'item-wide-lens',    color: 0x44aaff },
   itemChoiceSpecs: { id: 'itemChoiceSpecs', name: 'Choice Specs',  description: '+8% dano geral',               icon: 'item-choice-specs', color: 0xaa44ff },
-  itemDragonFang:  { id: 'itemDragonFang',  name: 'Dragon Fang',   description: '+10% dano dragon',             icon: 'item-dragon-fang',  color: 0x7744ff },
-  itemSharpBeak:   { id: 'itemSharpBeak',   name: 'Sharp Beak',    description: '+10% dano flying',             icon: 'item-sharp-beak',   color: 0x88ccff },
+  itemDragonFang:  { id: 'itemDragonFang',  name: 'Dragon Fang',   description: '+10% dano dragon',             icon: 'item-dragon-fang',  color: 0x7744ff, requiredType: 'dragon' },
+  itemSharpBeak:   { id: 'itemSharpBeak',   name: 'Sharp Beak',    description: '+10% dano flying',             icon: 'item-sharp-beak',   color: 0x88ccff, requiredType: 'flying' },
   itemScopeLens:   { id: 'itemScopeLens',   name: 'Scope Lens',    description: '+5% chance de crítico',        icon: 'item-scope-lens',   color: 0xff44aa },
   itemRazorClaw:   { id: 'itemRazorClaw',   name: 'Razor Claw',    description: '+15% dano crítico',            icon: 'item-razor-claw',   color: 0xcc4444 },
   itemShellBell:   { id: 'itemShellBell',   name: 'Shell Bell',    description: '+1.5% lifesteal',              icon: 'item-shell-bell',   color: 0xffcc44 },
@@ -106,8 +106,8 @@ export const UPGRADE_DEFS: Readonly<Record<string, UpgradeOption>> = {
   evolveWaterSpout:  { id: 'evolveWaterSpout',  name: 'EVO: Water Spout',  description: 'Whirlpool evolui!',    icon: 'item-water-stone', color: 0x3388ff },
   evolveBlizzard:    { id: 'evolveBlizzard',    name: 'EVO: Blizzard',     description: 'Ice Beam evolui!',     icon: 'item-water-stone', color: 0x88ddff },
   // Squirtle — held items
-  itemMysticWater:  { id: 'itemMysticWater',  name: 'Mystic Water',  description: '+10% dano de água',    icon: 'item-mystic-water',    color: 0x3388ff },
-  itemNeverMeltIce: { id: 'itemNeverMeltIce', name: 'Never-Melt Ice', description: '+10% dano de gelo',   icon: 'item-never-melt-ice',  color: 0x88ddff },
+  itemMysticWater:  { id: 'itemMysticWater',  name: 'Mystic Water',  description: '+10% dano de água',    icon: 'item-mystic-water',    color: 0x3388ff, requiredType: 'water' },
+  itemNeverMeltIce: { id: 'itemNeverMeltIce', name: 'Never-Melt Ice', description: '+10% dano de gelo',   icon: 'item-never-melt-ice',  color: 0x88ddff, requiredType: 'ice' },
   // ── Bulbasaur — novos ataques ─────────────────────────────────────
   newVineWhip:      { id: 'newVineWhip',      name: 'Vine Whip',      description: '+Vine Whip: chicotada vegetal',          icon: 'item-miracle-seed', color: 0x22cc44 },
   newRazorLeaf:     { id: 'newRazorLeaf',     name: 'Razor Leaf',     description: '+Razor Leaf: folhas cortantes',          icon: 'item-miracle-seed', color: 0x44dd66 },
@@ -152,9 +152,11 @@ export const UPGRADE_DEFS: Readonly<Record<string, UpgradeOption>> = {
   evolveHyperBeam2: { id: 'evolveHyperBeam2', name: 'EVO: Hyper Beam',  description: 'Solar Beam evolui!',   icon: 'item-leaf-stone', color: 0xffdd44 },
   evolveFloraBurst: { id: 'evolveFloraBurst', name: 'EVO: Flora Burst', description: 'Petal Dance evolui!',  icon: 'item-leaf-stone', color: 0xff66aa },
   // Bulbasaur — held items
-  itemMiracleSeed:  { id: 'itemMiracleSeed',  name: 'Miracle Seed',  description: '+10% dano grass',    icon: 'item-miracle-seed',    color: 0x22cc44 },
-  itemBlackSludge:  { id: 'itemBlackSludge',  name: 'Black Sludge',  description: '+10% dano poison',   icon: 'item-black-sludge',    color: 0x9944cc },
-  itemBigRoot:      { id: 'itemBigRoot',      name: 'Big Root',      description: '+25% lifesteal',     icon: 'item-big-root',        color: 0x886644 },
+  itemMiracleSeed:  { id: 'itemMiracleSeed',  name: 'Miracle Seed',  description: '+10% dano grass',    icon: 'item-miracle-seed',    color: 0x22cc44, requiredType: 'grass' },
+  itemBlackSludge:  { id: 'itemBlackSludge',  name: 'Black Sludge',  description: '+10% dano poison',   icon: 'item-black-sludge',    color: 0x9944cc, requiredType: 'poison' },
+  itemBigRoot:      { id: 'itemBigRoot',      name: 'Big Root',      description: '+25% lifesteal',     icon: 'item-big-root',        color: 0x886644, requiredType: 'grass' },
+  // ── Quick Powder (universal) ──────────────────────────────────────
+  itemQuickPowder: { id: 'itemQuickPowder', name: 'Quick Powder', description: '-8% cooldown de ataques (max 3x)', icon: 'item-quick-powder', color: 0x88ddff },
   // ── Revive (universal) ─────────────────────────────────────────────
   itemRevive:       { id: 'itemRevive',       name: 'Revive',        description: 'Revive ao morrer (50% HP)',  icon: 'item-revive',     color: 0xffaa00 },
   evolveMaxRevive:  { id: 'evolveMaxRevive',  name: 'EVO: Max Revive', description: 'Revive evolui! 100% HP!', icon: 'item-max-revive', color: 0xff44ff },

@@ -7,6 +7,14 @@ Vampire Survivors clone com tema Pokémon. Phaser 3.90 + TypeScript + Vite.
 - Sempre usar a skill `/game-development` ao trabalhar neste projeto
 - Para assets visuais, consultar o arquivo de memória `pokemon-resources.md`
 
+## Ralph (Desenvolvimento Autônomo)
+- **Criar PRD:** `/prd` → responder perguntas → salva em `tasks/prd-[nome].md`
+- **Converter para Ralph:** `/ralph` → converte PRD para `scripts/ralph/prd.json`
+- **Executar:** `npm run ralph` (10 iterações) ou `npm run ralph:20` (20 iterações)
+- **In-session:** `/ralph-loop` para rodar dentro da sessão atual
+- **Quality gate:** `npx tsc --noEmit` roda automaticamente em cada iteração
+- **PRDs ficam em:** `tasks/prd-[feature-name].md`
+
 ## Arquitetura
 - `BootScene` → carrega tudo → `TitleScene` → `SelectScene` → `GameScene` + `UIScene`
 - Ataques implementam interface `Attack` (type, level, update, upgrade, destroy)

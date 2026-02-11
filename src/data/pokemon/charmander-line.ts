@@ -20,6 +20,7 @@ export const CHARMANDER_FORMS = [
     maxAttackSlots: 5,
     maxPassiveSlots: 5,
     passiveTier: 1 as const,
+    types: ['fire', 'normal'] as const,
   },
   {
     form: "stage1" as const,
@@ -29,6 +30,7 @@ export const CHARMANDER_FORMS = [
     maxAttackSlots: 7,
     maxPassiveSlots: 7,
     passiveTier: 2 as const,
+    types: ['fire', 'normal'] as const,
   },
   {
     form: "stage2" as const,
@@ -38,6 +40,7 @@ export const CHARMANDER_FORMS = [
     maxAttackSlots: 10,
     maxPassiveSlots: 10,
     passiveTier: 3 as const,
+    types: ['fire', 'flying', 'dragon'] as const,
   },
 ] as const
 

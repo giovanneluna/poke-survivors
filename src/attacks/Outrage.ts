@@ -24,6 +24,7 @@ export class Outrage implements Attack {
   private berserkDuration = 3000;
   private confusionDuration = 1500;
   private isActive = false;
+  private pendingCleanups: Array<() => void> = [];
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -32,7 +33,7 @@ export class Outrage implements Attack {
     this.cooldown = ATTACKS.outrage.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.activate(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.activate(),
     });
   }
 
@@ -91,10 +92,15 @@ export class Outrage implements Attack {
       },
     });
 
+    let ended = false;
     const endBerserk = () => {
+      if (ended) return;
+      ended = true;
       tickEvent.destroy();
-      aura.destroy();
+      if (aura.active) aura.destroy();
       this.isActive = false;
+      const idx = this.pendingCleanups.indexOf(endBerserk);
+      if (idx !== -1) this.pendingCleanups.splice(idx, 1);
 
       // Confusão: player fica lento via applySlow (seguro contra overlap e pause)
       if (this.player.active) {
@@ -110,6 +116,10 @@ export class Outrage implements Attack {
         });
       }
     };
+    this.pendingCleanups.push(endBerserk);
+
+    // Safety cleanup (Outrage não tinha — agora tem)
+    this.scene.time.delayedCall(this.berserkDuration + 500, endBerserk);
   }
 
   update(_time: number, _delta: number): void {}
@@ -123,9 +133,13 @@ export class Outrage implements Attack {
     this.cooldown = Math.max(5000, this.cooldown - 400);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.activate(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.activate(),
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.timer.destroy();
+    for (const fn of [...this.pendingCleanups]) fn();
+    this.pendingCleanups.length = 0;
+  }
 }

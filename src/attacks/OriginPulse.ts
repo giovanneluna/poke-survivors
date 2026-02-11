@@ -10,6 +10,7 @@ interface ActiveCone {
   sprite: Phaser.GameObjects.Sprite;
   hitEnemies: Set<number>;
   dirAngleRad: number;
+  followFn: () => void;
 }
 
 /**
@@ -40,7 +41,7 @@ export class OriginPulse implements Attack {
     this.cooldown = ATTACKS.originPulse.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });
@@ -97,6 +98,7 @@ export class OriginPulse implements Attack {
       sprite: beam,
       hitEnemies: new Set<number>(),
       dirAngleRad,
+      followFn: followBeam,
     };
 
     // Campo de agua residual ao longo do beam (posicoes fixas — correto)
@@ -216,12 +218,16 @@ export class OriginPulse implements Attack {
     this.cooldown = Math.max(2000, this.cooldown - 250);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.fire(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.fire(),
     });
   }
 
   destroy(): void {
     this.timer.destroy();
-    this.activeCone = null;
+    if (this.activeCone) {
+      this.scene.events.off('update', this.activeCone.followFn);
+      if (this.activeCone.sprite.active) this.activeCone.sprite.destroy();
+      this.activeCone = null;
+    }
   }
 }

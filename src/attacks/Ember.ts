@@ -35,7 +35,7 @@ export class Ember implements Attack {
     });
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });
@@ -139,10 +139,10 @@ export class Ember implements Attack {
     if (this.level % 2 === 0) {
       this.projectileCount++;
     }
-    this.cooldown = Math.max(400, this.cooldown - 100);
+    this.cooldown = Math.max(600, this.cooldown - 100);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });

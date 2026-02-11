@@ -37,7 +37,7 @@ export class SludgeBomb implements Attack {
     });
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });
@@ -174,7 +174,7 @@ export class SludgeBomb implements Attack {
     this.cooldown = Math.max(1200, this.cooldown - 100);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });

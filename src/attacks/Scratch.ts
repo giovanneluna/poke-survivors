@@ -36,7 +36,7 @@ export class Scratch implements Attack {
     this.cooldown = ATTACKS.scratch.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.swipe(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.swipe(),
     });
   }
 
@@ -107,10 +107,10 @@ export class Scratch implements Attack {
     this.level++;
     this.damage += 4;
     this.range += 5;
-    this.cooldown = Math.max(300, this.cooldown - 40);
+    this.cooldown = Math.max(600, this.cooldown - 40);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.swipe(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.swipe(),
     });
   }
 

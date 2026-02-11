@@ -40,6 +40,7 @@ interface ActiveDash {
   hitEnemies: Set<number>;
   cardinal: CardinalDir;
   offset: { x: number; y: number };
+  followFn: () => void;
 }
 
 /**
@@ -72,7 +73,7 @@ export class Waterfall implements Attack {
     this.cooldown = ATTACKS.waterfall.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.dash(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.dash(),
     });
   }
 
@@ -125,6 +126,7 @@ export class Waterfall implements Attack {
       hitEnemies: new Set(),
       cardinal,
       offset,
+      followFn: followRush,
     };
 
     rushSprite.once('animationcomplete', () => {
@@ -241,15 +243,19 @@ export class Waterfall implements Attack {
     this.dashDistance += 12;
     this.trailDuration += 300;
     this.speedBoost += 0.03;
-    this.cooldown = Math.max(1200, this.cooldown - 120);
+    this.cooldown = Math.max(1500, this.cooldown - 120);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.dash(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.dash(),
     });
   }
 
   destroy(): void {
     this.timer.destroy();
-    this.activeDash = null;
+    if (this.activeDash) {
+      this.scene.events.off('update', this.activeDash.followFn);
+      if (this.activeDash.sprite.active) this.activeDash.sprite.destroy();
+      this.activeDash = null;
+    }
   }
 }

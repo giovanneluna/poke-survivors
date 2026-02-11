@@ -1,6 +1,6 @@
 import type { PhaseConfig } from '../../../types';
 
-/** Phase 3 — 20:00 to 30:00, 20 waves + 3 bosses */
+/** Phase 3 — 20:00 to 30:00, 20 waves + 3 bosses (Vileplume, Primeape, Gengar) */
 export const PHASE3: PhaseConfig = {
   waves: [
     // Wave 40 (20:00): BIG INTRO — Butterfree + Parasect + Venomoth (confusion swarm + slow aura)
@@ -13,7 +13,7 @@ export const PHASE3: PhaseConfig = {
     { enemies: [{ type: 'butterfree', weight: 1 }, { type: 'venomoth', weight: 1 }, { type: 'parasect', weight: 1 }, { type: 'gloom', weight: 1 }],
       spawnRate: 75, maxEnemies: 175 },
 
-    // ── BOSS: Primeape @ 21:00 ──
+    // ── BOSS: Vileplume @ 22:00 ──
 
     // Wave 43 (21:30): P2 elites reforçam, preparando pro duo
     { enemies: [{ type: 'parasect', weight: 2 }, { type: 'venomoth', weight: 1 }, { type: 'cubone', weight: 1 }, { type: 'venonat', weight: 1 }],
@@ -31,7 +31,8 @@ export const PHASE3: PhaseConfig = {
     { enemies: [{ type: 'marowak', weight: 2 }, { type: 'hypno', weight: 2 }, { type: 'venomoth', weight: 1 }, { type: 'butterfree', weight: 1 }],
       spawnRate: 62, maxEnemies: 188 },
 
-    // ── BOSS: Gengar @ 24:00 ──
+    // ── BOSS: Primeape @ 25:00 ──
+    // ── BOSS: Gengar @ 28:00 ──
 
     // Wave 48 (24:00): Post-Gengar — Graveler + Machoke reforçam
     { enemies: [{ type: 'marowak', weight: 2 }, { type: 'graveler', weight: 1 }, { type: 'machoke', weight: 1 }, { type: 'hypno', weight: 1 }, { type: 'parasect', weight: 1 }],
@@ -52,7 +53,7 @@ export const PHASE3: PhaseConfig = {
     { enemies: [{ type: 'venomoth', weight: 1 }, { type: 'butterfree', weight: 1 }, { type: 'hypno', weight: 2 }, { type: 'parasect', weight: 1 }],
       spawnRate: 85, maxEnemies: 105 },
 
-    // ── BOSS: Raticate ×2 @ 27:00 ──
+    // ── End Phase 3 ──
 
     // Wave 54 (27:00): Post-respawn
     { enemies: [{ type: 'hypno', weight: 2 }, { type: 'marowak', weight: 2 }, { type: 'venomoth', weight: 1 }],
@@ -75,10 +76,8 @@ export const PHASE3: PhaseConfig = {
   ],
 
   bosses: [
-    { type: 'primeape', timeSeconds: 1260 },
-    { type: 'pidgeot',  timeSeconds: 1350 },
-    { type: 'gengar',   timeSeconds: 1440 },
-    { type: 'golem',    timeSeconds: 1530 },
-    { type: 'raticate', timeSeconds: 1620, count: 2, hpMultiplier: 1.5, dmgMultiplier: 1.3 },
+    { type: 'vileplume', timeSeconds: 1680 },   // 28:00
+    { type: 'primeape',  timeSeconds: 1920 },   // 32:00
+    { type: 'gengar',    timeSeconds: 2160 },   // 36:00
   ],
 };

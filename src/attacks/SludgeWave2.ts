@@ -29,7 +29,7 @@ export class SludgeWave2 implements Attack {
     this.cooldown = ATTACKS.sludgeWave2.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.wave(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.wave(),
     });
   }
 
@@ -94,7 +94,7 @@ export class SludgeWave2 implements Attack {
     this.cooldown = Math.max(1500, this.cooldown - 150);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.wave(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.wave(),
     });
   }
 

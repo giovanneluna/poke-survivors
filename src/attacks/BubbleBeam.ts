@@ -44,7 +44,7 @@ export class BubbleBeam implements Attack {
     });
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });
@@ -174,10 +174,10 @@ export class BubbleBeam implements Attack {
     this.level++;
     this.damage += 4;
     if (this.level % 2 === 0) this.bubblesPerBurst++;
-    this.cooldown = Math.max(300, this.cooldown - 50);
+    this.cooldown = Math.max(900, this.cooldown - 50);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.fire(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.fire(),
     });
   }
 

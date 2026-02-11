@@ -3,7 +3,7 @@ import { STARTERS, DIFFICULTY } from '../config';
 import type { StarterConfig } from '../config';
 import type { DevConfig, Difficulty, PokemonForm } from '../types';
 import { SoundManager } from '../audio/SoundManager';
-import { getCoins, initSaveSystem } from '../systems/SaveSystem';
+import { getCoins, getLastRun, initSaveSystem } from '../systems/SaveSystem';
 import { fontSize, scaled } from '../utils/ui-scale';
 
 export class SelectScene extends Phaser.Scene {
@@ -123,6 +123,24 @@ export class SelectScene extends Phaser.Scene {
     backBtn.on('pointerout', () => backBtn.setColor('#666666'));
     backBtn.on('pointerdown', () => { SoundManager.playClick(); this.scene.start('TitleScene'); });
 
+    // ── Botão [DATA] (só localhost) ──────────────────────────────
+    {
+      const host = window.location.hostname;
+      const isLocalEnv = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+      if (isLocalEnv) {
+        const dataBtn = this.add.text(width - scaled(20), height - scaled(25), '[DATA]', {
+          fontSize: fontSize(12), color: '#00ff88', fontFamily: 'monospace', fontStyle: 'bold',
+        }).setOrigin(1, 0.5).setDepth(10).setInteractive({ useHandCursor: true });
+
+        dataBtn.on('pointerover', () => { dataBtn.setColor('#44ffaa'); SoundManager.playHover(); });
+        dataBtn.on('pointerout', () => dataBtn.setColor('#00ff88'));
+        dataBtn.on('pointerdown', () => {
+          SoundManager.playClick();
+          this.scene.start('DataViewerScene');
+        });
+      }
+    }
+
     // ── Coin counter ────────────────────────────────────────────────
     initSaveSystem();
     const coins = getCoins();
@@ -131,6 +149,19 @@ export class SelectScene extends Phaser.Scene {
         fontSize: fontSize(14), color: '#ffcc00', fontFamily: 'monospace',
         fontStyle: 'bold', stroke: '#000000', strokeThickness: 3,
       }).setOrigin(1, 0.5).setDepth(10);
+    }
+
+    // ── Last Run info ────────────────────────────────────────────────
+    const lastRun = getLastRun();
+    if (lastRun) {
+      const lm = Math.floor(lastRun.time / 60);
+      const ls = lastRun.time % 60;
+      const lTime = `${lm}:${String(ls).padStart(2, '0')}`;
+      this.add.text(
+        width / 2, scaled(76),
+        `Última: ${lastRun.formName} Lv.${lastRun.level} · ${lTime} · ${lastRun.kills} kills · ₽${lastRun.coinsEarned}`,
+        { fontSize: fontSize(9), color: '#555555', fontFamily: 'monospace' },
+      ).setOrigin(0.5).setDepth(10);
     }
 
     // ── Seleção inicial ──────────────────────────────────────────────

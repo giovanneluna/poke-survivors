@@ -36,7 +36,7 @@ export class FurySwipes implements Attack {
     this.cooldown = ATTACKS.furySwipes.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.swipe(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.swipe(),
     });
   }
 
@@ -116,10 +116,10 @@ export class FurySwipes implements Attack {
     this.damage += 3;
     this.range += 4;
     if (this.level % 2 === 0) this.swipeCount++;
-    this.cooldown = Math.max(250, this.cooldown - 30);
+    this.cooldown = Math.max(900, this.cooldown - 30);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.swipe(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.swipe(),
     });
   }
 

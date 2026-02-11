@@ -35,7 +35,7 @@ export class PetalDance implements Attack {
     this.cooldown = ATTACKS.petalDance.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.dance(),
     });
@@ -103,17 +103,18 @@ export class PetalDance implements Attack {
       },
     });
 
+    let cleaned = false;
     const cleanup = (): void => {
+      if (cleaned) return;
+      cleaned = true;
       if (this.tickEvent) {
         this.tickEvent.destroy();
         this.tickEvent = null;
       }
       petalEmitter?.destroy();
-      if (this.activeSprite) {
+      if (this.activeSprite && this.activeSprite.active) {
         this.scene.tweens.add({
-          targets: this.activeSprite,
-          alpha: 0,
-          duration: 300,
+          targets: this.activeSprite, alpha: 0, duration: 300,
           onComplete: () => {
             this.activeSprite?.destroy();
             this.activeSprite = null;
@@ -141,7 +142,7 @@ export class PetalDance implements Attack {
     this.cooldown = Math.max(2000, this.cooldown - 200);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.dance(),
     });

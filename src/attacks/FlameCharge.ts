@@ -67,7 +67,7 @@ export class FlameCharge implements Attack {
     this.cooldown = ATTACKS.flameCharge.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.dash(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.dash(),
     });
   }
 
@@ -184,7 +184,7 @@ export class FlameCharge implements Attack {
     this.cooldown = Math.max(1800, this.cooldown - 150);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.dash(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.dash(),
     });
   }
 

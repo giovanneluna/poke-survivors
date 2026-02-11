@@ -23,6 +23,7 @@ export class FloraBurst implements Attack {
   private cooldown: number;
   private radius = 100;
   private readonly duration = 2500;
+  private pendingCleanups: Array<() => void> = [];
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -31,7 +32,7 @@ export class FloraBurst implements Attack {
     this.cooldown = ATTACKS.floraBurst.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.burst(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.burst(),
     });
   }
 
@@ -97,17 +98,22 @@ export class FloraBurst implements Attack {
       },
     });
 
+    let cleaned = false;
     const cleanup = (): void => {
+      if (cleaned) return;
+      cleaned = true;
       tickEvent.destroy();
       petalEmitter?.destroy();
-      this.scene.tweens.add({
-        targets: floraSprite,
-        alpha: 0,
-        scale: 0.5,
-        duration: 400,
-        onComplete: () => floraSprite.destroy(),
-      });
+      if (floraSprite.active) {
+        this.scene.tweens.add({
+          targets: floraSprite, alpha: 0, scale: 0.5, duration: 400,
+          onComplete: () => { if (floraSprite.active) floraSprite.destroy(); },
+        });
+      }
+      const idx = this.pendingCleanups.indexOf(cleanup);
+      if (idx !== -1) this.pendingCleanups.splice(idx, 1);
     };
+    this.pendingCleanups.push(cleanup);
 
     // Safety cleanup
     this.scene.time.delayedCall(this.duration + 500, cleanup);
@@ -122,9 +128,13 @@ export class FloraBurst implements Attack {
     this.cooldown = Math.max(2000, this.cooldown - 150);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.burst(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.burst(),
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.timer.destroy();
+    for (const fn of [...this.pendingCleanups]) fn();
+    this.pendingCleanups.length = 0;
+  }
 }

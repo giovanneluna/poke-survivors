@@ -36,7 +36,7 @@ export class GigaDrain implements Attack {
     this.cooldown = ATTACKS.gigaDrain.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.drain(),
     });
@@ -141,7 +141,7 @@ export class GigaDrain implements Attack {
     this.cooldown = Math.max(2500, this.cooldown - 200);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.drain(),
     });

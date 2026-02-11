@@ -1,6 +1,6 @@
 import type { PhaseConfig } from '../../../types';
 
-/** Phase 2 — 10:00 to 20:00, 20 waves + 2 bosses */
+/** Phase 2 — 10:00 to 20:00, 20 waves + 3 bosses */
 export const PHASE2: PhaseConfig = {
   waves: [
     // Wave 20 (10:00): BIG INTRO — Metapod + Kakuna + Gloom (tank wall + healer)
@@ -34,7 +34,8 @@ export const PHASE2: PhaseConfig = {
     { enemies: [{ type: 'paras', weight: 2 }, { type: 'venonat', weight: 1 }, { type: 'drowzee', weight: 2 }, { type: 'cubone', weight: 1 }],
       spawnRate: 125, maxEnemies: 140 },
 
-    // ── BOSS: Beedrill @ 15:00 ──
+    // ── BOSS: Snorlax @ 13:00 ──
+    // ── BOSS: Beedrill @ 16:00 ──
 
     // Wave 30 (15:00): Post-boss intensity — Pidgeotto reforça
     { enemies: [{ type: 'cubone', weight: 2 }, { type: 'drowzee', weight: 2 }, { type: 'pidgeotto', weight: 1 }, { type: 'golbat', weight: 1 }],
@@ -55,7 +56,7 @@ export const PHASE2: PhaseConfig = {
     { enemies: [{ type: 'venonat', weight: 1 }, { type: 'drowzee', weight: 2 }, { type: 'cubone', weight: 2 }, { type: 'gloom', weight: 1 }],
       spawnRate: 100, maxEnemies: 155 },
 
-    // ── BOSS: Vileplume @ 18:00 ──
+    // ── BOSS: Fearow @ 19:00 ──
 
     // Wave 36 (18:00): Endurance push
     { enemies: [{ type: 'paras', weight: 2 }, { type: 'gloom', weight: 2 }, { type: 'cubone', weight: 2 }, { type: 'golbat', weight: 1 }],
@@ -72,8 +73,8 @@ export const PHASE2: PhaseConfig = {
   ],
 
   bosses: [
-    { type: 'beedrill',  timeSeconds: 900 },
-    { type: 'fearow',    timeSeconds: 990 },
-    { type: 'vileplume', timeSeconds: 1080 },
+    { type: 'snorlax',   timeSeconds: 960 },    // 16:00
+    { type: 'beedrill',  timeSeconds: 1200 },   // 20:00
+    { type: 'fearow',    timeSeconds: 1440 },   // 24:00
   ],
 };

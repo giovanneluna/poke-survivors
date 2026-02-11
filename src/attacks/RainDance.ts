@@ -23,6 +23,7 @@ export class RainDance implements Attack {
   private radius = 120;
   private duration = 3000;
   private readonly tickInterval = 300;
+  private pendingCleanups: Array<() => void> = [];
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -31,7 +32,7 @@ export class RainDance implements Attack {
     this.cooldown = ATTACKS.rainDance.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.summonRain(),
     });
@@ -128,16 +129,20 @@ export class RainDance implements Attack {
       },
     });
 
+    let cleaned = false;
     const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
       tickEvent.destroy();
       rainEmitter.destroy();
       this.scene.tweens.add({
-        targets: zoneCircle,
-        alpha: 0,
-        duration: 300,
+        targets: zoneCircle, alpha: 0, duration: 300,
         onComplete: () => zoneCircle.destroy(),
       });
+      const idx = this.pendingCleanups.indexOf(cleanup);
+      if (idx !== -1) this.pendingCleanups.splice(idx, 1);
     };
+    this.pendingCleanups.push(cleanup);
 
     // Safety cleanup
     this.scene.time.delayedCall(this.duration + 500, cleanup);
@@ -153,7 +158,7 @@ export class RainDance implements Attack {
     this.cooldown = Math.max(3000, this.cooldown - 300);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.summonRain(),
     });
@@ -161,5 +166,7 @@ export class RainDance implements Attack {
 
   destroy(): void {
     this.timer.destroy();
+    for (const fn of [...this.pendingCleanups]) fn();
+    this.pendingCleanups.length = 0;
   }
 }

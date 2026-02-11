@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Skill(game-development)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(node -e:*)"
     ]
   }
 }

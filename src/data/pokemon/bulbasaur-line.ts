@@ -10,6 +10,7 @@ export const BULBASAUR_FORMS: readonly PokemonFormConfig[] = [
     maxAttackSlots: 5,
     maxPassiveSlots: 5,
     passiveTier: 1,
+    types: ['grass', 'poison', 'normal'] as const,
   },
   {
     form: "stage1",
@@ -19,6 +20,7 @@ export const BULBASAUR_FORMS: readonly PokemonFormConfig[] = [
     maxAttackSlots: 7,
     maxPassiveSlots: 7,
     passiveTier: 2,
+    types: ['grass', 'poison', 'normal'] as const,
   },
   {
     form: "stage2",
@@ -28,6 +30,7 @@ export const BULBASAUR_FORMS: readonly PokemonFormConfig[] = [
     maxAttackSlots: 10,
     maxPassiveSlots: 10,
     passiveTier: 3,
+    types: ['grass', 'poison', 'normal'] as const,
   },
 ] as const
 

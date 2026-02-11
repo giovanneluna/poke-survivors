@@ -23,6 +23,7 @@ export class Hurricane implements Attack {
   private radius = 80;
   private pullForce = 100;
   private duration = 3000;
+  private pendingCleanups: Array<() => void> = [];
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -31,7 +32,7 @@ export class Hurricane implements Attack {
     this.cooldown = ATTACKS.hurricane.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.summon(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.summon(),
     });
   }
 
@@ -111,14 +112,22 @@ export class Hurricane implements Attack {
       },
     });
 
+    let cleaned = false;
     const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
       tickEvent.destroy();
       windEmitter?.destroy();
-      this.scene.tweens.add({
-        targets: tornado, alpha: 0, scale: 0.3, duration: 300,
-        onComplete: () => tornado.destroy(),
-      });
+      if (tornado.active) {
+        this.scene.tweens.add({
+          targets: tornado, alpha: 0, scale: 0.3, duration: 300,
+          onComplete: () => { if (tornado.active) tornado.destroy(); },
+        });
+      }
+      const idx = this.pendingCleanups.indexOf(cleanup);
+      if (idx !== -1) this.pendingCleanups.splice(idx, 1);
     };
+    this.pendingCleanups.push(cleanup);
 
     // Safety cleanup
     this.scene.time.delayedCall(this.duration + 500, cleanup);
@@ -135,9 +144,13 @@ export class Hurricane implements Attack {
     this.cooldown = Math.max(3500, this.cooldown - 300);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.summon(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.summon(),
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.timer.destroy();
+    for (const fn of [...this.pendingCleanups]) fn();
+    this.pendingCleanups.length = 0;
+  }
 }

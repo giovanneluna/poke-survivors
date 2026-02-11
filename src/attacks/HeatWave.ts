@@ -30,7 +30,7 @@ export class HeatWave implements Attack {
     this.cooldown = ATTACKS.heatWave.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.wave(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.wave(),
     });
   }
 
@@ -103,7 +103,7 @@ export class HeatWave implements Attack {
     this.cooldown = Math.max(3000, this.cooldown - 250);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.wave(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.wave(),
     });
   }
 

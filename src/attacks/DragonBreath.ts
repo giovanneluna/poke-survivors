@@ -38,7 +38,7 @@ export class DragonBreath implements Attack {
     this.cooldown = ATTACKS.dragonBreath.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.breathe(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.breathe(),
     });
   }
 
@@ -147,7 +147,7 @@ export class DragonBreath implements Attack {
     this.cooldown = Math.max(1000, this.cooldown - 100);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.breathe(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.breathe(),
     });
   }
 

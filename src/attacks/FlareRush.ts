@@ -69,7 +69,7 @@ export class FlareRush implements Attack {
     this.cooldown = ATTACKS.flareRush.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.dash(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.dash(),
     });
   }
 
@@ -235,7 +235,7 @@ export class FlareRush implements Attack {
     this.cooldown = Math.max(1200, this.cooldown - 120);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.dash(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.dash(),
     });
   }
 

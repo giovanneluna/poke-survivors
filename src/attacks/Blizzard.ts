@@ -54,7 +54,7 @@ export class Blizzard implements Attack {
     });
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.launch(),
     });
@@ -278,10 +278,10 @@ export class Blizzard implements Attack {
     if (this.level % 2 === 0) {
       this.projectileCount++;
     }
-    this.cooldown = Math.max(500, this.cooldown - 100);
+    this.cooldown = Math.max(1500, this.cooldown - 100);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.launch(),
     });

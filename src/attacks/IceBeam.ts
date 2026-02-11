@@ -37,7 +37,7 @@ export class IceBeam implements Attack {
     });
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });
@@ -173,10 +173,10 @@ export class IceBeam implements Attack {
     if (this.level % 3 === 0) {
       this.projectileCount++;
     }
-    this.cooldown = Math.max(500, this.cooldown - 120);
+    this.cooldown = Math.max(1500, this.cooldown - 120);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });

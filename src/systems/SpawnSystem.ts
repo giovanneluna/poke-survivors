@@ -14,12 +14,15 @@ export class SpawnSystem {
   private spawnTimer!: Phaser.Time.TimerEvent;
   private difficultyLevel = 0;
 
-  // ── Boss queue system (sequencial) ────────────────────────────────
+  // ── Boss system — sequential, 4-min gap ─────────────────────────
   private bossQueueIndex = 0;
-  private readonly activeBosses: Map<Boss, number> = new Map(); // boss → spawnTime
+  private readonly activeBosses: Map<Boss, number> = new Map();
   private readonly enragedBosses: Set<Boss> = new Set();
-  private waitingForBossDeath = false;
-  private static readonly BOSS_NEXT_DELAY_MS = 180_000; // 3 min entre bosses
+  private gameElapsed = 0;
+  private lastBossDeathElapsed = 0;
+  private allBossesDefeated = false;
+  private waitingForSpawn = false;
+  private static readonly BOSS_MIN_GAP_MS = 240_000;    // 4 min entre bosses
   private static readonly BOSS_ENRAGE_MS = 180_000;     // 3 min para enrage
 
   /** Batch tint cleanup para heal aura — evita delayedCall por enemy curado */
@@ -45,18 +48,17 @@ export class SpawnSystem {
     // Rattata circle event @ 2:00
     scene.time.delayedCall(120_000, () => this.spawnRattataCircle());
 
-    // Boss queue: primeiro boss no tempo original, depois sequencial
+    // Boss system: sequential com gap mínimo de 4 min (polling em updateBossQueue)
     this.bossQueueIndex = 0;
-    if (BOSS_SCHEDULE.length > 0) {
-      scene.time.addEvent({
-        delay: BOSS_SCHEDULE[0].timeSeconds * 1000,
-        callback: () => this.spawnNextBoss(),
-      });
-    }
+    this.gameElapsed = 0;
+    this.lastBossDeathElapsed = 0;
+    this.allBossesDefeated = false;
+    this.waitingForSpawn = false;
   }
 
   // ── Update (chamado todo frame para boss/ranged attacks) ──────────
   update(time: number, delta: number): void {
+    this.gameElapsed += delta;
     const scene = this.ctx.scene;
     const player = this.ctx.player;
     const playerX = player.x;
@@ -297,90 +299,74 @@ export class SpawnSystem {
     });
   }
 
-  // ── Boss queue: spawn sequencial (1 boss por vez) ───────────────
-  private static readonly BOSS_OVERLAP_BUFF = 0.2; // +20% speed/dmg por overlap
-  private bossOverlapStacks = 0;
+  private static readonly BOSS_ENRAGE_BUFF = 0.2; // +20% speed/dmg por enrage stack
 
-  private spawnNextBoss(): void {
-    if (this.bossQueueIndex >= BOSS_SCHEDULE.length) return;
+  private updateBossQueue(time: number): void {
+    const scene = this.ctx.scene;
 
-    // Se já tem um boss vivo, bufar em vez de spawnar outro
-    if (this.activeBosses.size > 0) {
-      this.bossOverlapStacks++;
-      const buffMult = 1 + SpawnSystem.BOSS_OVERLAP_BUFF * this.bossOverlapStacks;
-      for (const [boss] of this.activeBosses) {
-        if (!boss.active) continue;
+    // ── Limpa bosses mortos ───────────────────────────────────────
+    for (const [boss] of this.activeBosses) {
+      if (!boss.active) {
+        this.activeBosses.delete(boss);
+        this.enragedBosses.delete(boss);
+        this.lastBossDeathElapsed = this.gameElapsed;
+      }
+    }
+
+    // ── Phase-complete: todos os bosses derrotados ────────────────
+    if (this.bossQueueIndex >= BOSS_SCHEDULE.length
+        && this.activeBosses.size === 0
+        && !this.waitingForSpawn
+        && !this.allBossesDefeated) {
+      this.allBossesDefeated = true;
+      scene.events.emit('phase-complete');
+      return;
+    }
+
+    // ── Boss vivo ou spawn pendente → apenas enrage ──────────────
+    if (this.activeBosses.size > 0 || this.waitingForSpawn) {
+      for (const [boss, spawnTime] of this.activeBosses) {
+        const aliveMs = time - spawnTime;
+        const stacks = Math.floor(aliveMs / SpawnSystem.BOSS_ENRAGE_MS);
+        const prevStacks = this.enragedBosses.has(boss)
+          ? (boss.getData('enrageStacks') as number ?? 1)
+          : 0;
+        if (stacks <= prevStacks) continue;
+
+        this.enragedBosses.add(boss);
+        boss.setData('enrageStacks', stacks);
+        const buffMult = 1 + SpawnSystem.BOSS_ENRAGE_BUFF * stacks;
         boss.applyEnrage(buffMult);
         boss.applyDamageBuff(buffMult);
-        boss.setTint(0xff8800);
+        boss.setTint(0xff4444);
 
-        // Visual: texto de buff
-        const txt = this.ctx.scene.add.text(boss.x, boss.y - 40, `POWER UP! x${this.bossOverlapStacks}`, {
-          fontSize: '14px', color: '#ff8800', fontFamily: 'monospace',
+        const label = stacks === 1 ? 'ENRAGED!' : `ENRAGED x${stacks}!`;
+        const txt = scene.add.text(boss.x, boss.y - 40, label, {
+          fontSize: '14px', color: '#ff4444', fontFamily: 'monospace',
           stroke: '#000', strokeThickness: 3,
         }).setOrigin(0.5).setDepth(50);
-        this.ctx.scene.tweens.add({
+        scene.tweens.add({
           targets: txt, y: txt.y - 30, alpha: 0, duration: 1500,
           onComplete: () => txt.destroy(),
         });
       }
-      // Não avança o index — o boss pendente spawna depois de matar o atual
       return;
     }
 
-    const spawn = BOSS_SCHEDULE[this.bossQueueIndex];
-    this.bossQueueIndex++;
-    this.bossOverlapStacks = 0;
-    this.waitingForBossDeath = true;
-    this.spawnBossWithConfig(spawn);
-  }
+    // ── Sem boss vivo — verifica se é hora do próximo ─────────────
+    if (this.bossQueueIndex >= BOSS_SCHEDULE.length) return;
 
-  private updateBossQueue(time: number): void {
-    // Limpa bosses mortos do tracking
-    for (const [boss, _spawnTime] of this.activeBosses) {
-      if (!boss.active) {
-        this.activeBosses.delete(boss);
-        this.enragedBosses.delete(boss);
-      }
-    }
+    const nextBoss = BOSS_SCHEDULE[this.bossQueueIndex];
+    const scheduledMs = nextBoss.timeSeconds * 1000;
+    const minGapMs = this.lastBossDeathElapsed > 0
+      ? this.lastBossDeathElapsed + SpawnSystem.BOSS_MIN_GAP_MS
+      : 0;
+    const spawnAtMs = Math.max(scheduledMs, minGapMs);
 
-    // Se o boss morreu, agendar próximo da fila após delay
-    if (this.waitingForBossDeath && this.activeBosses.size === 0) {
-      this.waitingForBossDeath = false;
-      if (this.bossQueueIndex < BOSS_SCHEDULE.length) {
-        this.ctx.scene.time.addEvent({
-          delay: SpawnSystem.BOSS_NEXT_DELAY_MS,
-          callback: () => this.spawnNextBoss(),
-        });
-      }
-    }
-
-    // Enrage: boss vivo há mais de 3 min → +20% speed e dmg (stackável)
-    for (const [boss, spawnTime] of this.activeBosses) {
-      const aliveMs = time - spawnTime;
-      const stacks = Math.floor(aliveMs / SpawnSystem.BOSS_ENRAGE_MS);
-      const prevStacks = this.enragedBosses.has(boss)
-        ? (boss.getData('enrageStacks') as number ?? 1)
-        : 0;
-      if (stacks <= prevStacks) continue;
-
-      this.enragedBosses.add(boss);
-      boss.setData('enrageStacks', stacks);
-      const buffMult = 1 + SpawnSystem.BOSS_OVERLAP_BUFF * stacks;
-      boss.applyEnrage(buffMult);
-      boss.applyDamageBuff(buffMult);
-      boss.setTint(0xff4444);
-
-      // Visual: texto de aviso
-      const label = stacks === 1 ? 'ENRAGED!' : `ENRAGED x${stacks}!`;
-      const txt = this.ctx.scene.add.text(boss.x, boss.y - 40, label, {
-        fontSize: '14px', color: '#ff4444', fontFamily: 'monospace',
-        stroke: '#000', strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(50);
-      this.ctx.scene.tweens.add({
-        targets: txt, y: txt.y - 30, alpha: 0, duration: 1500,
-        onComplete: () => txt.destroy(),
-      });
+    if (this.gameElapsed >= spawnAtMs) {
+      this.waitingForSpawn = true;
+      this.bossQueueIndex++;
+      this.spawnBossWithConfig(nextBoss);
     }
   }
 
@@ -422,6 +408,7 @@ export class SpawnSystem {
 
       // Trackear boss para enrage e queue sequencial
       this.activeBosses.set(boss, scene.time.now);
+      this.waitingForSpawn = false;
 
       scene.events.emit('boss-spawned', {
         name: label,
@@ -431,6 +418,8 @@ export class SpawnSystem {
       });
     });
   }
+
+  isAllBossesDefeated(): boolean { return this.allBossesDefeated; }
 
   // ── Boss spawning (legacy, used by DebugSystem) ──────────────────
   spawnBoss(type: EnemyType): void {

@@ -33,7 +33,7 @@ export class DracoMeteor implements Attack {
     this.cooldown = ATTACKS.dracoMeteor.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.rain(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.rain(),
     });
   }
 
@@ -135,7 +135,7 @@ export class DracoMeteor implements Attack {
     this.cooldown = Math.max(6000, this.cooldown - 500);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.rain(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.rain(),
     });
   }
 

@@ -40,7 +40,7 @@ export class Slash implements Attack {
     this.cooldown = ATTACKS.slash.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.swipe(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.swipe(),
     });
   }
 
@@ -129,10 +129,10 @@ export class Slash implements Attack {
     this.damage += 6;
     this.range += 5;
     this.critChance = Math.min(0.5, this.critChance + 0.04);
-    this.cooldown = Math.max(400, this.cooldown - 50);
+    this.cooldown = Math.max(900, this.cooldown - 50);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.swipe(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.swipe(),
     });
   }
 

@@ -31,7 +31,7 @@ export class Liquidation implements Attack {
     this.cooldown = ATTACKS.liquidation.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.strike(),
     });
@@ -150,7 +150,7 @@ export class Liquidation implements Attack {
     this.cooldown = Math.max(5000, this.cooldown - 500);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.strike(),
     });

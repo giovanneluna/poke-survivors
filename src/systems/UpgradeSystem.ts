@@ -128,17 +128,6 @@ const STARTER_ATTACK_POOL: Record<string, ReadonlySet<AttackType>> = {
   ]),
 };
 
-// ── Held items com afinidade de starter (elemento-específicos) ──────
-const ITEM_STARTER_AFFINITY: Partial<Record<HeldItemType, string>> = {
-  charcoal: 'charmander',
-  dragonFang: 'charmander',
-  sharpBeak: 'charmander',
-  mysticWater: 'squirtle',
-  neverMeltIce: 'squirtle',
-  miracleSeed: 'bulbasaur',
-  blackSludge: 'bulbasaur',
-  bigRoot: 'bulbasaur',
-};
 
 export class UpgradeSystem {
   constructor(
@@ -266,10 +255,12 @@ export class UpgradeSystem {
       if (def) pool.push(def);
     }
 
-    // Held items
+    // Held items (filtered by form type)
     const heldItemCount = player.getHeldItems().length;
     const maxPassive = player.stats.passiveSlots;
-    const starterKey = this.ctx.starterConfig.key ?? 'charmander';
+    const forms = this.ctx.starterConfig.forms ?? [];
+    const currentFormConfig = forms.find(f => f.form === playerForm);
+    const formTypes: readonly string[] = currentFormConfig?.types ?? [];
     if (heldItemCount < maxPassive) {
       const itemFormReqs: Partial<Record<HeldItemType, PokemonForm>> = {
         dragonFang: 'stage1',
@@ -288,15 +279,23 @@ export class UpgradeSystem {
         { key: 'focusBand', defKey: 'itemFocusBand' },
         { key: 'mysticWater', defKey: 'itemMysticWater' },
         { key: 'neverMeltIce', defKey: 'itemNeverMeltIce' },
+        { key: 'miracleSeed', defKey: 'itemMiracleSeed' },
+        { key: 'blackSludge', defKey: 'itemBlackSludge' },
+        { key: 'bigRoot', defKey: 'itemBigRoot' },
       ];
       for (const { key, defKey } of items) {
         if (player.hasHeldItem(key)) continue;
         const formReq = itemFormReqs[key];
         if (formReq && !isFormUnlocked(playerForm, formReq)) continue;
-        const affinity = ITEM_STARTER_AFFINITY[key];
-        if (affinity && affinity !== starterKey) continue;
-        pool.push(UPGRADE_DEFS[defKey]);
+        const def = UPGRADE_DEFS[defKey];
+        if (def.requiredType && !formTypes.includes(def.requiredType)) continue;
+        pool.push(def);
       }
+    }
+
+    // Quick Powder (stackable, max 3x -8% cooldown)
+    if (player.stats.attackSpeedBonus < 0.24) {
+      pool.push(UPGRADE_DEFS.itemQuickPowder);
     }
 
     // Revive (max 2)
@@ -307,6 +306,15 @@ export class UpgradeSystem {
     // Max Revive evolution (has revive but not max yet)
     if (player.stats.revives > 0 && !player.stats.reviveIsMax) {
       pool.push(UPGRADE_DEFS.evolveMaxRevive);
+    }
+
+    // Fallback rewards when pool is empty (all skills maxed + all items obtained)
+    if (pool.length === 0) {
+      return [
+        { id: 'goldSmall', name: 'Coins', description: '+100₽', icon: 'coin-medium', color: 0xffcc00 },
+        { id: 'heal', name: 'Oran Berry', description: 'Restaura 30% HP', icon: 'pickup-oran', color: 0x44aaff },
+        { id: 'goldLarge', name: 'Big Coins', description: '+250₽', icon: 'coin-large', color: 0xffdd00 },
+      ];
     }
 
     // Stats (always available)
@@ -366,6 +374,36 @@ export class UpgradeSystem {
       return;
     }
 
+    // Quick Powder (stackable)
+    if (upgradeId === 'itemQuickPowder') {
+      player.stats.attackSpeedBonus = Math.min(0.24, player.stats.attackSpeedBonus + 0.08);
+      const stacks = Math.round(player.stats.attackSpeedBonus / 0.08);
+      this.pickupSystem.showPickupNotification(`QUICK POWDER! -${stacks * 8}% cooldown`, 0x88ddff);
+      this.emitStats();
+      return;
+    }
+
+    // Fallback rewards (pool empty)
+    if (upgradeId === 'goldSmall') {
+      this.pickupSystem.showPickupNotification('+100₽', 0xffcc00);
+      this.pickupSystem.addCoins(100);
+      this.emitStats();
+      return;
+    }
+    if (upgradeId === 'heal') {
+      const healAmount = Math.max(1, Math.floor(player.stats.maxHp * 0.3));
+      player.heal(healAmount);
+      this.pickupSystem.showPickupNotification(`+${healAmount} HP`, 0x44aaff);
+      this.emitStats();
+      return;
+    }
+    if (upgradeId === 'goldLarge') {
+      this.pickupSystem.showPickupNotification('+250₽', 0xffdd00);
+      this.pickupSystem.addCoins(250);
+      this.emitStats();
+      return;
+    }
+
     // Stats
     switch (upgradeId) {
       case 'maxHpUp':
@@ -377,7 +415,7 @@ export class UpgradeSystem {
         player.stats.speed = Math.floor(player.stats.speed * 1.15);
         break;
       case 'magnetUp':
-        player.stats.magnetRange = Math.floor(player.stats.magnetRange * 1.4);
+        player.stats.magnetRange = Math.min(player.stats.magnetRange + 12, 90);
         break;
     }
 
@@ -418,6 +456,11 @@ export class UpgradeSystem {
         player.addXp(player.stats.xpToNext);
         this.triggerLevelUp();
         return true; // triggerLevelUp handles pause + emitStats
+      }
+      case 'coinLarge': {
+        this.pickupSystem.showPickupNotification('BIG COINS! +300₽', 0xFFD700);
+        this.pickupSystem.addCoins(300);
+        break;
       }
       case 'evolutionStone': {
         this.pickupSystem.showPickupNotification('EVOLUTION STONE!', 0xff8800);

@@ -44,7 +44,7 @@ export class Bubble implements Attack {
     });
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });
@@ -247,10 +247,10 @@ export class Bubble implements Attack {
     if (this.level % 4 === 0) {
       this.maxChains++;
     }
-    this.cooldown = Math.max(400, this.cooldown - 60);
+    this.cooldown = Math.max(600, this.cooldown - 60);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });

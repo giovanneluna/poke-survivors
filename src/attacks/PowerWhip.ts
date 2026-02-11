@@ -39,7 +39,7 @@ export class PowerWhip implements Attack {
     this.cooldown = ATTACKS.powerWhip.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.whip(),
     });
@@ -149,10 +149,10 @@ export class PowerWhip implements Attack {
     this.damage += 5;
     this.range += 8;
     this.knockbackForce += 30;
-    this.cooldown = Math.max(350, this.cooldown - 40);
+    this.cooldown = Math.max(900, this.cooldown - 40);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.whip(),
     });

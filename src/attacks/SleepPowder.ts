@@ -37,7 +37,7 @@ export class SleepPowder implements Attack {
     this.cooldown = ATTACKS.sleepPowder.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.spore(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.spore(),
     });
   }
 
@@ -121,7 +121,7 @@ export class SleepPowder implements Attack {
     this.cooldown = Math.max(3000, this.cooldown - 200);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.spore(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.spore(),
     });
   }
 

@@ -38,7 +38,7 @@ export class LeafBlade implements Attack {
     this.cooldown = ATTACKS.leafBlade.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.slash(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.slash(),
     });
   }
 
@@ -123,10 +123,10 @@ export class LeafBlade implements Attack {
     this.damage += 6;
     this.range += 5;
     this.critChance = Math.min(0.6, this.critChance + 0.03);
-    this.cooldown = Math.max(800, this.cooldown - 80);
+    this.cooldown = Math.max(900, this.cooldown - 80);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.slash(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.slash(),
     });
   }
 

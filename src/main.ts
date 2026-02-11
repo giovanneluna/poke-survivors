@@ -6,6 +6,7 @@ import { SelectScene } from './scenes/SelectScene';
 import { GameScene } from './scenes/GameScene';
 import { UIScene } from './scenes/UIScene';
 import { ShowcaseScene } from './scenes/ShowcaseScene';
+import { DataViewerScene } from './scenes/DataViewerScene';
 import { PowerUpScene } from './scenes/PowerUpScene';
 import { PokedexScene } from './scenes/PokedexScene';
 import { StatsScene } from './scenes/StatsScene';
@@ -38,7 +39,7 @@ const config: Phaser.Types.Core.GameConfig = {
     expandParent: true,
     ...(isLow ? {} : { width: '100%', height: '100%' }),
   },
-  scene: [BootScene, TitleScene, SelectScene, PowerUpScene, PokedexScene, StatsScene, SaveScene, GameScene, UIScene, ShowcaseScene],
+  scene: [BootScene, TitleScene, SelectScene, PowerUpScene, PokedexScene, StatsScene, SaveScene, GameScene, UIScene, ShowcaseScene, DataViewerScene],
 };
 
 const game = new Phaser.Game(config);

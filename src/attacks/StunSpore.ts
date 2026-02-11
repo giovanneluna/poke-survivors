@@ -30,7 +30,7 @@ export class StunSpore implements Attack {
     this.cooldown = ATTACKS.stunSpore.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.release(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.release(),
     });
   }
 
@@ -99,7 +99,7 @@ export class StunSpore implements Attack {
     this.cooldown = Math.max(3500, this.cooldown - 300);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.release(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.release(),
     });
   }
 

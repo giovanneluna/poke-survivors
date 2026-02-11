@@ -10,6 +10,7 @@ interface ActiveCone {
   sprite: Phaser.GameObjects.Sprite;
   hitEnemies: Set<number>;
   dirAngleRad: number;
+  followFn: () => void;
 }
 
 /**
@@ -38,7 +39,7 @@ export class BlastBurn implements Attack {
     this.cooldown = ATTACKS.blastBurn.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });
@@ -67,6 +68,7 @@ export class BlastBurn implements Attack {
       sprite: burn,
       hitEnemies: new Set(),
       dirAngleRad,
+      followFn: followBurn,
     };
 
     this.scene.tweens.add({
@@ -146,12 +148,16 @@ export class BlastBurn implements Attack {
     this.cooldown = Math.max(2000, this.cooldown - 200);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.fire(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.fire(),
     });
   }
 
   destroy(): void {
     this.timer.destroy();
-    this.activeCone = null;
+    if (this.activeCone) {
+      this.scene.events.off('update', this.activeCone.followFn);
+      if (this.activeCone.sprite.active) this.activeCone.sprite.destroy();
+      this.activeCone = null;
+    }
   }
 }

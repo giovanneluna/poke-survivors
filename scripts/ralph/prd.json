@@ -1,0 +1,64 @@
+{
+  "branchName": "ralph/data-viewer-scene",
+  "title": "DataViewerScene — Terminal Retro Data Dashboard",
+  "description": "Nova cena Phaser para visualizar dados do jogo: waves timeline, ataques com DPS calculator, itens, e eventos. Estilo terminal retro com fonte monospace e bordas ASCII. Acessível via botão [DATA] na SelectScene.",
+  "designDoc": "docs/plans/2026-02-10-data-viewer-scene.md",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "DataViewerScene base com sistema de tabs",
+      "description": "Criar src/scenes/DataViewerScene.ts. Registrar no game config. Fundo #0a0a0a, UI monospace. 4 tabs no topo: WAVES, ATAQUES, ITENS, EVENTOS. Tab ativa em #00ff88, inativas em #666666. Footer com controles [ESC] [◀▶] [▲▼]. Container scrollable com mask para mouse wheel + setas. ESC volta para SelectScene. Recebe { map: string } como scene data. Trocar tab destroi e recria conteúdo. Registrar cena em src/scenes/index.ts e no game config (onde as scenes são listadas).",
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "US-002",
+      "title": "Botão [DATA] na SelectScene",
+      "description": "Adicionar botão [DATA] na SelectScene. Posicionar no canto inferior ou abaixo dos starters. Texto monospace com hover effect (highlight verde #00ff88). Click navega para DataViewerScene com { map: 'phase1' }. Estilo consistente com outros botões. Arquivo: src/scenes/SelectScene.ts",
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "US-003",
+      "title": "Tab WAVES — modo TABLE",
+      "description": "Renderizar tabela de waves na tab WAVES. Importar PHASE1 de src/data/enemies/phases/phase1.ts e boss configs (RATICATE, ARBOK, NIDOKING, SNORLAX) de src/data/enemies/. Header: MAP 1 FIRE RED | 20 WAVES | 10:00 | 4 BOSSES. Tabela: WAVE | TIME | ENEMIES | RATE | MAX. Time = waveIndex × 30s. Enemies: tipo×peso. Boss rows destacados entre waves com HP, SPD, DMG, XP, bossAttacks (nome, pattern, dmg, cd). Cores: waves #00ff88, bosses #ff4444, headers #ffcc00.",
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "US-004",
+      "title": "Tab WAVES — modo TIMELINE",
+      "description": "Adicionar modo TIMELINE na tab WAVES. Sub-tabs: TIMELINE | TABLE, toggle com T ou click. Timeline vertical cronológica: waves + bosses + eventos intercalados. Waves: '0:00 ┬ WAVE 00 ─ Rattata×3 ...' Bosses: box com bordas duplas. Eventos timed no minuto correto: PokéCenter@3:00(repete 3min), ProfOak@4:00, Eclipse@6:00, Legendary@8:00. Eventos wave-triggered: Swarm(5%,min2:00,cd60s) e TreasureRoom(8%,min3:00,cd90s) como 'possível'. Criar EVENT_DATA array local com dados. Linha vertical │ conectando entries.",
+      "priority": 4,
+      "passes": false
+    },
+    {
+      "id": "US-005",
+      "title": "Tab ATAQUES — Lista de ataques por starter",
+      "description": "Renderizar lista de ataques na tab ATAQUES. Selector de starter no topo: CHARMANDER ◀▶ SQUIRTLE ◀▶ BULBASAUR. Importar ATTACKS de src/data/attacks/attack-registry.ts e starter configs de src/data/pokemon/index.ts. Agrupar por form: BASE, STAGE 1, STAGE 2. Colunas: ATAQUE | ELE | DMG | CD | FORM | MAX LV. Elemento colorido por tipo (fire=#ff6600, water=#3388ff, grass=#22cc44, dragon=#7744ff, normal=#aaaaaa, flying=#88ccff, ice=#88ddff, poison=#9944cc). Cursor ▲▼ para navegar, selecionado com '>' e highlight.",
+      "priority": 5,
+      "passes": false
+    },
+    {
+      "id": "US-006",
+      "title": "Tab ATAQUES — Combo Calculator",
+      "description": "Ao pressionar ENTER num ataque, mostrar DPS breakdown. Painel inferior: COMBO CALCULATOR. Criar ATTACK_SCALING Record<string, {dmgPerLevel:number, cdReduction:number}> com valores por ataque (padrão: +5dmg/lv, -100ms cd/lv). Mostrar: Base DMG + upgrades = total, Cooldown base - redução = total, +QuickPowder x3 (×0.76), +held items relevantes ao tipo (+10% fire=Charcoal, +8% Choice Specs, etc.), +Scope Lens crit, Projéteis (1+3 duplicator=4). FINAL: dmg×proj/cd = DPS. DPS grande em #00ff88, valores em #ff6644.",
+      "priority": 6,
+      "passes": false
+    },
+    {
+      "id": "US-007",
+      "title": "Tab ITENS — Held Items, Upgrades, Pickups",
+      "description": "Tab ITENS com 3 sub-tabs. HELD ITEMS: importar de src/data/items/held-items.ts, colunas ITEM|EFEITO|TIPO|MAX|POR LEVEL (22 items). UPGRADES: Max HP Up(+10HP,+0.5regen), Speed Up(+15%), Magnet Up(+12,max90). PICKUPS: Oran(+25HP), Sitrus(+50HP), Liechi(2×DMG 30s), Salac(1.5×SPD 30s), MagnetBurst, Duplicator(+1proj max3), XPShare(XP×2), FriendBall, Coins(Small₽5,Medium₽25,Large₽100).",
+      "priority": 7,
+      "passes": false
+    },
+    {
+      "id": "US-008",
+      "title": "Tab EVENTOS — Lista detalhada",
+      "description": "Tab EVENTOS com lista dos 6 eventos. Cada evento: header (EVENTO|TRIGGER|QUANDO|REPETE?|EFEITO) + sub-linha com detalhes. PokéCenter: timed 3:00, repeat 3min, zona 80px, +5HP/500ms, 15s. ProfOak: timed 4:00, one-shot, gacha box. Swarm: wave 5%, min2:00, cd60s, 40 enemies. Eclipse: timed 6:00, one-shot, 30s, brightness 0.35. Legendary: timed 8:00, one-shot, Mew 15s. TreasureRoom: wave 8%, min3:00, cd90s, 3-5 baús+3 Machop.",
+      "priority": 8,
+      "passes": false
+    }
+  ]
+}

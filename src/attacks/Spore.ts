@@ -30,7 +30,7 @@ export class Spore implements Attack {
     this.cooldown = ATTACKS.spore.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.release(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.release(),
     });
   }
 
@@ -124,7 +124,7 @@ export class Spore implements Attack {
     this.cooldown = Math.max(2500, this.cooldown - 200);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.release(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.release(),
     });
   }
 

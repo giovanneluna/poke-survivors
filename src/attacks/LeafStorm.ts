@@ -23,6 +23,7 @@ export class LeafStorm implements Attack {
   private cooldown: number;
   private radius = 90;
   private readonly duration = 2000;
+  private pendingCleanups: Array<() => void> = [];
 
   constructor(scene: Phaser.Scene, player: Player, _enemyGroup: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
@@ -31,7 +32,7 @@ export class LeafStorm implements Attack {
     this.cooldown = ATTACKS.leafStorm.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.storm(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.storm(),
     });
   }
 
@@ -111,17 +112,22 @@ export class LeafStorm implements Attack {
       },
     });
 
+    let cleaned = false;
     const cleanup = (): void => {
+      if (cleaned) return;
+      cleaned = true;
       tickEvent.destroy();
       leafEmitter?.destroy();
-      this.scene.tweens.add({
-        targets: stormSprite,
-        alpha: 0,
-        scale: 0.3,
-        duration: 300,
-        onComplete: () => stormSprite.destroy(),
-      });
+      if (stormSprite.active) {
+        this.scene.tweens.add({
+          targets: stormSprite, alpha: 0, scale: 0.3, duration: 300,
+          onComplete: () => { if (stormSprite.active) stormSprite.destroy(); },
+        });
+      }
+      const idx = this.pendingCleanups.indexOf(cleanup);
+      if (idx !== -1) this.pendingCleanups.splice(idx, 1);
     };
+    this.pendingCleanups.push(cleanup);
 
     // Safety cleanup
     this.scene.time.delayedCall(this.duration + 500, cleanup);
@@ -136,9 +142,13 @@ export class LeafStorm implements Attack {
     this.cooldown = Math.max(1200, this.cooldown - 100);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.storm(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.storm(),
     });
   }
 
-  destroy(): void { this.timer.destroy(); }
+  destroy(): void {
+    this.timer.destroy();
+    for (const fn of [...this.pendingCleanups]) fn();
+    this.pendingCleanups.length = 0;
+  }
 }

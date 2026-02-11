@@ -30,7 +30,7 @@ export class AirSlash implements Attack {
     this.cooldown = ATTACKS.airSlash.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.slash(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.slash(),
     });
   }
 
@@ -110,10 +110,10 @@ export class AirSlash implements Attack {
     this.damage += 5;
     this.pierceCount++;
     if (this.level % 3 === 0) this.bladeCount++;
-    this.cooldown = Math.max(700, this.cooldown - 100);
+    this.cooldown = Math.max(1500, this.cooldown - 100);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.slash(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.slash(),
     });
   }
 

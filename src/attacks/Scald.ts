@@ -37,7 +37,7 @@ export class Scald implements Attack {
     });
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown,
+      delay: this.player.getAdjustedCooldown(this.cooldown),
       loop: true,
       callback: () => this.fire(),
     });
@@ -154,10 +154,10 @@ export class Scald implements Attack {
     this.level++;
     this.damage += 6;
     if (this.level % 2 === 0) this.projectileCount++;
-    this.cooldown = Math.max(400, this.cooldown - 80);
+    this.cooldown = Math.max(900, this.cooldown - 80);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.fire(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.fire(),
     });
   }
 

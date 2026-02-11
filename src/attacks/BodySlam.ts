@@ -42,7 +42,7 @@ export class BodySlam implements Attack {
     this.cooldown = ATTACKS.bodySlam.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.slam(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.slam(),
     });
   }
 
@@ -148,10 +148,10 @@ export class BodySlam implements Attack {
     this.damage += 5;
     this.range += 4;
     if (this.level % 2 === 0) this.slamCount++;
-    this.cooldown = Math.max(250, this.cooldown - 30);
+    this.cooldown = Math.max(900, this.cooldown - 30);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.slam(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.slam(),
     });
   }
 

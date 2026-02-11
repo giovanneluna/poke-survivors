@@ -66,6 +66,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('item-razor-claw', 'assets/items/razor-claw.png');
     this.load.image('item-shell-bell', 'assets/items/shell-bell.png');
     this.load.image('item-focus-band', 'assets/items/focus-band.png');
+    this.load.image('item-quick-powder', 'assets/items/quick-powder.png');
     this.load.image('item-silk-scarf', 'assets/items/silk-scarf.png');
     this.load.image('item-metronome', 'assets/items/metronome.png');
     this.load.image('item-mystic-water', 'assets/items/mystic-water.png');
@@ -427,11 +428,11 @@ export class BootScene extends Phaser.Scene {
       frames: this.anims.generateFrameNumbers('atk-dragon-claw', { start: 0, end: 9 }),
       frameRate: 20, repeat: 0,
     });
-    // Dragon Pulse (6 frames, looping projectile)
+    // Dragon Pulse (6 frames, play twice then complete)
     this.anims.create({
       key: 'anim-dragon-pulse',
       frames: this.anims.generateFrameNumbers('atk-dragon-pulse', { start: 0, end: 5 }),
-      frameRate: 15, repeat: -1,
+      frameRate: 15, repeat: 1,
     });
     // Dragon Rush (7 frames, play once)
     this.anims.create({

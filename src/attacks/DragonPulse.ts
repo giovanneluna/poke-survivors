@@ -30,7 +30,7 @@ export class DragonPulse implements Attack {
     this.cooldown = ATTACKS.dragonPulse.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.fire(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.fire(),
     });
   }
 
@@ -52,6 +52,8 @@ export class DragonPulse implements Attack {
         pulseSprite.setRotation(angle);
         pulseSprite.play('anim-dragon-pulse');
         pulseSprite.once('animationcomplete', () => pulseSprite.destroy());
+        // Safety: destroy after 1s regardless (prevents leak if anim event fails)
+        this.scene.time.delayedCall(1000, () => { if (pulseSprite.active) pulseSprite.destroy(); });
       });
     }
 
@@ -104,10 +106,10 @@ export class DragonPulse implements Attack {
     this.damage += 6;
     this.beamWidth += 5;
     this.beamLength += 20;
-    this.cooldown = Math.max(800, this.cooldown - 100);
+    this.cooldown = Math.max(1500, this.cooldown - 100);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.fire(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.fire(),
     });
   }
 

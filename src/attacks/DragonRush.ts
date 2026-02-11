@@ -31,7 +31,7 @@ export class DragonRush implements Attack {
     this.cooldown = ATTACKS.dragonRush.baseCooldown;
 
     this.timer = scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.charge(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.charge(),
     });
   }
 
@@ -143,7 +143,7 @@ export class DragonRush implements Attack {
     this.cooldown = Math.max(1500, this.cooldown - 150);
     this.timer.destroy();
     this.timer = this.scene.time.addEvent({
-      delay: this.cooldown, loop: true, callback: () => this.charge(),
+      delay: this.player.getAdjustedCooldown(this.cooldown), loop: true, callback: () => this.charge(),
     });
   }
 
