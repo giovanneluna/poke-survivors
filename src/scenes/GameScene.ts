@@ -16,7 +16,7 @@ import { UpgradeSystem } from "../systems/UpgradeSystem"
 import { DebugSystem } from "../systems/DebugSystem"
 import { PassiveSystem, getPassive } from "../systems/PassiveSystem"
 import { initSpatialGrid, getSpatialGrid } from "../systems/SpatialHashGrid"
-import { clearSpores } from "../systems/EnemyBehaviors"
+import { clearSpores, clearDeathClouds } from "../systems/EnemyBehaviors"
 import {
   resetDamageTotals,
   getDamageTotals,
@@ -243,9 +243,21 @@ export class GameScene extends Phaser.Scene {
       this.spawnSystem.startSpawning()
       this.worldSystem.spawnDestructibles()
       this.time.addEvent({
-        delay: 60_000,
+        delay: 90_000,
         loop: true,
         callback: () => this.worldSystem.spawnChest(),
+      })
+      // Magnet Burst floor spawn (como vacuum do VS) — a cada 150s, perto do player
+      this.time.addEvent({
+        delay: 150_000,
+        loop: true,
+        callback: () => {
+          const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+          const dist = Phaser.Math.Between(200, 350);
+          const x = Phaser.Math.Clamp(this.player.x + Math.cos(angle) * dist, 100, GAME.worldWidth - 100);
+          const y = Phaser.Math.Clamp(this.player.y + Math.sin(angle) * dist, 100, GAME.worldHeight - 100);
+          this.pickupSystem.spawnPickup(x, y, 'magnetBurst');
+        },
       })
     }
 
@@ -504,7 +516,7 @@ export class GameScene extends Phaser.Scene {
 
       const bestCombo = getComboSystem().getBestCombo()
       const formName =
-        this.starterConfig.forms.find(
+        (this.starterConfig.forms ?? []).find(
           (f) => f.form === this.player.stats.form,
         )?.name ?? this.starterConfig.name
 
@@ -538,13 +550,13 @@ export class GameScene extends Phaser.Scene {
         combo: getComboSystem().getBestCombo(),
         starterKey: this.starterKey,
         formName:
-          this.starterConfig.forms.find(
+          (this.starterConfig.forms ?? []).find(
             (f) => f.form === this.player.stats.form,
           )?.name ?? this.starterConfig.name,
         damageByAttack: runStats.damageByAttack,
       })
       const formName =
-        this.starterConfig.forms.find(
+        (this.starterConfig.forms ?? []).find(
           (f) => f.form === this.player.stats.form,
         )?.name ?? this.starterConfig.name
       saveLastRun({
@@ -560,6 +572,7 @@ export class GameScene extends Phaser.Scene {
       getMusicManager()?.fadeOut(1000)
       getEventSystem().destroy()
       clearSpores()
+      clearDeathClouds()
     })
 
     // ── Initial state ───────────────────────────────────────────────
@@ -738,11 +751,11 @@ export class GameScene extends Phaser.Scene {
       xp: runStats.xpCollected,
       combo: getComboSystem().getBestCombo(),
       starterKey: this.starterKey,
-      formName: this.starterConfig.forms.find((f) => f.form === this.player.stats.form)
+      formName: (this.starterConfig.forms ?? []).find((f) => f.form === this.player.stats.form)
         ?.name ?? this.starterConfig.name,
       damageByAttack: runStats.damageByAttack,
     })
-    const formName = this.starterConfig.forms.find((f) => f.form === this.player.stats.form)
+    const formName = (this.starterConfig.forms ?? []).find((f) => f.form === this.player.stats.form)
       ?.name ?? this.starterConfig.name
     saveLastRun({
       starterKey: this.starterKey,
@@ -767,6 +780,7 @@ export class GameScene extends Phaser.Scene {
     getMusicManager()?.fadeOut(2000)
     getEventSystem().destroy()
     clearSpores()
+    clearDeathClouds()
 
     this.events.emit("game-over", {
       level: this.player.stats.level,
@@ -923,7 +937,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private emitStats(): void {
-    const currentForm = this.starterConfig.forms.find(
+    const currentForm = (this.starterConfig.forms ?? []).find(
       (f) => f.form === this.player.stats.form,
     )
     // Keep StatsTracker in sync

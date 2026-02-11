@@ -3,6 +3,10 @@
 ## Projeto
 Vampire Survivors clone com tema Pokémon. Phaser 3.90 + TypeScript + Vite.
 
+## REGRA ABSOLUTA: NUNCA COMMITAR
+- **NUNCA** executar `git commit`, `git add`, `git push` ou qualquer operação git destrutiva.
+- O usuário faz TODOS os commits manualmente. Isso se aplica a TODOS os agentes, incluindo Ralph.
+
 ## Skills Obrigatórias
 - Sempre usar a skill `/game-development` ao trabalhar neste projeto
 - Para assets visuais, consultar o arquivo de memória `pokemon-resources.md`

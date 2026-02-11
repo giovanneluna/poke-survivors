@@ -8,6 +8,7 @@ import type {
   EnemyContactEffect,
   EnemyHealAuraConfig,
   EnemyDeathExplosionConfig,
+  EnemyDeathCloudConfig,
   EnemyTeleportConfig,
   EnemyBoomerangConfig,
   EnemySlowAuraConfig,
@@ -21,6 +22,7 @@ import {
   getFormDamageMultiplier,
 } from "../systems/DamageTracker"
 import { safeExplode } from "../utils/particles"
+import { spawnDeathCloud } from "../systems/EnemyBehaviors"
 import { ATTACKS } from "../config"
 import { ATTACK_CATEGORIES } from "../data/attacks/categories"
 import { ENEMY_TYPES, getTypeEffectiveness } from "../data/type-chart"
@@ -43,6 +45,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   readonly contactEffect: EnemyContactEffect | undefined
   readonly healAura: EnemyHealAuraConfig | undefined
   readonly deathExplosion: EnemyDeathExplosionConfig | undefined
+  readonly deathCloudConfig: EnemyDeathCloudConfig | undefined
   readonly teleportConfig: EnemyTeleportConfig | undefined
   readonly boomerang: EnemyBoomerangConfig | undefined
   readonly slowAura: EnemySlowAuraConfig | undefined
@@ -79,6 +82,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.contactEffect = config.contactEffect
     this.healAura = config.healAura
     this.deathExplosion = config.deathExplosion
+    this.deathCloudConfig = config.deathCloud
     this.teleportConfig = config.teleport
     this.boomerang = config.boomerang
     this.slowAura = config.slowAura
@@ -287,6 +291,23 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
    */
   takeDamage(amount: number): boolean {
     if (!this.scene || this.isDead) return false
+
+    // ── Shield check (Mr. Mime shielder behavior) ─────
+    const shieldEnd = this.data.get('shieldEnd') as number | undefined
+    if (shieldEnd && this.scene.time.now < shieldEnd) {
+      this.setTint(0x4488ff)
+      this.scene.time.delayedCall(150, () => {
+        if (this.active) this.clearTint()
+      })
+      return false
+    }
+    if (this.data.get('shielded')) {
+      if (!shieldEnd || this.scene.time.now >= shieldEnd) {
+        this.data.set('shielded', false)
+        if (this.active) this.clearTint()
+      }
+    }
+
     const passive = getPassive()
     let finalAmount = amount
     const now = this.scene.time.now
@@ -491,6 +512,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
           damage: cfg.damage,
           radius: cfg.radius,
         })
+      }
+
+      // Death cloud (Koffing/Weezing) — spawn lingering poison cloud
+      if (this.deathCloudConfig) {
+        const cfg = this.deathCloudConfig
+        spawnDeathCloud(this.scene, this.x, this.y, cfg.radius, cfg.dps, cfg.durationMs)
       }
 
       // Passive on-kill effect (Blaze: fire explosion, Torrent: water splash)

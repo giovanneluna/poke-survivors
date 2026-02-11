@@ -56,16 +56,23 @@ export class SelectScene extends Phaser.Scene {
       fontFamily: 'monospace',
     }).setOrigin(0.5).setDepth(10);
 
-    // ── Cards de personagem ──────────────────────────────────────────
-    const cardWidth = scaled(200);
-    const cardHeight = scaled(340);
-    const gap = scaled(30);
-    const totalWidth = STARTERS.length * cardWidth + (STARTERS.length - 1) * gap;
-    const startX = (width - totalWidth) / 2;
+    // ── Cards de personagem (grid 3 colunas) ─────────────────────────
+    const COLS = 3;
+    const maxCardW = scaled(160);
+    const gap = scaled(15);
+    const cardWidth = Math.min(maxCardW, (width - gap * (COLS + 1)) / COLS);
+    const cardHeight = Math.min(scaled(230), (height - scaled(220)) / 2);
+    const rowGap = scaled(12);
 
     STARTERS.forEach((starter, i) => {
-      const cx = startX + i * (cardWidth + gap) + cardWidth / 2;
-      const cy = height / 2 + scaled(20);
+      const col = i % COLS;
+      const row = Math.floor(i / COLS);
+      const rowCount = Math.min(COLS, STARTERS.length - row * COLS);
+      const rowTotalW = rowCount * cardWidth + (rowCount - 1) * gap;
+      const rowStartX = (width - rowTotalW) / 2;
+      const cx = rowStartX + col * (cardWidth + gap) + cardWidth / 2;
+      const baseY = scaled(88) + cardHeight / 2;
+      const cy = baseY + row * (cardHeight + rowGap);
       this.createCharacterCard(starter, i, cx, cy, cardWidth, cardHeight);
     });
 
@@ -777,8 +784,8 @@ export class SelectScene extends Phaser.Scene {
     container.add(cardGfx);
 
     // ── Sprite do Pokémon ────────────────────────────────────────────
-    const sprite = this.add.sprite(cx, cy - scaled(60), starter.sprite.key);
-    sprite.setScale(3);
+    const sprite = this.add.sprite(cx, cy - scaled(45), starter.sprite.key);
+    sprite.setScale(2.5);
 
     if (!starter.unlocked) {
       sprite.setFrame(0);
@@ -787,7 +794,7 @@ export class SelectScene extends Phaser.Scene {
       sprite.play(`${starter.sprite.key}-down`);
       this.tweens.add({
         targets: sprite,
-        y: sprite.y - 5,
+        y: sprite.y - 4,
         duration: 1000,
         yoyo: true,
         repeat: -1,
@@ -797,13 +804,13 @@ export class SelectScene extends Phaser.Scene {
     container.add(sprite);
 
     // Sombra
-    const shadow = this.add.image(cx, cy - scaled(25), 'shadow').setScale(3).setAlpha(starter.unlocked ? 0.3 : 0.1);
+    const shadow = this.add.image(cx, cy - scaled(15), 'shadow').setScale(2.5).setAlpha(starter.unlocked ? 0.3 : 0.1);
     container.add(shadow);
 
     // ── Nome ─────────────────────────────────────────────────────────
     const nameColor = starter.unlocked ? '#ffffff' : '#444444';
     const nameText = this.add.text(cx, cy + scaled(15), starter.name.toUpperCase(), {
-      fontSize: fontSize(16),
+      fontSize: fontSize(13),
       color: nameColor,
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -813,18 +820,21 @@ export class SelectScene extends Phaser.Scene {
     container.add(nameText);
 
     // ── Tipo badge ───────────────────────────────────────────────────
-    const typeColors: Record<string, number> = { 'Fogo': 0xff6600, 'Água': 0x4488ff, 'Planta': 0x44bb44 };
+    const typeColors: Record<string, number> = {
+      'Fogo': 0xff6600, 'Água': 0x4488ff, 'Planta': 0x44bb44,
+      'Fada': 0xff77cc, 'Fantasma': 0x6644aa, 'Psíquico': 0xff4488,
+    };
     const typeColor = typeColors[starter.type] ?? 0x888888;
 
     const typeBadge = this.add.graphics();
-    const badgeW = scaled(70);
-    const badgeH = scaled(20);
+    const badgeW = scaled(60);
+    const badgeH = scaled(18);
     typeBadge.fillStyle(starter.unlocked ? typeColor : 0x333333, 0.8);
-    typeBadge.fillRoundedRect(cx - badgeW / 2, cy + scaled(32), badgeW, badgeH, 5);
+    typeBadge.fillRoundedRect(cx - badgeW / 2, cy + scaled(28), badgeW, badgeH, 5);
     container.add(typeBadge);
 
-    const typeText = this.add.text(cx, cy + scaled(42), starter.type.toUpperCase(), {
-      fontSize: fontSize(10),
+    const typeText = this.add.text(cx, cy + scaled(37), starter.type.toUpperCase(), {
+      fontSize: fontSize(9),
       color: starter.unlocked ? '#ffffff' : '#555555',
       fontFamily: 'monospace',
       fontStyle: 'bold',
@@ -833,11 +843,11 @@ export class SelectScene extends Phaser.Scene {
 
     // ── Descrição ────────────────────────────────────────────────────
     if (starter.unlocked) {
-      const desc = this.add.text(cx, cy + scaled(70), starter.description, {
-        fontSize: fontSize(9),
+      const desc = this.add.text(cx, cy + scaled(55), starter.description, {
+        fontSize: fontSize(8),
         color: '#aaaaaa',
         fontFamily: 'monospace',
-        wordWrap: { width: cardWidth - scaled(30) },
+        wordWrap: { width: cardWidth - scaled(20) },
         align: 'center',
       }).setOrigin(0.5, 0);
       container.add(desc);
@@ -846,26 +856,26 @@ export class SelectScene extends Phaser.Scene {
     // ── Badge WIP ───────────────────────────────────────────────────
     if (starter.key === 'bulbasaur') {
       const wipBadgeGfx = this.add.graphics();
-      const wipW = scaled(50);
-      const wipH = scaled(18);
+      const wipW = scaled(45);
+      const wipH = scaled(16);
       wipBadgeGfx.fillStyle(0xff8800, 0.9);
-      wipBadgeGfx.fillRoundedRect(cx + cardWidth / 2 - wipW - scaled(8), cy - cardHeight / 2 + scaled(8), wipW, wipH, 4);
+      wipBadgeGfx.fillRoundedRect(cx + cardWidth / 2 - wipW - scaled(5), cy - cardHeight / 2 + scaled(6), wipW, wipH, 4);
       container.add(wipBadgeGfx);
-      const wipLabel = this.add.text(cx + cardWidth / 2 - wipW / 2 - scaled(8), cy - cardHeight / 2 + scaled(17), 'WIP', {
-        fontSize: fontSize(10), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
+      const wipLabel = this.add.text(cx + cardWidth / 2 - wipW / 2 - scaled(5), cy - cardHeight / 2 + scaled(14), 'WIP', {
+        fontSize: fontSize(9), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
       }).setOrigin(0.5);
       container.add(wipLabel);
     }
 
     // ── Overlay de lock ──────────────────────────────────────────────
     if (!starter.unlocked) {
-      const lockText = this.add.text(cx, cy + scaled(75), 'X', {
-        fontSize: fontSize(28), color: '#444444', fontFamily: 'monospace', fontStyle: 'bold',
+      const lockText = this.add.text(cx, cy + scaled(60), '🔒', {
+        fontSize: fontSize(22),
       }).setOrigin(0.5);
       container.add(lockText);
 
-      const lockedLabel = this.add.text(cx, cy + scaled(105), 'EM BREVE', {
-        fontSize: fontSize(11),
+      const lockedLabel = this.add.text(cx, cy + scaled(85), 'EM BREVE', {
+        fontSize: fontSize(9),
         color: '#666666',
         fontFamily: 'monospace',
         fontStyle: 'bold',
@@ -909,26 +919,36 @@ export class SelectScene extends Phaser.Scene {
     this.cardGraphics.push(cardGfx);
   }
 
+  private getCardPos(index: number): { cx: number; cy: number; w: number; h: number } {
+    const { width, height } = this.cameras.main;
+    const COLS = 3;
+    const maxCardW = scaled(160);
+    const gap = scaled(15);
+    const cardWidth = Math.min(maxCardW, (width - gap * (COLS + 1)) / COLS);
+    const cardHeight = Math.min(scaled(230), (height - scaled(220)) / 2);
+    const rowGap = scaled(12);
+    const col = index % COLS;
+    const row = Math.floor(index / COLS);
+    const rowCount = Math.min(COLS, STARTERS.length - row * COLS);
+    const rowTotalW = rowCount * cardWidth + (rowCount - 1) * gap;
+    const rowStartX = (width - rowTotalW) / 2;
+    const cx = rowStartX + col * (cardWidth + gap) + cardWidth / 2;
+    const baseY = scaled(88) + cardHeight / 2;
+    const cy = baseY + row * (cardHeight + rowGap);
+    return { cx, cy, w: cardWidth, h: cardHeight };
+  }
+
   private selectCard(index: number): void {
     const prevIndex = this.selectedIndex;
     this.selectedIndex = index;
 
-    const cardWidth = scaled(200);
-    const cardHeight = scaled(340);
-    const gap = scaled(30);
-    const { width } = this.cameras.main;
-    const totalWidth = STARTERS.length * cardWidth + (STARTERS.length - 1) * gap;
-    const startX = (width - totalWidth) / 2;
-
     if (prevIndex !== index && STARTERS[prevIndex].unlocked) {
-      const prevCx = startX + prevIndex * (cardWidth + gap) + cardWidth / 2;
-      const prevCy = this.cameras.main.height / 2 + scaled(20);
-      this.drawCard(this.cardGraphics[prevIndex], prevCx, prevCy, cardWidth, cardHeight, true, false);
+      const prev = this.getCardPos(prevIndex);
+      this.drawCard(this.cardGraphics[prevIndex], prev.cx, prev.cy, prev.w, prev.h, true, false);
     }
 
-    const cx = startX + index * (cardWidth + gap) + cardWidth / 2;
-    const cy = this.cameras.main.height / 2 + scaled(20);
-    this.drawCard(this.cardGraphics[index], cx, cy, cardWidth, cardHeight, true, true);
+    const pos = this.getCardPos(index);
+    this.drawCard(this.cardGraphics[index], pos.cx, pos.cy, pos.w, pos.h, true, true);
   }
 
   private drawCard(

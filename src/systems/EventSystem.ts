@@ -64,6 +64,11 @@ class EventSystemImpl {
   private currentWaveIndex = 0;
   private lastGameTime = 0;
 
+  /** Returns true if any visual event is active (prevents overlap) */
+  private isEventActive(): boolean {
+    return this.activeEclipse != null || this.activeSwarm != null;
+  }
+
   // ── Constants ──
   private static readonly HEAL_ZONE_RADIUS = 80;
   private static readonly HEAL_ZONE_TICK_MS = 500;
@@ -146,15 +151,15 @@ class EventSystemImpl {
       execute: (ctx, _gameTime) => this.executeLegendarySighting(ctx),
     });
 
-    // 6. Treasure Room — wave-triggered, 8% chance, min 3 min, cooldown 90s
+    // 6. Treasure Room — wave-triggered, 5% chance, min 3 min, cooldown 120s
     this.events.push({
       id: 'treasureRoom',
       name: 'Treasure Room',
       trigger: 'wave',
       triggerTimeMs: 0,
-      chance: 0.08,
+      chance: 0.05,
       minTimeMs: 180_000,
-      cooldownMs: 90_000,
+      cooldownMs: 120_000,
       fired: false,
       lastFiredAt: -Infinity,
       execute: (ctx, gameTime) => this.executeTreasureRoom(ctx, gameTime),
@@ -166,19 +171,21 @@ class EventSystemImpl {
   update(gameTime: number, _delta: number): void {
     this.lastGameTime = gameTime;
 
-    // Check timed events
+    // Check timed events (skip if another event is active)
     for (const evt of this.events) {
       if (evt.trigger !== 'timed') continue;
 
       if (evt.repeat != null) {
         // Repeating event
         if (gameTime >= evt.triggerTimeMs && gameTime - evt.lastFiredAt >= evt.repeat) {
+          if (this.isEventActive() && evt.id !== 'pokemonCenter') continue;
           evt.lastFiredAt = gameTime;
           evt.execute(this.ctx, gameTime);
         }
       } else {
-        // One-shot event
+        // One-shot event — defer if another event is active
         if (!evt.fired && gameTime >= evt.triggerTimeMs) {
+          if (this.isEventActive()) continue;
           evt.fired = true;
           evt.lastFiredAt = gameTime;
           evt.execute(this.ctx, gameTime);
@@ -490,7 +497,7 @@ class EventSystemImpl {
     const player = ctx.player;
     SoundManager.playEventWarning();
 
-    const chestCount = Phaser.Math.Between(3, 5);
+    const chestCount = Phaser.Math.Between(2, 3);
     const chestConfig = DESTRUCTIBLES.treasureChest;
 
     for (let i = 0; i < chestCount; i++) {

@@ -78,6 +78,20 @@ export const ENEMY_TYPES: Readonly<Record<EnemyType, ElementType>> = {
   marowak:    'ground',
   graveler:   'rock',
   machoke:    'fighting',
+  // Phase 3 — novos
+  koffing:    'poison',
+  magnemite:  'normal',   // Electric not in ElementType, use normal
+  tentacool:  'water',
+  rhyhorn:    'ground',
+  // Phase 4 — novos
+  weezing:    'poison',
+  magneton:   'normal',   // Electric not in ElementType, use normal
+  tentacruel: 'water',
+  rhydon:     'ground',
+  scyther:    'bug',
+  'mr-mime':  'psychic',
+  hitmonlee:  'fighting',
+  electabuzz: 'normal',   // Electric not in ElementType, use normal
   // Phase 4 — advanced elites
   alakazam:       'psychic',
   'alakazam-boss': 'psychic',

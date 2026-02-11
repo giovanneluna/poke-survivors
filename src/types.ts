@@ -86,8 +86,12 @@ export type EnemyType =
   // Phase 3 — Elites + evoluções
   | 'butterfree' | 'parasect' | 'venomoth' | 'hypno' | 'marowak'
   | 'graveler' | 'machoke'
+  // Phase 3 — Novos
+  | 'koffing' | 'magnemite' | 'tentacool' | 'rhyhorn'
   // Phase 4 — Elites avançados
   | 'alakazam' | 'alakazam-boss' | 'electrode' | 'crobat'
+  // Phase 4 — Novos
+  | 'weezing' | 'magneton' | 'tentacruel' | 'rhydon' | 'scyther' | 'mr-mime' | 'hitmonlee' | 'electabuzz'
   // Bosses
   | 'beedrill' | 'vileplume' | 'primeape' | 'gengar'
   | 'fearow' | 'pidgeot' | 'machamp' | 'golem';
@@ -96,7 +100,10 @@ export type Direction = 'down' | 'downRight' | 'right' | 'upRight' | 'up' | 'upL
 // ── Comportamentos de Inimigos ──────────────────────────────────
 export type EnemyBehavior =
   | 'charger' | 'swooper' | 'circler' | 'berserker'
-  | 'dasher' | 'tank' | 'sporeWalker' | 'confuser' | 'healer' | 'teleporter';
+  | 'dasher' | 'tank' | 'sporeWalker' | 'confuser' | 'healer' | 'teleporter'
+  | 'deathCloud' | 'puller' | 'trapper' | 'rammer'
+  | 'gasSpreader' | 'pullerElite' | 'trapperElite'
+  | 'slasher' | 'shielder' | 'leaper' | 'stunner';
 
 // ── Held Items (expandido) ────────────────────────────────────────
 export type HeldItemType =
@@ -161,6 +168,13 @@ export interface EnemyDeathExplosionConfig {
   readonly radius: number;
 }
 
+/** Config de nuvem tóxica na morte (Koffing/Weezing) */
+export interface EnemyDeathCloudConfig {
+  readonly radius: number;
+  readonly dps: number;
+  readonly durationMs: number;
+}
+
 /** Config de teleporte (Alakazam) */
 export interface EnemyTeleportConfig {
   readonly cooldownMs: number;
@@ -196,6 +210,7 @@ export interface EnemyConfig {
   readonly contactEffect?: EnemyContactEffect;
   readonly healAura?: EnemyHealAuraConfig;
   readonly deathExplosion?: EnemyDeathExplosionConfig;
+  readonly deathCloud?: EnemyDeathCloudConfig;
   readonly teleport?: EnemyTeleportConfig;
   readonly boomerang?: EnemyBoomerangConfig;
   readonly slowAura?: EnemySlowAuraConfig;

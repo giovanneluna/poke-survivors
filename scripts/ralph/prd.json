@@ -1,64 +1,91 @@
 {
-  "branchName": "ralph/data-viewer-scene",
-  "title": "DataViewerScene — Terminal Retro Data Dashboard",
-  "description": "Nova cena Phaser para visualizar dados do jogo: waves timeline, ataques com DPS calculator, itens, e eventos. Estilo terminal retro com fonte monospace e bordas ASCII. Acessível via botão [DATA] na SelectScene.",
-  "designDoc": "docs/plans/2026-02-10-data-viewer-scene.md",
+  "branchName": "main",
+  "title": "New Enemies for Phase 3 & Phase 4",
+  "designDoc": "docs/plans/2026-02-11-new-enemies-p3-p4.md",
   "userStories": [
     {
       "id": "US-001",
-      "title": "DataViewerScene base com sistema de tabs",
-      "description": "Criar src/scenes/DataViewerScene.ts. Registrar no game config. Fundo #0a0a0a, UI monospace. 4 tabs no topo: WAVES, ATAQUES, ITENS, EVENTOS. Tab ativa em #00ff88, inativas em #666666. Footer com controles [ESC] [◀▶] [▲▼]. Container scrollable com mask para mouse wheel + setas. ESC volta para SelectScene. Recebe { map: string } como scene data. Trocar tab destroi e recria conteúdo. Registrar cena em src/scenes/index.ts e no game config (onde as scenes são listadas).",
+      "title": "Add sprite configs for 12 new enemies",
       "priority": 1,
-      "passes": false
+      "passes": true,
+      "description": "Add sprite configurations for 12 new Pokémon to `src/data/sprites/enemies.ts`. The sprite PNG files already exist at `public/assets/pokemon/`. Add entries inside ENEMY_SPRITES with comment sections `// ── Phase 3 novos ──` and `// ── Phase 4 novos ──`. Use exact frame dimensions:\n\nkoffing:     { key: 'koffing-walk',     path: 'assets/pokemon/koffing-walk.png',     frameWidth: 32, frameHeight: 56, frameCount: 10, directions: 8 }\nmagnemite:   { key: 'magnemite-walk',   path: 'assets/pokemon/magnemite-walk.png',   frameWidth: 24, frameHeight: 32, frameCount: 6,  directions: 8 }\ntentacool:   { key: 'tentacool-walk',   path: 'assets/pokemon/tentacool-walk.png',   frameWidth: 24, frameHeight: 40, frameCount: 4,  directions: 8 }\nrhyhorn:     { key: 'rhyhorn-walk',     path: 'assets/pokemon/rhyhorn-walk.png',     frameWidth: 32, frameHeight: 32, frameCount: 4,  directions: 8 }\nweezing:     { key: 'weezing-walk',     path: 'assets/pokemon/weezing-walk.png',     frameWidth: 32, frameHeight: 56, frameCount: 6,  directions: 8 }\nmagneton:    { key: 'magneton-walk',    path: 'assets/pokemon/magneton-walk.png',    frameWidth: 32, frameHeight: 48, frameCount: 8,  directions: 8 }\ntentacruel:  { key: 'tentacruel-walk',  path: 'assets/pokemon/tentacruel-walk.png',  frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 }\nrhydon:      { key: 'rhydon-walk',      path: 'assets/pokemon/rhydon-walk.png',      frameWidth: 32, frameHeight: 48, frameCount: 4,  directions: 8 }\nscyther:     { key: 'scyther-walk',     path: 'assets/pokemon/scyther-walk.png',     frameWidth: 40, frameHeight: 48, frameCount: 4,  directions: 8 }\nmrMime:      { key: 'mr-mime-walk',     path: 'assets/pokemon/mr-mime-walk.png',     frameWidth: 32, frameHeight: 48, frameCount: 4,  directions: 8 }\nhitmonlee:   { key: 'hitmonlee-walk',   path: 'assets/pokemon/hitmonlee-walk.png',   frameWidth: 40, frameHeight: 48, frameCount: 4,  directions: 8 }\nelectabuzz:  { key: 'electabuzz-walk',  path: 'assets/pokemon/electabuzz-walk.png',  frameWidth: 40, frameHeight: 56, frameCount: 4,  directions: 8 }\n\nBootScene automatically loads all ENEMIES via Object.values(ENEMIES) loop. No BootScene changes needed."
     },
     {
       "id": "US-002",
-      "title": "Botão [DATA] na SelectScene",
-      "description": "Adicionar botão [DATA] na SelectScene. Posicionar no canto inferior ou abaixo dos starters. Texto monospace com hover effect (highlight verde #00ff88). Click navega para DataViewerScene com { map: 'phase1' }. Estilo consistente com outros botões. Arquivo: src/scenes/SelectScene.ts",
+      "title": "Add new behavior types to types.ts",
       "priority": 2,
-      "passes": false
+      "passes": true,
+      "description": "In `src/types.ts`, find the `EnemyBehavior` type union (around line 97-99) and add 11 new behavior types:\n\nexport type EnemyBehavior =\n  | 'charger' | 'swooper' | 'circler' | 'berserker'\n  | 'dasher' | 'tank' | 'sporeWalker' | 'confuser' | 'healer' | 'teleporter'\n  | 'deathCloud' | 'puller' | 'trapper' | 'rammer'\n  | 'gasSpreader' | 'pullerElite' | 'trapperElite'\n  | 'slasher' | 'shielder' | 'leaper' | 'stunner';\n\nAlso in the EnemyConfig interface, add an optional deathCloud field near the existing deathExplosion field:\n\nreadonly deathCloud?: {\n  readonly radius: number;\n  readonly dps: number;\n  readonly durationMs: number;\n};"
     },
     {
       "id": "US-003",
-      "title": "Tab WAVES — modo TABLE",
-      "description": "Renderizar tabela de waves na tab WAVES. Importar PHASE1 de src/data/enemies/phases/phase1.ts e boss configs (RATICATE, ARBOK, NIDOKING, SNORLAX) de src/data/enemies/. Header: MAP 1 FIRE RED | 20 WAVES | 10:00 | 4 BOSSES. Tabela: WAVE | TIME | ENEMIES | RATE | MAX. Time = waveIndex × 30s. Enemies: tipo×peso. Boss rows destacados entre waves com HP, SPD, DMG, XP, bossAttacks (nome, pattern, dmg, cd). Cores: waves #00ff88, bosses #ff4444, headers #ffcc00.",
+      "title": "Create 12 enemy config files and register in index",
       "priority": 3,
-      "passes": false
+      "passes": true,
+      "description": "Create 12 new enemy config files in `src/data/enemies/` following the exact pattern of geodude.ts and venonat.ts. Import types and SPRITES the same way.\n\nConfigs:\n1. koffing.ts: key:'koffing', name:'Koffing', sprite:SPRITES.koffing, hp:100, speed:30, damage:12, xpValue:50, scale:1.1, behavior:'deathCloud', deathCloud:{radius:50, dps:4, durationMs:4000}\n2. magnemite.ts: key:'magnemite', name:'Magnemite', sprite:SPRITES.magnemite, hp:60, speed:40, damage:10, xpValue:45, scale:0.8, behavior:'puller'\n3. tentacool.ts: key:'tentacool', name:'Tentacool', sprite:SPRITES.tentacool, hp:70, speed:45, damage:10, xpValue:50, scale:1.0, behavior:'trapper', contactEffect:{type:'stun', durationMs:1500}\n4. rhyhorn.ts: key:'rhyhorn', name:'Rhyhorn', sprite:SPRITES.rhyhorn, hp:120, speed:25, damage:22, xpValue:55, scale:1.2, behavior:'rammer', contactEffect:{type:'knockback', durationMs:300, force:300}\n5. weezing.ts: key:'weezing', name:'Weezing', sprite:SPRITES.weezing, hp:180, speed:25, damage:15, xpValue:100, scale:1.3, behavior:'gasSpreader', deathCloud:{radius:70, dps:5, durationMs:6000}\n6. magneton.ts: key:'magneton', name:'Magneton', sprite:SPRITES.magneton, hp:100, speed:45, damage:14, xpValue:95, scale:1.0, behavior:'pullerElite'\n7. tentacruel.ts: key:'tentacruel', name:'Tentacruel', sprite:SPRITES.tentacruel, hp:130, speed:50, damage:16, xpValue:105, scale:1.2, behavior:'trapperElite', contactEffect:{type:'stun', durationMs:2500}\n8. rhydon.ts: key:'rhydon', name:'Rhydon', sprite:SPRITES.rhydon, hp:250, speed:20, damage:35, xpValue:110, scale:1.4, behavior:'rammer', contactEffect:{type:'knockback', durationMs:500, force:400}\n9. scyther.ts: key:'scyther', name:'Scyther', sprite:SPRITES.scyther, hp:80, speed:55, damage:25, xpValue:100, scale:1.1, behavior:'slasher'\n10. mr-mime.ts: export const MR_MIME, key:'mr-mime', name:'Mr. Mime', sprite:SPRITES.mrMime, hp:60, speed:35, damage:8, xpValue:120, scale:1.0, behavior:'shielder'\n11. hitmonlee.ts: key:'hitmonlee', name:'Hitmonlee', sprite:SPRITES.hitmonlee, hp:90, speed:30, damage:40, xpValue:100, scale:1.1, behavior:'leaper'\n12. electabuzz.ts: key:'electabuzz', name:'Electabuzz', sprite:SPRITES.electabuzz, hp:100, speed:85, damage:15, xpValue:95, scale:1.1, behavior:'stunner', contactEffect:{type:'stun', durationMs:500}\n\nIn index.ts add imports and register all 12 in ENEMIES. Use sections: '// ── Phase 3 novos ──' and '// ── Phase 4 novos ──'.\nFor mr-mime.ts: export const MR_MIME, import { MR_MIME }, register as 'mr-mime': MR_MIME."
     },
     {
       "id": "US-004",
-      "title": "Tab WAVES — modo TIMELINE",
-      "description": "Adicionar modo TIMELINE na tab WAVES. Sub-tabs: TIMELINE | TABLE, toggle com T ou click. Timeline vertical cronológica: waves + bosses + eventos intercalados. Waves: '0:00 ┬ WAVE 00 ─ Rattata×3 ...' Bosses: box com bordas duplas. Eventos timed no minuto correto: PokéCenter@3:00(repete 3min), ProfOak@4:00, Eclipse@6:00, Legendary@8:00. Eventos wave-triggered: Swarm(5%,min2:00,cd60s) e TreasureRoom(8%,min3:00,cd90s) como 'possível'. Criar EVENT_DATA array local com dados. Linha vertical │ conectando entries.",
+      "title": "Implement deathCloud and gasSpreader behaviors",
       "priority": 4,
-      "passes": false
+      "passes": true,
+      "description": "In `src/systems/EnemyBehaviors.ts`, implement deathCloud (Koffing) and gasSpreader (Weezing).\n\nDeath Cloud Pool (similar to existing activeSpores pool):\nAdd module-level array near activeSpores:\n  interface DeathCloud { x:number; y:number; radius:number; dps:number; endTime:number; circle:Phaser.GameObjects.Arc|null; }\n  const activeClouds: DeathCloud[] = []; const MAX_CLOUDS = 20;\n\nExport processDeathClouds(player, time, delta): iterate backwards, remove expired (destroy circle), for active: check dist to player, if within radius apply dps*(delta/1000) damage. VFX guard for circles.\n\nExport spawnDeathCloud(scene, x, y, radius, dps, durationMs): if full remove oldest. Create circle (0x9944cc, alpha 0.3) with VFX guard. Push to array. Fade-out tween in last 1000ms.\n\ndeathCloud behavior: case 'deathCloud': break; — no special movement. Death cloud spawned from Enemy.die().\n\nIn Enemy.ts die() method, AFTER deathExplosion block: check if enemy has deathCloud config and call spawnDeathCloud. To access config, store deathCloud as property on Enemy class similar to deathExplosion. Add: readonly deathCloudConfig: {radius:number;dps:number;durationMs:number}|undefined. Set in constructor from config.deathCloud. In die(): if(this.deathCloudConfig){spawnDeathCloud(this.scene,this.x,this.y,cfg.radius,cfg.dps,cfg.durationMs);}\n\ngasSpreader behavior: State key gs_nextDrop. Every 3000ms call spawnDeathCloud(scene, enemy.x, enemy.y, 30, 3, 3000). Move toward player normally. Death cloud from die() handled by deathCloud config.\n\nWire into SpawnSystem: import processDeathClouds, call after processSpores(player, time). Pass delta: processDeathClouds(player, time, delta)."
     },
     {
       "id": "US-005",
-      "title": "Tab ATAQUES — Lista de ataques por starter",
-      "description": "Renderizar lista de ataques na tab ATAQUES. Selector de starter no topo: CHARMANDER ◀▶ SQUIRTLE ◀▶ BULBASAUR. Importar ATTACKS de src/data/attacks/attack-registry.ts e starter configs de src/data/pokemon/index.ts. Agrupar por form: BASE, STAGE 1, STAGE 2. Colunas: ATAQUE | ELE | DMG | CD | FORM | MAX LV. Elemento colorido por tipo (fire=#ff6600, water=#3388ff, grass=#22cc44, dragon=#7744ff, normal=#aaaaaa, flying=#88ccff, ice=#88ddff, poison=#9944cc). Cursor ▲▼ para navegar, selecionado com '>' e highlight.",
+      "title": "Implement puller and pullerElite behaviors",
       "priority": 5,
-      "passes": false
+      "passes": true,
+      "description": "In `src/systems/EnemyBehaviors.ts`, implement puller (Magnemite) and pullerElite (Magneton).\n\npuller: PULL_FORCE=15, PULL_RANGE=150. Each frame: move toward player normally. If dist<=PULL_RANGE, apply pull on player body velocity (direction from player TO enemy, normalized * PULL_FORCE * delta/1000). VFX guard: tint pulse 0x44aaff.\n\npullerElite: PULL_FORCE_ELITE=30, PULL_RANGE_ELITE=200. Same pull but stronger. State key pe_nextWave. Every 5000ms if player within 120px: apply stun 300ms. Look for player.applyStun() or player.applyContactEffect() method. If no direct method, just skip stun and add TODO. VFX: tint 0xffff44 for 200ms.\n\nPlayer body access: const playerBody = player.body as Phaser.Physics.Arcade.Body | null; if (!playerBody) return;\nEnemy body access: const body = enemy.body as Phaser.Physics.Arcade.Body | null; if (!body) return;\n\nMovement: angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y); body.velocity.x = Math.cos(angle) * enemy.speed; body.velocity.y = Math.sin(angle) * enemy.speed;\n\nAdd both cases to updateBehavior switch."
     },
     {
       "id": "US-006",
-      "title": "Tab ATAQUES — Combo Calculator",
-      "description": "Ao pressionar ENTER num ataque, mostrar DPS breakdown. Painel inferior: COMBO CALCULATOR. Criar ATTACK_SCALING Record<string, {dmgPerLevel:number, cdReduction:number}> com valores por ataque (padrão: +5dmg/lv, -100ms cd/lv). Mostrar: Base DMG + upgrades = total, Cooldown base - redução = total, +QuickPowder x3 (×0.76), +held items relevantes ao tipo (+10% fire=Charcoal, +8% Choice Specs, etc.), +Scope Lens crit, Projéteis (1+3 duplicator=4). FINAL: dmg×proj/cd = DPS. DPS grande em #00ff88, valores em #ff6644.",
+      "title": "Implement trapper and trapperElite behaviors",
       "priority": 6,
-      "passes": false
+      "passes": true,
+      "description": "In `src/systems/EnemyBehaviors.ts`, implement trapper (Tentacool) and trapperElite (Tentacruel).\n\nThese are simple — the stun contactEffect is applied automatically on collision. The behavior just adds movement + visual feedback.\n\ntrapper: Move toward player normally. VFX guard: permanent tint 0x44ffaa.\ntrapperElite: Move toward player normally. VFX guard: permanent tint 0xff4444.\n\nMovement pattern:\n  const body = enemy.body as Phaser.Physics.Arcade.Body | null; if (!body) return;\n  const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);\n  body.velocity.x = Math.cos(angle) * enemy.speed;\n  body.velocity.y = Math.sin(angle) * enemy.speed;\n\nAdd both cases to updateBehavior switch."
     },
     {
       "id": "US-007",
-      "title": "Tab ITENS — Held Items, Upgrades, Pickups",
-      "description": "Tab ITENS com 3 sub-tabs. HELD ITEMS: importar de src/data/items/held-items.ts, colunas ITEM|EFEITO|TIPO|MAX|POR LEVEL (22 items). UPGRADES: Max HP Up(+10HP,+0.5regen), Speed Up(+15%), Magnet Up(+12,max90). PICKUPS: Oran(+25HP), Sitrus(+50HP), Liechi(2×DMG 30s), Salac(1.5×SPD 30s), MagnetBurst, Duplicator(+1proj max3), XPShare(XP×2), FriendBall, Coins(Small₽5,Medium₽25,Large₽100).",
+      "title": "Implement rammer behavior",
       "priority": 7,
-      "passes": false
+      "passes": true,
+      "description": "In `src/systems/EnemyBehaviors.ts`, implement rammer behavior (Rhyhorn/Rhydon).\n\nState machine 4 states (similar to charger but NO tracking during charge):\n\nConstants: RAMMER_IDLE_SPEED_MULT=0.6, RAMMER_CHARGE_SPEED=250, RAMMER_CHARGE_SPEED_ELITE=300, RAMMER_AIM_DURATION=800, RAMMER_CHARGE_DURATION=1500, RAMMER_RECOVER_DURATION=1000, RAMMER_CYCLE=4000.\n\nState keys: rm_state(0-3), rm_next, rm_angle, rm_stateEnd, rm_chargeCount.\n\nState 0 (idle): Move toward player at speed*0.6. When time>=rm_next, go to state 1.\nState 1 (aiming): Stop. Lock rm_angle to player. Tint 0xff8844. After AIM_DURATION, go to state 2.\nState 2 (charging): Move in LOCKED angle at charge speed (NOT tracking player). Tint 0xff4400. After CHARGE_DURATION: if maxHp>200 AND chargeCount<2, re-aim (state 1 brief). Else state 3.\nState 3 (recovering): Stop. clearTint. After RECOVER_DURATION, state 0, rm_next=time+CYCLE.\n\nDouble charge for Rhydon: maxHp>200 gets 2 charges before recover. Track with rm_chargeCount.\n\nTo detect elite: store rm_isElite = (enemy config hp > 200) at init. Access maxHp via (enemy as any).maxHp or enemy.getData('maxHp'). If unavailable, check enemy.hp > 200 on first update.\n\nAdd case to updateBehavior switch."
     },
     {
       "id": "US-008",
-      "title": "Tab EVENTOS — Lista detalhada",
-      "description": "Tab EVENTOS com lista dos 6 eventos. Cada evento: header (EVENTO|TRIGGER|QUANDO|REPETE?|EFEITO) + sub-linha com detalhes. PokéCenter: timed 3:00, repeat 3min, zona 80px, +5HP/500ms, 15s. ProfOak: timed 4:00, one-shot, gacha box. Swarm: wave 5%, min2:00, cd60s, 40 enemies. Eclipse: timed 6:00, one-shot, 30s, brightness 0.35. Legendary: timed 8:00, one-shot, Mew 15s. TreasureRoom: wave 8%, min3:00, cd90s, 3-5 baús+3 Machop.",
+      "title": "Implement slasher behavior",
       "priority": 8,
-      "passes": false
+      "passes": true,
+      "description": "In `src/systems/EnemyBehaviors.ts`, implement slasher behavior (Scyther). Hit-and-run.\n\nConstants: SLASHER_ORBIT_DIST=150, SLASHER_CYCLE=3500, SLASHER_WINDUP=500, SLASHER_SLASH_DURATION=400, SLASHER_SLASH_SPEED=400, SLASHER_RETURN_DURATION=1500.\n\nState keys: sl_state(0-3), sl_next, sl_angle, sl_stateEnd.\n\nState 0 (orbiting): Maintain ~150px from player. If dist<120 move away, if dist>180 move toward, else perpendicular orbit. When time>=sl_next, state 1.\nState 1 (winding): Stop. Lock sl_angle. Tint 0xff2222. After WINDUP, state 2.\nState 2 (slashing): Dash in locked angle at SLASH_SPEED (goes THROUGH player). Tint 0xaaffaa. After SLASH_DURATION, state 3.\nState 3 (returning): Move toward orbit distance. clearTint. After RETURN_DURATION, state 0, sl_next=time+CYCLE.\n\nOrbit movement:\n  if dist<120: move away\n  else if dist>180: move toward\n  else: perpendicular (body.velocity.x = -Math.sin(angle)*speed*0.8, body.velocity.y = Math.cos(angle)*speed*0.8)\n\nAdd case to updateBehavior switch."
+    },
+    {
+      "id": "US-009",
+      "title": "Implement shielder behavior and shield system",
+      "priority": 9,
+      "passes": true,
+      "description": "Implement shielder behavior (Mr. Mime) in EnemyBehaviors.ts AND shield check in Enemy.ts.\n\nshielder behavior:\nConstants: SHIELDER_COOLDOWN=6000, SHIELDER_DURATION=3000, SHIELDER_RANGE=150.\nState key: sh_nextShield.\nMove toward player normally. Every COOLDOWN ms: use getSpatialGrid().queryRadius(enemy.x, enemy.y, RANGE) to find nearest non-boss active unshielded ally. Apply shield: target.data.set('shielded',true), target.data.set('shieldEnd',time+DURATION). VFX: target.setTint(0x4488ff).\n\nShield check in Enemy.takeDamage() (src/entities/Enemy.ts):\nAt TOP of takeDamage method, BEFORE existing checks:\n  const shieldEnd = this.data.get('shieldEnd') as number | undefined;\n  if (shieldEnd && this.scene && this.scene.time.now < shieldEnd) {\n    this.setTint(0x4488ff);\n    this.scene.time.delayedCall(150, () => { if (this.active) this.clearTint(); });\n    return false;\n  }\n  if (this.data.get('shielded')) {\n    if (!shieldEnd || (this.scene && this.scene.time.now >= shieldEnd)) {\n      this.data.set('shielded', false);\n      if (this.active) this.clearTint();\n    }\n  }\n\nImport getSpatialGrid in EnemyBehaviors if not already imported. Do NOT shield bosses or self."
+    },
+    {
+      "id": "US-010",
+      "title": "Implement leaper and stunner behaviors",
+      "priority": 10,
+      "passes": true,
+      "description": "In `src/systems/EnemyBehaviors.ts`, implement leaper (Hitmonlee) and stunner (Electabuzz).\n\nleaper: Constants: LEAPER_STALK_DIST=220, LEAPER_CYCLE=4000, LEAPER_WINDUP=600, LEAPER_LEAP_SPEED=400, LEAPER_LEAP_DURATION=300, LEAPER_STUN_DURATION=2000, LEAPER_HIT_RANGE=35.\nState keys: lp_state(0-4), lp_next, lp_targetX, lp_targetY, lp_stateEnd.\nState 0 (stalking): Maintain ~220px dist. When time>=lp_next, state 1.\nState 1 (windup): Stop. Crouch (scaleY*0.8). Tint 0xffcc00. Lock target=player pos. After WINDUP, restore scale, state 2.\nState 2 (leaping): Move toward locked target at LEAP_SPEED. After LEAP_DURATION, state 3.\nState 3 (landing): Check dist to player. If <HIT_RANGE: hit (contact damage natural), clearTint, state 0, lp_next=time+CYCLE. If >=HIT_RANGE: missed, state 4.\nState 4 (stunned): Stop. Tint 0x888888. After STUN_DURATION, clearTint, state 0, lp_next=time+CYCLE.\n\nstunner: STUNNER_RETREAT_DURATION=1500. State keys: st_retreating(bool), st_retreatEnd.\nIf retreating: move AWAY from player at 1.5x speed. When time>=st_retreatEnd, stop retreating.\nIf not retreating: move toward player at full speed. If dist<20 (contact made): set retreating=true, st_retreatEnd=time+DURATION, tint 0xffff44.\n\nAdd both cases to updateBehavior switch."
+    },
+    {
+      "id": "US-011",
+      "title": "Add new enemies to Phase 3 waves",
+      "priority": 11,
+      "passes": true,
+      "description": "Edit `src/data/enemies/phases/phase3.ts` to add 4 new enemies (koffing, magnemite, tentacool, rhyhorn) to wave configs.\n\nPhase 3 has 20 waves. Add gradually:\n- Waves 40-43: Add koffing(weight 1), magnemite(weight 1) to existing arrays\n- Waves 44-47: Add tentacool(weight 1)\n- Waves 48-51: Add rhyhorn(weight 1). All 4 present.\n- Waves 52-55: Increase new enemy weights to 2\n- Waves 56-59: All 4 at weight 2-3\n\nDo NOT remove existing enemies. Just append new entries to the enemies arrays.\nUpdate header comment to mention new enemies."
+    },
+    {
+      "id": "US-012",
+      "title": "Add new enemies to Phase 4 waves",
+      "priority": 12,
+      "passes": true,
+      "description": "Edit `src/data/enemies/phases/phase4.ts` to add 8 new enemies (weezing, magneton, tentacruel, rhydon, scyther, mr-mime, hitmonlee, electabuzz) to wave configs.\n\nPhase 4 has 20 waves. Currently only Alakazam and Electrode as new enemies.\n- Waves 60-63: Add weezing(1), magneton(1)\n- Waves 64-67: Add tentacruel(1), rhydon(1), scyther(1)\n- Waves 68-71: Add mr-mime(1), hitmonlee(1)\n- Waves 72-75: Add electabuzz(1). All 8 present. Weights to 2.\n- Waves 76-79: Full roster weight 2-3. Reduce legacy P3 enemies.\n\nKeep Alakazam and Electrode weights. Use type names: 'mr-mime' (hyphenated).\nUpdate header comment."
     }
   ]
 }

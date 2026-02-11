@@ -116,8 +116,28 @@ export class PickupSystem {
     const config = dest.config;
 
     if (dest.destructibleType === 'treasureChest') {
-      this.dropHeldItem(dest.x, dest.y);
+      // Coins sempre dropam (1-2 medium) — recompensa base
       this.spawnChestCoins(dest.x, dest.y);
+
+      // 60% das vezes: só coins, sem item bônus
+      const bonusRoll = Math.random();
+      if (bonusRoll < 0.60) {
+        // Nada extra — só coins
+      } else if (bonusRoll < 0.85 && !this.allHeldItemsCollected()) {
+        // 25% chance: held item (se disponível)
+        this.dropHeldItem(dest.x, dest.y);
+      } else {
+        // 15% chance: 1 item da drop table (ou fallback se todos held items coletados)
+        for (const drop of config.drops) {
+          if (Math.random() > drop.chance) continue;
+          if (drop.type === 'xpGem') {
+            this.spawnXpGem(dest.x, dest.y, drop.count ?? 1);
+          } else {
+            this.spawnPickup(dest.x, dest.y, drop.type);
+          }
+          break;
+        }
+      }
       return;
     }
 
@@ -133,6 +153,14 @@ export class PickupSystem {
     }
   }
 
+  private allHeldItemsCollected(): boolean {
+    const items: HeldItemType[] = [
+      'charcoal', 'wideLens', 'choiceSpecs', 'dragonFang', 'sharpBeak',
+      'scopeLens', 'razorClaw', 'shellBell', 'focusBand', 'quickClaw', 'leftovers', 'quickPowder',
+    ];
+    return items.every(i => this.ctx.player.hasHeldItem(i));
+  }
+
   // ── Held Item drops ───────────────────────────────────────────────
   dropHeldItem(x: number, y: number): void {
     const items: HeldItemType[] = [
@@ -141,7 +169,9 @@ export class PickupSystem {
     ];
     const available = items.filter(i => !this.ctx.player.hasHeldItem(i));
     if (available.length === 0) {
-      this.spawnPickup(x, y, 'rareCandy');
+      // Todos held items coletados — dropa coin aleatório
+      const coinTiers: Array<'small' | 'medium' | 'large'> = ['small', 'small', 'small', 'medium', 'medium', 'large'];
+      this.spawnCoin(x, y, coinTiers[Phaser.Math.Between(0, coinTiers.length - 1)]);
       return;
     }
     const item = available[Phaser.Math.Between(0, available.length - 1)];

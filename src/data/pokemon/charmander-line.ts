@@ -8,7 +8,7 @@ export interface StarterConfig {
   readonly type: string
   readonly description: string
   readonly unlocked: boolean
-  readonly forms: readonly PokemonFormConfig[]
+  readonly forms?: readonly PokemonFormConfig[]
 }
 
 export const CHARMANDER_FORMS = [

@@ -46,6 +46,77 @@ export function clearSpores(): void {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Death cloud pool (module-level, persists after enemy death)
+// ═══════════════════════════════════════════════════════════════
+interface DeathCloud {
+  readonly x: number;
+  readonly y: number;
+  readonly radius: number;
+  readonly dps: number;
+  readonly endTime: number;
+  readonly circle: Phaser.GameObjects.Arc | null;
+}
+
+const activeClouds: DeathCloud[] = [];
+const MAX_CLOUDS = 20;
+
+/** Spawn a death cloud at position. Called from Enemy.die() or gasSpreader behavior. */
+export function spawnDeathCloud(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  radius: number,
+  dps: number,
+  durationMs: number,
+): void {
+  // Remove oldest if at limit
+  if (activeClouds.length >= MAX_CLOUDS) {
+    const old = activeClouds.shift();
+    if (old?.circle?.active) old.circle.destroy();
+  }
+
+  let circle: Phaser.GameObjects.Arc | null = null;
+  if (shouldShowVfx()) {
+    circle = scene.add.circle(x, y, radius, 0x9944cc, 0.3).setDepth(2);
+    // Fade-out in last 1000ms
+    const fadeDelay = Math.max(0, durationMs - 1000);
+    scene.time.delayedCall(fadeDelay, () => {
+      if (circle?.active) {
+        scene.tweens.add({ targets: circle, alpha: 0, duration: 1000 });
+      }
+    });
+  }
+
+  const now = scene.time.now;
+  activeClouds.push({ x, y, radius, dps, endTime: now + durationMs, circle });
+}
+
+/** Process all active death clouds — call once per frame from SpawnSystem */
+export function processDeathClouds(player: Player, time: number, _delta: number): void {
+  for (let i = activeClouds.length - 1; i >= 0; i--) {
+    const cloud = activeClouds[i];
+    if (time >= cloud.endTime) {
+      if (cloud.circle?.active) cloud.circle.destroy();
+      activeClouds.splice(i, 1);
+      continue;
+    }
+    const dist = Phaser.Math.Distance.Between(cloud.x, cloud.y, player.x, player.y);
+    if (dist <= cloud.radius) {
+      // Apply as poison DoT (same pattern as spore zones)
+      player.applyPoison(cloud.dps, 500, time);
+    }
+  }
+}
+
+/** Clean all death clouds (call on scene shutdown) */
+export function clearDeathClouds(): void {
+  for (const c of activeClouds) {
+    if (c.circle?.active) c.circle.destroy();
+  }
+  activeClouds.length = 0;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Main dispatcher
 // ═══════════════════════════════════════════════════════════════
 
@@ -68,6 +139,17 @@ export function updateBehavior(
     case 'confuser':   updateConfuser(enemy, player, time); break;
     case 'healer':     updateHealer(enemy, player, time); break;
     case 'teleporter': updateTeleporter(enemy, player, time); break;
+    case 'deathCloud': updateDeathCloudEnemy(enemy, player); break;
+    case 'gasSpreader': updateGasSpreader(enemy, player, time); break;
+    case 'puller': updatePuller(enemy, player, delta); break;
+    case 'pullerElite': updatePullerElite(enemy, player, time, delta); break;
+    case 'trapper': updateTrapper(enemy, player); break;
+    case 'trapperElite': updateTrapperElite(enemy, player); break;
+    case 'rammer': updateRammer(enemy, player, time); break;
+    case 'slasher': updateSlasher(enemy, player, time); break;
+    case 'shielder': updateShielder(enemy, player, time); break;
+    case 'leaper': updateLeaper(enemy, player, time); break;
+    case 'stunner': updateStunner(enemy, player, time); break;
     default: break;
   }
 }
@@ -489,6 +571,517 @@ function updateTeleporter(enemy: Enemy, player: Player, time: number): void {
       d.set('tp_teleporting', false);
       d.set('tp_nextTp', time + 5000);
     });
+  }
+
+  enemy.updateAnimation();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 11. DEATH CLOUD (Koffing)
+// No special movement — walks toward player. Cloud spawned on die().
+// ═══════════════════════════════════════════════════════════════
+function updateDeathCloudEnemy(enemy: Enemy, player: Player): void {
+  const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+  if (!body) return;
+  const speed = enemy.getEffectiveSpeed();
+  const a = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+  body.velocity.x = Math.cos(a) * speed;
+  body.velocity.y = Math.sin(a) * speed;
+  enemy.updateAnimation();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 12. GAS SPREADER (Weezing)
+// Drops mini death clouds every 3s while walking toward player.
+// ═══════════════════════════════════════════════════════════════
+const GAS_SPREADER_INTERVAL = 3000;
+const GAS_SPREADER_RADIUS = 30;
+const GAS_SPREADER_DPS = 3;
+const GAS_SPREADER_DURATION = 3000;
+
+function updateGasSpreader(enemy: Enemy, player: Player, time: number): void {
+  const d = enemy.data;
+  if (!d.has('gs_nextDrop')) {
+    d.set('gs_nextDrop', time + GAS_SPREADER_INTERVAL);
+  }
+
+  const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+  if (!body) return;
+
+  // Move toward player
+  const speed = enemy.getEffectiveSpeed();
+  const a = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+  body.velocity.x = Math.cos(a) * speed;
+  body.velocity.y = Math.sin(a) * speed;
+
+  // Drop gas cloud
+  if (time >= (d.get('gs_nextDrop') as number) && enemy.scene) {
+    d.set('gs_nextDrop', time + GAS_SPREADER_INTERVAL);
+    spawnDeathCloud(enemy.scene, enemy.x, enemy.y, GAS_SPREADER_RADIUS, GAS_SPREADER_DPS, GAS_SPREADER_DURATION);
+  }
+
+  enemy.updateAnimation();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 13. PULLER (Magnemite)
+// Pulls player toward self while moving toward player.
+// ═══════════════════════════════════════════════════════════════
+const PULL_FORCE = 15;
+const PULL_RANGE = 150;
+
+function updatePuller(enemy: Enemy, player: Player, delta: number): void {
+  const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+  if (!body) return;
+
+  const speed = enemy.getEffectiveSpeed();
+  const a = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+  body.velocity.x = Math.cos(a) * speed;
+  body.velocity.y = Math.sin(a) * speed;
+
+  // Pull player toward self
+  const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, player.x, player.y);
+  if (dist <= PULL_RANGE) {
+    const playerBody = player.body as Phaser.Physics.Arcade.Body | null;
+    if (playerBody) {
+      const pullAngle = Phaser.Math.Angle.Between(player.x, player.y, enemy.x, enemy.y);
+      playerBody.velocity.x += Math.cos(pullAngle) * PULL_FORCE * (delta / 1000) * 60;
+      playerBody.velocity.y += Math.sin(pullAngle) * PULL_FORCE * (delta / 1000) * 60;
+    }
+    if (shouldShowVfx()) {
+      enemy.setTint(0x44aaff);
+    }
+  } else {
+    enemy.clearTint();
+  }
+
+  enemy.updateAnimation();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 14. PULLER ELITE (Magneton)
+// Stronger pull + periodic stun pulse.
+// ═══════════════════════════════════════════════════════════════
+const PULL_FORCE_ELITE = 30;
+const PULL_RANGE_ELITE = 200;
+const PULLER_ELITE_STUN_COOLDOWN = 5000;
+const PULLER_ELITE_STUN_RANGE = 120;
+
+function updatePullerElite(enemy: Enemy, player: Player, time: number, delta: number): void {
+  const d = enemy.data;
+  if (!d.has('pe_nextWave')) {
+    d.set('pe_nextWave', time + PULLER_ELITE_STUN_COOLDOWN);
+  }
+
+  const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+  if (!body) return;
+
+  const speed = enemy.getEffectiveSpeed();
+  const a = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+  body.velocity.x = Math.cos(a) * speed;
+  body.velocity.y = Math.sin(a) * speed;
+
+  // Strong pull
+  const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, player.x, player.y);
+  if (dist <= PULL_RANGE_ELITE) {
+    const playerBody = player.body as Phaser.Physics.Arcade.Body | null;
+    if (playerBody) {
+      const pullAngle = Phaser.Math.Angle.Between(player.x, player.y, enemy.x, enemy.y);
+      playerBody.velocity.x += Math.cos(pullAngle) * PULL_FORCE_ELITE * (delta / 1000) * 60;
+      playerBody.velocity.y += Math.sin(pullAngle) * PULL_FORCE_ELITE * (delta / 1000) * 60;
+    }
+  }
+
+  // Stun pulse
+  if (time >= (d.get('pe_nextWave') as number) && dist <= PULLER_ELITE_STUN_RANGE) {
+    d.set('pe_nextWave', time + PULLER_ELITE_STUN_COOLDOWN);
+    player.applyStun(300, time);
+    if (shouldShowVfx()) {
+      enemy.setTint(0xffff44);
+      if (enemy.scene) {
+        enemy.scene.time.delayedCall(200, () => {
+          if (enemy.active) enemy.clearTint();
+        });
+      }
+    }
+  }
+
+  enemy.updateAnimation();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 15. TRAPPER (Tentacool)
+// Simple move toward player. Stun on contact is via contactEffect.
+// ═══════════════════════════════════════════════════════════════
+function updateTrapper(enemy: Enemy, player: Player): void {
+  const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+  if (!body) return;
+  const speed = enemy.getEffectiveSpeed();
+  const a = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+  body.velocity.x = Math.cos(a) * speed;
+  body.velocity.y = Math.sin(a) * speed;
+  if (shouldShowVfx()) enemy.setTint(0x44ffaa);
+  enemy.updateAnimation();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 16. TRAPPER ELITE (Tentacruel)
+// Same as trapper but with stronger stun via contactEffect.
+// ═══════════════════════════════════════════════════════════════
+function updateTrapperElite(enemy: Enemy, player: Player): void {
+  const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+  if (!body) return;
+  const speed = enemy.getEffectiveSpeed();
+  const a = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+  body.velocity.x = Math.cos(a) * speed;
+  body.velocity.y = Math.sin(a) * speed;
+  if (shouldShowVfx()) enemy.setTint(0xff4444);
+  enemy.updateAnimation();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 17. RAMMER (Rhyhorn/Rhydon)
+// State machine: idle → aim → charge → recover.
+// Rhydon (hp>200) gets double charge before recover.
+// ═══════════════════════════════════════════════════════════════
+const RAMMER_IDLE_SPEED_MULT = 0.6;
+const RAMMER_CHARGE_SPEED = 250;
+const RAMMER_CHARGE_SPEED_ELITE = 300;
+const RAMMER_AIM_DURATION = 800;
+const RAMMER_CHARGE_DURATION = 1500;
+const RAMMER_RECOVER_DURATION = 1000;
+const RAMMER_CYCLE = 4000;
+
+function updateRammer(enemy: Enemy, player: Player, time: number): void {
+  const d = enemy.data;
+  if (!d.has('rm_state')) {
+    d.set('rm_state', 0);
+    d.set('rm_next', time + RAMMER_CYCLE);
+    d.set('rm_angle', 0);
+    d.set('rm_stateEnd', 0);
+    d.set('rm_chargeCount', 0);
+    d.set('rm_isElite', enemy.enemyKey === 'rhydon');
+  }
+
+  const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+  if (!body) return;
+
+  const state = d.get('rm_state') as number;
+  const speed = enemy.getEffectiveSpeed();
+  const isElite = d.get('rm_isElite') as boolean;
+  const chargeSpeed = isElite ? RAMMER_CHARGE_SPEED_ELITE : RAMMER_CHARGE_SPEED;
+
+  if (state === 0) {
+    // Idle: walk toward player at reduced speed
+    const a = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+    body.velocity.x = Math.cos(a) * speed * RAMMER_IDLE_SPEED_MULT;
+    body.velocity.y = Math.sin(a) * speed * RAMMER_IDLE_SPEED_MULT;
+    if (time >= (d.get('rm_next') as number)) {
+      d.set('rm_state', 1);
+      d.set('rm_stateEnd', time + RAMMER_AIM_DURATION);
+      d.set('rm_chargeCount', 0);
+    }
+  } else if (state === 1) {
+    // Aiming: stop and lock angle
+    body.velocity.set(0, 0);
+    d.set('rm_angle', Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y));
+    enemy.setTint(0xff8844);
+    if (time >= (d.get('rm_stateEnd') as number)) {
+      d.set('rm_state', 2);
+      d.set('rm_stateEnd', time + RAMMER_CHARGE_DURATION);
+    }
+  } else if (state === 2) {
+    // Charging: move in locked angle
+    const a = d.get('rm_angle') as number;
+    body.velocity.x = Math.cos(a) * chargeSpeed;
+    body.velocity.y = Math.sin(a) * chargeSpeed;
+    enemy.setTint(0xff4400);
+    if (time >= (d.get('rm_stateEnd') as number)) {
+      const count = (d.get('rm_chargeCount') as number) + 1;
+      d.set('rm_chargeCount', count);
+      if (isElite && count < 2) {
+        // Re-aim for second charge
+        d.set('rm_state', 1);
+        d.set('rm_stateEnd', time + RAMMER_AIM_DURATION / 2);
+      } else {
+        d.set('rm_state', 3);
+        d.set('rm_stateEnd', time + RAMMER_RECOVER_DURATION);
+      }
+    }
+  } else {
+    // Recovering: stop
+    body.velocity.set(0, 0);
+    enemy.clearTint();
+    if (time >= (d.get('rm_stateEnd') as number)) {
+      d.set('rm_state', 0);
+      d.set('rm_next', time + RAMMER_CYCLE);
+    }
+  }
+
+  enemy.updateAnimation();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 18. SLASHER (Scyther)
+// Orbits at distance, winds up, slashes through player, returns.
+// ═══════════════════════════════════════════════════════════════
+const SLASHER_ORBIT_DIST = 150;
+const SLASHER_CYCLE = 3500;
+const SLASHER_WINDUP = 500;
+const SLASHER_SLASH_DURATION = 400;
+const SLASHER_SLASH_SPEED = 400;
+const SLASHER_RETURN_DURATION = 1500;
+
+function updateSlasher(enemy: Enemy, player: Player, time: number): void {
+  const d = enemy.data;
+  if (!d.has('sl_state')) {
+    d.set('sl_state', 0);
+    d.set('sl_next', time + SLASHER_CYCLE);
+    d.set('sl_angle', 0);
+    d.set('sl_stateEnd', 0);
+  }
+
+  const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+  if (!body) return;
+
+  const state = d.get('sl_state') as number;
+  const speed = enemy.getEffectiveSpeed();
+  const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, player.x, player.y);
+  const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+
+  if (state === 0) {
+    // Orbiting: maintain ~150px from player
+    if (dist < 120) {
+      // Move away
+      body.velocity.x = -Math.cos(angle) * speed;
+      body.velocity.y = -Math.sin(angle) * speed;
+    } else if (dist > 180) {
+      // Move toward
+      body.velocity.x = Math.cos(angle) * speed;
+      body.velocity.y = Math.sin(angle) * speed;
+    } else {
+      // Perpendicular orbit
+      body.velocity.x = -Math.sin(angle) * speed * 0.8;
+      body.velocity.y = Math.cos(angle) * speed * 0.8;
+    }
+    if (time >= (d.get('sl_next') as number)) {
+      d.set('sl_state', 1);
+      d.set('sl_stateEnd', time + SLASHER_WINDUP);
+    }
+  } else if (state === 1) {
+    // Winding up
+    body.velocity.set(0, 0);
+    d.set('sl_angle', angle);
+    enemy.setTint(0xff2222);
+    if (time >= (d.get('sl_stateEnd') as number)) {
+      d.set('sl_state', 2);
+      d.set('sl_stateEnd', time + SLASHER_SLASH_DURATION);
+    }
+  } else if (state === 2) {
+    // Slashing through player
+    const a = d.get('sl_angle') as number;
+    body.velocity.x = Math.cos(a) * SLASHER_SLASH_SPEED;
+    body.velocity.y = Math.sin(a) * SLASHER_SLASH_SPEED;
+    if (shouldShowVfx()) enemy.setTint(0xaaffaa);
+    if (time >= (d.get('sl_stateEnd') as number)) {
+      d.set('sl_state', 3);
+      d.set('sl_stateEnd', time + SLASHER_RETURN_DURATION);
+    }
+  } else {
+    // Returning to orbit distance
+    enemy.clearTint();
+    if (dist < SLASHER_ORBIT_DIST) {
+      body.velocity.x = -Math.cos(angle) * speed * 0.6;
+      body.velocity.y = -Math.sin(angle) * speed * 0.6;
+    } else {
+      body.velocity.x = Math.cos(angle) * speed * 0.4;
+      body.velocity.y = Math.sin(angle) * speed * 0.4;
+    }
+    if (time >= (d.get('sl_stateEnd') as number)) {
+      d.set('sl_state', 0);
+      d.set('sl_next', time + SLASHER_CYCLE);
+    }
+  }
+
+  enemy.updateAnimation();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 19. SHIELDER (Mr. Mime)
+// Shields nearby allies, making them immune to damage temporarily.
+// ═══════════════════════════════════════════════════════════════
+const SHIELDER_COOLDOWN = 6000;
+const SHIELDER_DURATION = 3000;
+const SHIELDER_RANGE = 150;
+
+function updateShielder(enemy: Enemy, player: Player, time: number): void {
+  const d = enemy.data;
+  if (!d.has('sh_nextShield')) {
+    d.set('sh_nextShield', time + SHIELDER_COOLDOWN);
+  }
+
+  const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+  if (!body) return;
+
+  // Move toward player
+  const speed = enemy.getEffectiveSpeed();
+  const a = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+  body.velocity.x = Math.cos(a) * speed;
+  body.velocity.y = Math.sin(a) * speed;
+
+  // Shield nearby ally
+  if (time >= (d.get('sh_nextShield') as number)) {
+    d.set('sh_nextShield', time + SHIELDER_COOLDOWN);
+    const nearby = getSpatialGrid().queryRadius(enemy.x, enemy.y, SHIELDER_RANGE);
+    for (const other of nearby) {
+      if (other === enemy) continue;
+      // Don't shield bosses or already shielded allies
+      if ('bossAttacks' in other) continue;
+      const shieldEnd = other.data.get('shieldEnd') as number | undefined;
+      if (shieldEnd && time < shieldEnd) continue;
+
+      other.data.set('shielded', true);
+      other.data.set('shieldEnd', time + SHIELDER_DURATION);
+      if (shouldShowVfx()) other.setTint(0x4488ff);
+      break; // Shield only 1 ally per cycle
+    }
+  }
+
+  enemy.updateAnimation();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 20. LEAPER (Hitmonlee)
+// Stalks at distance, crouches, leaps to player position, stuns if miss.
+// ═══════════════════════════════════════════════════════════════
+const LEAPER_STALK_DIST = 220;
+const LEAPER_CYCLE = 4000;
+const LEAPER_WINDUP = 600;
+const LEAPER_LEAP_SPEED = 400;
+const LEAPER_LEAP_DURATION = 300;
+const LEAPER_STUN_DURATION = 2000;
+const LEAPER_HIT_RANGE = 35;
+
+function updateLeaper(enemy: Enemy, player: Player, time: number): void {
+  const d = enemy.data;
+  if (!d.has('lp_state')) {
+    d.set('lp_state', 0);
+    d.set('lp_next', time + LEAPER_CYCLE);
+    d.set('lp_targetX', 0);
+    d.set('lp_targetY', 0);
+    d.set('lp_stateEnd', 0);
+    d.set('lp_origScaleY', enemy.scaleY);
+  }
+
+  const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+  if (!body) return;
+
+  const state = d.get('lp_state') as number;
+  const speed = enemy.getEffectiveSpeed();
+  const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, player.x, player.y);
+  const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+
+  if (state === 0) {
+    // Stalking: maintain distance
+    if (dist < LEAPER_STALK_DIST - 40) {
+      body.velocity.x = -Math.cos(angle) * speed * 0.5;
+      body.velocity.y = -Math.sin(angle) * speed * 0.5;
+    } else if (dist > LEAPER_STALK_DIST + 40) {
+      body.velocity.x = Math.cos(angle) * speed;
+      body.velocity.y = Math.sin(angle) * speed;
+    } else {
+      body.velocity.set(0, 0);
+    }
+    if (time >= (d.get('lp_next') as number)) {
+      d.set('lp_state', 1);
+      d.set('lp_stateEnd', time + LEAPER_WINDUP);
+    }
+  } else if (state === 1) {
+    // Windup: crouch and lock target
+    body.velocity.set(0, 0);
+    enemy.setScale(enemy.scaleX, (d.get('lp_origScaleY') as number) * 0.8);
+    enemy.setTint(0xffcc00);
+    d.set('lp_targetX', player.x);
+    d.set('lp_targetY', player.y);
+    if (time >= (d.get('lp_stateEnd') as number)) {
+      enemy.setScale(enemy.scaleX, d.get('lp_origScaleY') as number);
+      d.set('lp_state', 2);
+      d.set('lp_stateEnd', time + LEAPER_LEAP_DURATION);
+    }
+  } else if (state === 2) {
+    // Leaping to locked target
+    const tx = d.get('lp_targetX') as number;
+    const ty = d.get('lp_targetY') as number;
+    const leapAngle = Phaser.Math.Angle.Between(enemy.x, enemy.y, tx, ty);
+    body.velocity.x = Math.cos(leapAngle) * LEAPER_LEAP_SPEED;
+    body.velocity.y = Math.sin(leapAngle) * LEAPER_LEAP_SPEED;
+    if (time >= (d.get('lp_stateEnd') as number)) {
+      // Landing check
+      const playerDist = Phaser.Math.Distance.Between(enemy.x, enemy.y, player.x, player.y);
+      if (playerDist < LEAPER_HIT_RANGE) {
+        // Hit
+        enemy.clearTint();
+        d.set('lp_state', 0);
+        d.set('lp_next', time + LEAPER_CYCLE);
+      } else {
+        // Miss — stunned
+        d.set('lp_state', 4);
+        d.set('lp_stateEnd', time + LEAPER_STUN_DURATION);
+      }
+    }
+  } else {
+    // Stunned after miss (state 4)
+    body.velocity.set(0, 0);
+    enemy.setTint(0x888888);
+    if (time >= (d.get('lp_stateEnd') as number)) {
+      enemy.clearTint();
+      d.set('lp_state', 0);
+      d.set('lp_next', time + LEAPER_CYCLE);
+    }
+  }
+
+  enemy.updateAnimation();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 21. STUNNER (Electabuzz)
+// Charges at full speed, retreats after contact.
+// ═══════════════════════════════════════════════════════════════
+const STUNNER_RETREAT_DURATION = 1500;
+
+function updateStunner(enemy: Enemy, player: Player, time: number): void {
+  const d = enemy.data;
+  if (!d.has('st_retreating')) {
+    d.set('st_retreating', false);
+    d.set('st_retreatEnd', 0);
+  }
+
+  const body = enemy.body as Phaser.Physics.Arcade.Body | null;
+  if (!body) return;
+
+  const speed = enemy.getEffectiveSpeed();
+  const angle = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
+  const dist = Phaser.Math.Distance.Between(enemy.x, enemy.y, player.x, player.y);
+
+  if (d.get('st_retreating') as boolean) {
+    // Move AWAY from player at 1.5x speed
+    body.velocity.x = -Math.cos(angle) * speed * 1.5;
+    body.velocity.y = -Math.sin(angle) * speed * 1.5;
+    if (time >= (d.get('st_retreatEnd') as number)) {
+      d.set('st_retreating', false);
+      enemy.clearTint();
+    }
+  } else {
+    // Charge toward player
+    body.velocity.x = Math.cos(angle) * speed;
+    body.velocity.y = Math.sin(angle) * speed;
+
+    // Contact detection: start retreating
+    if (dist < 20) {
+      d.set('st_retreating', true);
+      d.set('st_retreatEnd', time + STUNNER_RETREAT_DURATION);
+      if (shouldShowVfx()) enemy.setTint(0xffff44);
+    }
   }
 
   enemy.updateAnimation();

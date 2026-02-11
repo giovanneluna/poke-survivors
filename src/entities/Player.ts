@@ -80,7 +80,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       speed: PLAYER.startSpeed,
       baseSpeed: PLAYER.startSpeed,
       magnetRange: PLAYER.startMagnetRange,
-      hpRegen: 3,
+      hpRegen: 1.5,
       xpMultiplier: 1,
       projectileBonus: 0,
       attackSpeedBonus: 0,
@@ -205,8 +205,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
-  // ── Berry buff system ────────────────────────────────────────────
+  // ── Berry buff system (mutuamente exclusivos) ───────────────────
   applyBuff(type: string, multiplier: number, durationMs: number, time: number): void {
+    // Buffs são mutuamente exclusivos — limpa todos antes de aplicar o novo
+    this.activeBuffs.clear();
     this.activeBuffs.set(type, { multiplier, expiresAt: time + durationMs });
   }
 

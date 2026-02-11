@@ -8,7 +8,7 @@ import { safeExplode } from '../utils/particles';
 import type { GameContext } from './GameContext';
 import { getSpatialGrid } from './SpatialHashGrid';
 import { shouldShowVfx } from './GraphicsSettings';
-import { updateBehavior, processSpores } from './EnemyBehaviors';
+import { updateBehavior, processSpores, processDeathClouds } from './EnemyBehaviors';
 
 export class SpawnSystem {
   private spawnTimer!: Phaser.Time.TimerEvent;
@@ -76,6 +76,9 @@ export class SpawnSystem {
 
     // Process spore zones (persists after enemy death)
     processSpores(player, time);
+
+    // Process death clouds (Koffing/Weezing — persists after enemy death)
+    processDeathClouds(player, time, delta);
 
     for (const enemy of grid.getActiveEnemies()) {
       // ── Behavior system (replaces ALL legacy mechanics) ──

@@ -84,6 +84,12 @@ export class BootScene extends Phaser.Scene {
     this.load.image('coin-medium', 'assets/items/nugget.png');
     this.load.image('coin-large', 'assets/items/big-nugget.png');
 
+    // ── Destructible sprites (PokeAPI items) ─────────────────────
+    this.load.image('dest-tall-grass', 'assets/items/dest-tall-grass.png');
+    this.load.image('dest-berry-bush', 'assets/items/dest-berry-bush.png');
+    this.load.image('dest-rock', 'assets/items/dest-rock.png');
+    this.load.image('dest-chest', 'assets/items/dest-chest.png');
+
     // ── Real pickup sprites (PokeAPI) ───────────────────────────
     this.load.image('pickup-oran', 'assets/items/oran-berry.png');
     this.load.image('pickup-sitrus', 'assets/items/sitrus-berry.png');
@@ -1004,35 +1010,9 @@ export class BootScene extends Phaser.Scene {
     g.generateTexture('shadow', 16, 8);
 
     // ── Objetos destrutíveis ─────────────────────────────────────
-    // Tall Grass - moita de grama alta
-    g.clear(); g.fillStyle(0x3d8a3d);
-    g.fillRect(2, 8, 4, 12); g.fillRect(7, 5, 4, 15); g.fillRect(12, 7, 4, 13);
-    g.fillStyle(0x4da04d); g.fillRect(4, 3, 3, 8); g.fillRect(10, 2, 3, 7);
-    g.fillStyle(0x2d7a2d); g.fillRect(6, 6, 2, 10);
-    g.generateTexture('dest-tall-grass', 18, 20);
-
-    // Berry Bush - arbusto com frutinhas
-    g.clear(); g.fillStyle(0x2d7a2d); g.fillCircle(10, 12, 9);
-    g.fillStyle(0x3d8a3d, 0.7); g.fillCircle(8, 10, 6);
-    g.fillStyle(0xff3344); g.fillCircle(6, 9, 2); g.fillCircle(13, 8, 2); g.fillCircle(10, 14, 2);
-    g.fillStyle(0xff5566, 0.8); g.fillCircle(4, 12, 1.5);
-    g.generateTexture('dest-berry-bush', 20, 20);
-
-    // Rock - pedra grande quebrável
-    g.clear(); g.fillStyle(0x777777); g.fillCircle(10, 10, 9);
-    g.fillStyle(0x999999, 0.6); g.fillCircle(8, 7, 5);
-    g.fillStyle(0x555555); g.fillRect(6, 10, 8, 2);
-    g.fillStyle(0xaaaaaa, 0.3); g.fillCircle(7, 6, 2);
-    g.generateTexture('dest-rock', 20, 20);
-
-    // Treasure Chest - baú dourado
-    g.clear();
-    g.fillStyle(0x8B6914); g.fillRect(2, 6, 16, 12);
-    g.fillStyle(0xDAA520); g.fillRect(3, 7, 14, 4);
-    g.fillStyle(0xFFD700); g.fillRect(7, 5, 6, 3);
-    g.fillStyle(0xFFE44D, 0.5); g.fillRect(8, 6, 4, 1);
-    g.fillStyle(0x6B4226); g.fillRect(2, 11, 16, 1);
-    g.generateTexture('dest-chest', 20, 18);
+    // Agora carregados como sprites reais (PokeAPI) no preload():
+    // dest-tall-grass (power-herb), dest-berry-bush (oran-berry),
+    // dest-rock (hard-stone), dest-chest (relic-crown)
 
     // ── Pickups ──────────────────────────────────────────────────
     // All pickups now loaded as real PokeAPI sprites in preload():

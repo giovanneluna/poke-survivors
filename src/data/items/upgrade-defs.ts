@@ -38,7 +38,7 @@ export const UPGRADE_DEFS: Readonly<Record<string, UpgradeOption>> = {
   // Stats passivos
   maxHpUp:         { id: 'maxHpUp',         name: 'Leftovers',     description: '+10 HP máximo, +0.5 HP/s regen', icon: 'item-leftovers',  color: 0xff4444 },
   speedUp:         { id: 'speedUp',         name: 'Quick Claw',    description: '+15% velocidade de movimento', icon: 'item-quick-claw',   color: 0x44aaff },
-  magnetUp:        { id: 'magnetUp',        name: 'Magnet',        description: '+12 alcance de coleta de XP (max 90)', icon: 'item-magnet',       color: 0xaa44ff },
+  magnetUp:        { id: 'magnetUp',        name: 'Magnet',        description: '+5 alcance de coleta de XP (max 100)', icon: 'item-magnet',       color: 0xaa44ff },
   // Held Items como upgrades
   itemCharcoal:    { id: 'itemCharcoal',    name: 'Charcoal',      description: '+10% dano de fogo',            icon: 'item-charcoal',     color: 0xff6600, requiredType: 'fire' },
   itemWideLens:    { id: 'itemWideLens',    name: 'Wide Lens',     description: '+10% área de efeito',          icon: 'item-wide-lens',    color: 0x44aaff },

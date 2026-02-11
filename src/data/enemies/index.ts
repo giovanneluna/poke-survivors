@@ -50,9 +50,25 @@ import { CROBAT } from './crobat';
 import { GRAVELER } from './graveler';
 import { MACHOKE } from './machoke';
 
+// ── Phase 3 novos ───────────────────────────────────────────────────
+import { KOFFING } from './koffing';
+import { MAGNEMITE } from './magnemite';
+import { TENTACOOL } from './tentacool';
+import { RHYHORN } from './rhyhorn';
+
 // ── Phase 4 elite ───────────────────────────────────────────────────
 import { ALAKAZAM } from './alakazam';
 import { ELECTRODE } from './electrode';
+
+// ── Phase 4 novos ───────────────────────────────────────────────────
+import { WEEZING } from './weezing';
+import { MAGNETON } from './magneton';
+import { TENTACRUEL } from './tentacruel';
+import { RHYDON } from './rhydon';
+import { SCYTHER } from './scyther';
+import { MR_MIME } from './mr-mime';
+import { HITMONLEE } from './hitmonlee';
+import { ELECTABUZZ } from './electabuzz';
 
 // ── Boss Final ──────────────────────────────────────────────────────
 import { ALAKAZAM_BOSS } from './alakazam-boss';
@@ -114,9 +130,23 @@ export const ENEMIES: Readonly<Record<string, EnemyConfig | BossConfig>> = {
   crobat: CROBAT,
   graveler: GRAVELER,
   machoke: MACHOKE,
+  // Phase 3 novos
+  koffing: KOFFING,
+  magnemite: MAGNEMITE,
+  tentacool: TENTACOOL,
+  rhyhorn: RHYHORN,
   // Phase 4
   alakazam: ALAKAZAM,
   electrode: ELECTRODE,
+  // Phase 4 novos
+  weezing: WEEZING,
+  magneton: MAGNETON,
+  tentacruel: TENTACRUEL,
+  rhydon: RHYDON,
+  scyther: SCYTHER,
+  'mr-mime': MR_MIME,
+  hitmonlee: HITMONLEE,
+  electabuzz: ELECTABUZZ,
   // Bosses
   beedrill: BEEDRILL,
   vileplume: VILEPLUME,

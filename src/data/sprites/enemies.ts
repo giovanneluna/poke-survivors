@@ -51,6 +51,22 @@ export const ENEMY_SPRITES: Readonly<Record<string, SpriteConfig>> = {
   graveler:  { key: 'graveler-walk',  path: 'assets/pokemon/graveler-walk.png',  frameWidth: 32, frameHeight: 48, frameCount: 4,  directions: 8 },
   machoke:   { key: 'machoke-walk',   path: 'assets/pokemon/machoke-walk.png',   frameWidth: 32, frameHeight: 48, frameCount: 4,  directions: 8 },
 
+  // ── Phase 3 novos ──────────────────────────────────────────────
+  koffing:    { key: 'koffing-walk',    path: 'assets/pokemon/koffing-walk.png',    frameWidth: 32, frameHeight: 56, frameCount: 10, directions: 8 },
+  magnemite:  { key: 'magnemite-walk',  path: 'assets/pokemon/magnemite-walk.png',  frameWidth: 24, frameHeight: 32, frameCount: 6,  directions: 8 },
+  tentacool:  { key: 'tentacool-walk',  path: 'assets/pokemon/tentacool-walk.png',  frameWidth: 24, frameHeight: 40, frameCount: 4,  directions: 8 },
+  rhyhorn:    { key: 'rhyhorn-walk',    path: 'assets/pokemon/rhyhorn-walk.png',    frameWidth: 32, frameHeight: 32, frameCount: 4,  directions: 8 },
+
+  // ── Phase 4 novos ──────────────────────────────────────────────
+  weezing:    { key: 'weezing-walk',    path: 'assets/pokemon/weezing-walk.png',    frameWidth: 32, frameHeight: 56, frameCount: 6,  directions: 8 },
+  magneton:   { key: 'magneton-walk',   path: 'assets/pokemon/magneton-walk.png',   frameWidth: 32, frameHeight: 48, frameCount: 8,  directions: 8 },
+  tentacruel: { key: 'tentacruel-walk', path: 'assets/pokemon/tentacruel-walk.png', frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+  rhydon:     { key: 'rhydon-walk',     path: 'assets/pokemon/rhydon-walk.png',     frameWidth: 32, frameHeight: 48, frameCount: 4,  directions: 8 },
+  scyther:    { key: 'scyther-walk',    path: 'assets/pokemon/scyther-walk.png',    frameWidth: 40, frameHeight: 48, frameCount: 4,  directions: 8 },
+  mrMime:     { key: 'mr-mime-walk',    path: 'assets/pokemon/mr-mime-walk.png',    frameWidth: 32, frameHeight: 48, frameCount: 4,  directions: 8 },
+  hitmonlee:  { key: 'hitmonlee-walk',  path: 'assets/pokemon/hitmonlee-walk.png',  frameWidth: 40, frameHeight: 48, frameCount: 4,  directions: 8 },
+  electabuzz: { key: 'electabuzz-walk', path: 'assets/pokemon/electabuzz-walk.png', frameWidth: 40, frameHeight: 56, frameCount: 4,  directions: 8 },
+
   // ── Phase 4 elite ───────────────────────────────────────────────
   alakazam:  { key: 'alakazam-walk',  path: 'assets/pokemon/alakazam-walk.png',  frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
   electrode: { key: 'electrode-walk', path: 'assets/pokemon/electrode-walk.png', frameWidth: 32, frameHeight: 40, frameCount: 7,  directions: 8 },

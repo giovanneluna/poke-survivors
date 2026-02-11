@@ -14,9 +14,33 @@ export interface VersionLog {
   readonly entries: readonly ChangeEntry[];
 }
 
-export const CURRENT_VERSION = '0.40';
+export const CURRENT_VERSION = '0.47';
 
 export const CHANGELOG: readonly VersionLog[] = [
+  {
+    version: '0.47',
+    date: '2026-02-11',
+    entries: [
+      // ── Novos inimigos ──────────────────────────────────────────────
+      { tag: 'NEW', text: '12 novos Pokémon inimigos nas Fases 3 e 4' },
+      { tag: 'NEW', text: 'Fase 3: Koffing (nuvem tóxica), Magnemite (puxa jogador), Tentacool (armadilha), Rhyhorn (investida)' },
+      { tag: 'NEW', text: 'Fase 4: Weezing, Magneton, Tentacruel, Rhydon, Scyther, Mr. Mime (escudo), Hitmonlee, Electabuzz' },
+      { tag: 'NEW', text: 'Death Cloud — nuvem de veneno persiste após morte de Koffing/Weezing' },
+      { tag: 'NEW', text: 'Shield — Mr. Mime bloqueia dano temporariamente' },
+      // ── Novos starters (bloqueados) ─────────────────────────────────
+      { tag: 'NEW', text: '3 novos starters (bloqueados): Jigglypuff, Gastly, Abra' },
+      // ── Visual ──────────────────────────────────────────────────────
+      { tag: 'NEW', text: 'Sprites autênticos GBA para destrutíveis (grama, pedra, baú, berry bush)' },
+      { tag: 'NEW', text: 'Tela de seleção agora usa grid 3 colunas (suporta 6+ starters)' },
+      // ── Balance ─────────────────────────────────────────────────────
+      { tag: 'BALANCE', text: 'Fase 4 redesenhada: poucos inimigos elite, cada um perigoso individualmente' },
+      { tag: 'BALANCE', text: 'Berry drops reduzidos ~50% em todos os destrutíveis' },
+      { tag: 'BALANCE', text: 'Magnet rework: +5 por pick (era +12), cap 100 (era 90)' },
+      // ── Fixes ───────────────────────────────────────────────────────
+      { tag: 'FIX', text: 'Magnet não aparece mais no level-up quando já está no máximo' },
+      { tag: 'FIX', text: 'Magnet não reduz mais o range com meta-progression alta' },
+    ],
+  },
   {
     version: '0.40',
     date: '2026-02-10',

@@ -499,7 +499,7 @@ export class DataViewerScene extends Phaser.Scene {
 
     // Group attacks by minForm
     const allKeys = STARTER_ATTACK_KEYS[this.selectedStarter];
-    const forms = STARTERS[this.selectedStarter].forms;
+    const forms = STARTERS[this.selectedStarter].forms ?? [];
     const byForm: Record<string, string[]> = { base: [], stage1: [], stage2: [] };
     for (const key of allKeys) {
       const atk = ATTACKS[key];

@@ -317,8 +317,11 @@ export class UpgradeSystem {
       ];
     }
 
-    // Stats (always available)
-    pool.push(UPGRADE_DEFS.maxHpUp, UPGRADE_DEFS.speedUp, UPGRADE_DEFS.magnetUp);
+    // Stats (always available, except magnet when maxed)
+    pool.push(UPGRADE_DEFS.maxHpUp, UPGRADE_DEFS.speedUp);
+    if (player.stats.magnetRange < 100) {
+      pool.push(UPGRADE_DEFS.magnetUp);
+    }
 
     Phaser.Utils.Array.Shuffle(pool);
 
@@ -415,7 +418,7 @@ export class UpgradeSystem {
         player.stats.speed = Math.floor(player.stats.speed * 1.15);
         break;
       case 'magnetUp':
-        player.stats.magnetRange = Math.min(player.stats.magnetRange + 12, 90);
+        player.stats.magnetRange = Math.min(player.stats.magnetRange + 5, 100);
         break;
     }
 

@@ -184,21 +184,20 @@ export class CollisionSystem {
   ): void {
     const colliders: Phaser.Physics.Arcade.Collider[] = [];
     const scene = this.ctx.scene;
-    const hitCooldowns = new Map<number, number>();
+    const hitCooldowns = new WeakMap<Phaser.GameObjects.GameObject, number>();
 
-    // Orbs vs enemies (with cooldown)
+    // Orbs vs enemies (with cooldown — uses WeakMap for stable identity)
     colliders.push(scene.physics.add.overlap(orbs, this.ctx.enemyGroup, (_orbObj, enemyObj) => {
       const enemy = enemyObj as Enemy;
       if (!enemy.active) return;
-      const enemyId = enemy.x * 10000 + enemy.y;
-      const lastHit = hitCooldowns.get(enemyId) ?? 0;
+      const lastHit = hitCooldowns.get(enemy) ?? 0;
       if (scene.time.now - lastHit < hitCooldownMs) return;
-      hitCooldowns.set(enemyId, scene.time.now);
+      hitCooldowns.set(enemy, scene.time.now);
       this.pickupSystem.playHitEffect(enemy.x, enemy.y, hitElement);
       setDamageSource(attackType);
       const killed = enemy.takeDamage(getDamage());
       clearDamageSource();
-      if (killed) { this.onEnemyKilled(enemy); hitCooldowns.delete(enemyId); }
+      if (killed) { this.onEnemyKilled(enemy); }
     }));
 
     // Orbs vs destructibles

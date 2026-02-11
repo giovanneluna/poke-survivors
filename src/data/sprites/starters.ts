@@ -11,4 +11,6 @@ export const STARTER_SPRITES: Readonly<Record<string, SpriteConfig>> = {
   squirtle:    { key: 'squirtle-walk',    path: 'assets/pokemon/squirtle-walk.png',    frameWidth: 32, frameHeight: 32, frameCount: 4,  directions: 8 },
   wartortle:   { key: 'wartortle-walk',   path: 'assets/pokemon/wartortle-walk.png',   frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
   blastoise:   { key: 'blastoise-walk',   path: 'assets/pokemon/blastoise-walk.png',   frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+  jigglypuff:  { key: 'jigglypuff-walk',  path: 'assets/pokemon/jigglypuff-walk.png',  frameWidth: 32, frameHeight: 40, frameCount: 5,  directions: 8 },
+  abra:        { key: 'abra-walk',        path: 'assets/pokemon/abra-walk.png',        frameWidth: 32, frameHeight: 48, frameCount: 8,  directions: 8 },
 } as const;

@@ -6,11 +6,11 @@ You are an autonomous coding agent working on **Poké World Survivors**, a Vampi
 
 1. Read the PRD at `scripts/ralph/prd.json`
 2. Read the progress log at `scripts/ralph/progress.txt` (check **Codebase Patterns** section first)
-3. Check you're on the correct branch from PRD `branchName`. If not, check it out or create from main.
+3. Stay on the current branch. Do NOT create or switch branches. Do NOT run any git commands.
 4. Pick the **highest priority** user story where `passes: false`
 5. Implement that single user story
 6. Run quality checks: `npx tsc --noEmit`
-7. If checks pass, commit ALL changes with message: `feat: [Story ID] - [Story Title]`
+7. **NEVER COMMIT.** The user handles all git commits manually. Do NOT run `git commit`, `git add`, or any git commands.
 8. Update the PRD to set `passes: true` for the completed story
 9. Append your progress to `scripts/ralph/progress.txt`
 
@@ -135,7 +135,7 @@ If there are still incomplete stories, end your response normally.
 ## Important
 
 - Work on ONE story per iteration
-- Commit frequently
+- **NEVER COMMIT** — the user handles all git operations manually. No `git commit`, `git add`, `git push`.
 - Keep typecheck green (`npx tsc --noEmit`)
 - Read the Codebase Patterns section in progress.txt before starting
 - Follow existing code patterns in the codebase

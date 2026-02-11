@@ -14,8 +14,8 @@ export const PLAYER = {
   startSpeed: 160,
   startMagnetRange: 60,
   invincibilityMs: 500,
-  baseXpToLevel: 20,
-  xpScaleFactor: 1.35,
+  baseXpToLevel: 25,
+  xpScaleFactor: 1.25,
   sprite: SPRITES.charmander,
 } as const;
 
