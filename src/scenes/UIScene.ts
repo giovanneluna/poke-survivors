@@ -1990,7 +1990,14 @@ export class UIScene extends Phaser.Scene {
       this.scene.start('TitleScene');
     });
 
-    this.tweens.add({ targets: [continueBtn, menuBtn], alpha: 1, duration: 400, delay: animDelay + 300 });
+    // ── Contribute hint ─────────────────────────────────────────────
+    const contribHint = this.add.text(width / 2, btnY + scaled(58), t('contribute.endgame'), {
+      fontSize: fontSize(8), color: '#aa88ff', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: scaled(1),
+    }).setOrigin(0.5).setAlpha(0);
+    this.victoryContainer.add(contribHint);
+
+    this.tweens.add({ targets: [continueBtn, menuBtn, contribHint], alpha: 1, duration: 400, delay: animDelay + 300 });
   }
 
   private showGameOver(data: GameOverData): void {
@@ -2223,6 +2230,13 @@ export class UIScene extends Phaser.Scene {
       this.scene.start('TitleScene');
     });
 
-    this.tweens.add({ targets: [restartBtn, menuBtn], alpha: 1, duration: 400, delay: animDelay + 300 });
+    // ── Contribute hint ─────────────────────────────────────────────
+    const contribHint = this.add.text(width / 2, btnY + scaled(58), t('contribute.endgame'), {
+      fontSize: fontSize(8), color: '#aa88ff', fontFamily: 'monospace',
+      stroke: '#000000', strokeThickness: scaled(1),
+    }).setOrigin(0.5).setAlpha(0);
+    this.gameOverContainer.add(contribHint);
+
+    this.tweens.add({ targets: [restartBtn, menuBtn, contribHint], alpha: 1, duration: 400, delay: animDelay + 300 });
   }
 }

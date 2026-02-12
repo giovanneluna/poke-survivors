@@ -4,7 +4,7 @@ import { getCoins, initSaveSystem } from "../systems/SaveSystem"
 import { fontSize, scaled } from "../utils/ui-scale"
 import { CHANGELOG, CURRENT_VERSION } from "../data/changelog"
 import type { ChangeTag } from "../data/changelog"
-import { t, getLanguage, setLanguage } from "../i18n"
+import { t, getLanguage, setLanguage, isFirstVisit, clearFirstVisit } from "../i18n"
 import type { Language } from "../i18n"
 
 function fmtDate(iso: string): string {
@@ -27,6 +27,7 @@ export class TitleScene extends Phaser.Scene {
   private clScrollOffset = 0
   private clMaxScroll = 0
   private contributeOverlay: Phaser.GameObjects.GameObject[] = []
+  private langModalOverlay: Phaser.GameObjects.GameObject[] = []
 
   constructor() {
     super({ key: "TitleScene" })
@@ -639,6 +640,11 @@ export class TitleScene extends Phaser.Scene {
 
     // ── Fade in ──────────────────────────────────────────────────────
     this.cameras.main.fadeIn(600, 0, 0, 0)
+
+    // ── Modal de idioma no primeiro acesso ──────────────────────────
+    if (isFirstVisit()) {
+      this.time.delayedCall(700, () => this.showLanguageModal())
+    }
   }
 
   // ── Changelog Overlay ───────────────────────────────────────────
@@ -847,6 +853,135 @@ export class TitleScene extends Phaser.Scene {
     if (this.clContainer) {
       this.clContainer.y = this.clContentTop - this.clScrollOffset
     }
+  }
+
+  // ── Language Modal (first visit) ───────────────────────────────────
+
+  private showLanguageModal(): void {
+    if (this.langModalOverlay.length > 0) return
+    const { width, height } = this.cameras.main
+
+    const backdrop = this.add
+      .rectangle(width / 2, height / 2, width, height, 0x000000, 0.92)
+      .setDepth(100)
+      .setInteractive()
+    this.langModalOverlay.push(backdrop)
+
+    const pw = scaled(320)
+    const ph = scaled(260)
+    const px = (width - pw) / 2
+    const py = (height - ph) / 2
+
+    const panel = this.add.graphics().setDepth(101)
+    panel.fillStyle(0x0f0f23, 0.98)
+    panel.fillRoundedRect(px, py, pw, ph, 14)
+    panel.lineStyle(2, 0xffcc00, 0.6)
+    panel.strokeRoundedRect(px, py, pw, ph, 14)
+    this.langModalOverlay.push(panel)
+
+    const panelHit = this.add
+      .rectangle(width / 2, height / 2, pw, ph, 0xffffff, 0)
+      .setDepth(101)
+      .setInteractive()
+    this.langModalOverlay.push(panelHit)
+
+    // Título (em inglês por ser o default)
+    this.langModalOverlay.push(
+      this.add
+        .text(width / 2, py + scaled(30), "CHOOSE YOUR LANGUAGE", {
+          fontSize: fontSize(16),
+          color: "#ffcc00",
+          fontFamily: "monospace",
+          fontStyle: "bold",
+          stroke: "#000000",
+          strokeThickness: 3,
+        })
+        .setOrigin(0.5)
+        .setDepth(102),
+    )
+
+    // Subtítulo (em português para quem fala PT)
+    this.langModalOverlay.push(
+      this.add
+        .text(width / 2, py + scaled(52), "Escolha seu idioma", {
+          fontSize: fontSize(11),
+          color: "#888888",
+          fontFamily: "monospace",
+        })
+        .setOrigin(0.5)
+        .setDepth(102),
+    )
+
+    // Botão PORTUGUÊS
+    const btnW = scaled(220)
+    const btnH = scaled(50)
+    const ptY = py + scaled(110)
+    const enY = py + scaled(175)
+
+    const createLangBtn = (
+      y: number,
+      label: string,
+      flag: string,
+      color: number,
+      hoverColor: number,
+      lang: Language,
+    ): void => {
+      const gfx = this.add.graphics().setDepth(102)
+      const draw = (hover: boolean): void => {
+        gfx.clear()
+        gfx.fillStyle(0x000000, 0.4)
+        gfx.fillRoundedRect(width / 2 - btnW / 2 + 2, y - btnH / 2 + 2, btnW, btnH, 10)
+        gfx.fillStyle(hover ? hoverColor : color, 0.95)
+        gfx.fillRoundedRect(width / 2 - btnW / 2, y - btnH / 2, btnW, btnH, 10)
+        gfx.lineStyle(2, hover ? 0xffcc00 : 0x888888, hover ? 0.8 : 0.4)
+        gfx.strokeRoundedRect(width / 2 - btnW / 2, y - btnH / 2, btnW, btnH, 10)
+      }
+      draw(false)
+      this.langModalOverlay.push(gfx)
+
+      const text = this.add
+        .text(width / 2, y, `${flag}  ${label}`, {
+          fontSize: fontSize(16),
+          color: "#ffffff",
+          fontFamily: "monospace",
+          fontStyle: "bold",
+          stroke: "#000000",
+          strokeThickness: 2,
+        })
+        .setOrigin(0.5)
+        .setDepth(103)
+      this.langModalOverlay.push(text)
+
+      const hit = this.add
+        .rectangle(width / 2, y, btnW, btnH, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(104)
+      hit.on("pointerover", () => {
+        draw(true)
+        text.setColor("#ffcc00")
+        SoundManager.playHover()
+      })
+      hit.on("pointerout", () => {
+        draw(false)
+        text.setColor("#ffffff")
+      })
+      hit.on("pointerdown", () => {
+        SoundManager.playStart()
+        setLanguage(lang)
+        clearFirstVisit()
+        this.hideLanguageModal()
+        this.scene.restart()
+      })
+      this.langModalOverlay.push(hit)
+    }
+
+    createLangBtn(ptY, "PORTUGUÊS", "🇧🇷", 0x1a3a1a, 0x2a4a2a, "pt")
+    createLangBtn(enY, "ENGLISH", "🇺🇸", 0x1a1a3a, 0x2a2a4a, "en")
+  }
+
+  private hideLanguageModal(): void {
+    for (const obj of this.langModalOverlay) obj.destroy()
+    this.langModalOverlay = []
   }
 
   // ── Language Selector ──────────────────────────────────────────────
