@@ -36,7 +36,7 @@ export class Tackle implements Attack {
   }
 
   private strike(): void {
-    const dir = this.player.getLastDirection();
+    const dir = this.player.getAimDirection();
     const dirAngleRad = Math.atan2(dir.y, dir.x);
 
     // Visual: flash branco circular no ponto de impacto

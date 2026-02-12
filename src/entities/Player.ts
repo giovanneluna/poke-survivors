@@ -44,6 +44,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   godMode = false
   private statusTinted = false
 
+  // Manual aim system
+  private manualAimEnabled = false
+  private cursorWorldX = 0
+  private cursorWorldY = 0
+
   // Berry buff system
   private readonly activeBuffs = new Map<string, { multiplier: number; expiresAt: number }>()
 
@@ -223,6 +228,37 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   getLastDirection(): Phaser.Math.Vector2 {
     return this.lastDirection.clone()
+  }
+
+  // ── Manual Aim System ──────────────────────────────────────────────
+
+  updateCursorPosition(wx: number, wy: number): void {
+    this.cursorWorldX = wx
+    this.cursorWorldY = wy
+  }
+
+  toggleManualAim(): void {
+    this.manualAimEnabled = !this.manualAimEnabled
+  }
+
+  isManualAimEnabled(): boolean {
+    return this.manualAimEnabled
+  }
+
+  /** Direção de aim: cursor (manual) ou lastDirection (auto) */
+  getAimDirection(): Phaser.Math.Vector2 {
+    if (!this.manualAimEnabled) return this.lastDirection.clone()
+    const dx = this.cursorWorldX - this.x
+    const dy = this.cursorWorldY - this.y
+    const len = Math.sqrt(dx * dx + dy * dy)
+    if (len < 10) return this.lastDirection.clone()
+    return new Phaser.Math.Vector2(dx / len, dy / len)
+  }
+
+  /** Para projectiles: retorna ponto do cursor, ou null se auto-aim */
+  getAimTarget(): { x: number; y: number } | null {
+    if (!this.manualAimEnabled) return null
+    return { x: this.cursorWorldX, y: this.cursorWorldY }
   }
 
   takeDamage(amount: number, time: number): boolean {

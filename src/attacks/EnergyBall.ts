@@ -52,6 +52,65 @@ export class EnergyBall implements Attack {
   }
 
   private fire(): void {
+    const aimTarget = this.player.getAimTarget();
+
+    if (aimTarget) {
+      const count = this.projectileCount + this.player.stats.projectileBonus;
+      const angle = Math.atan2(aimTarget.y - this.player.y, aimTarget.x - this.player.x);
+
+      for (let i = 0; i < count; i++) {
+        const bullet = this.bullets.get(
+          this.player.x,
+          this.player.y,
+          'atk-magical-leaf'
+        ) as Phaser.Physics.Arcade.Sprite | null;
+
+        if (!bullet) continue;
+
+        const currentFireId = ++this.fireId;
+        bullet.setData('fireId', currentFireId);
+        bullet.setData('chainsLeft', this.maxChains);
+        bullet.setData('lastHitUid', -1);
+        bullet.setActive(true).setVisible(true).setScale(1.2);
+        bullet.setDepth(8);
+        bullet.play('anim-magical-leaf');
+
+        const body = bullet.body as Phaser.Physics.Arcade.Body;
+        body.enable = true;
+        body.reset(this.player.x, this.player.y);
+        body.setCircle(16, 8, 8);
+
+        const spread = count > 1 ? (i - (count - 1) / 2) * 0.15 : 0;
+        body.setVelocity(
+          Math.cos(angle + spread) * this.speed,
+          Math.sin(angle + spread) * this.speed,
+        );
+
+        // Trail de particulas verdes
+        let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+        if (shouldShowVfx()) {
+          trail = this.scene.add.particles(0, 0, 'fire-particle', {
+            follow: bullet,
+            speed: { min: 5, max: 20 },
+            lifespan: 200,
+            scale: { start: 1, end: 0 },
+            quantity: getVfxQuantity(1),
+            frequency: 50,
+            tint: [0x22cc44, 0x88ff88],
+          });
+        }
+
+        // Auto-destruir apos lifetime (stale protection via fireId)
+        this.scene.time.delayedCall(3000, () => {
+          if (bullet.active && bullet.getData('fireId') === currentFireId) {
+            this.killBullet(bullet);
+          }
+          trail?.destroy();
+        });
+      }
+      return;
+    }
+
     const activeEnemies = getSpatialGrid().getActiveEnemies();
     if (activeEnemies.length === 0) return;
 

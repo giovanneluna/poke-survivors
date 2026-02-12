@@ -55,6 +55,7 @@ export class GameScene extends Phaser.Scene {
   private joystick: VirtualJoystick | null = null
   private debugMode = false
   private runSaved = false
+  private aimCrosshair!: Phaser.GameObjects.Triangle
   private onBeforeUnload: (() => void) | null = null
   private starterKey = "charmander"
   private difficulty: Difficulty = "hard"
@@ -445,6 +446,19 @@ export class GameScene extends Phaser.Scene {
       getMegaSystem()?.activate(this.gameTime)
     })
 
+    // ── Manual aim toggle — Shift key ────────────────────────────────
+    this.input.keyboard?.on("keydown-SHIFT", () => {
+      if (this.isPaused) return
+      this.player.toggleManualAim()
+      SoundManager.playClick()
+      this.statsDirty = true
+      this.updateAimCrosshair()
+    })
+
+    // ── Aim crosshair (world-space, follows cursor when manual aim) ──
+    this.aimCrosshair = this.add.triangle(0, 0, 0, 8, 16, 0, 0, -8, 0x44ff88, 0.85)
+    this.aimCrosshair.setDepth(15).setVisible(false)
+
     // ── EventSystem wave change hook ──────────────────────────────────
     this.events.on("wave-changed", (waveIndex: number) => {
       getEventSystem().onWaveChanged(waveIndex, this.gameTime)
@@ -618,6 +632,12 @@ export class GameScene extends Phaser.Scene {
     this.gameTime += delta
     getStatsTracker().addTime(delta)
     getComboSystem().update(delta)
+
+    // ── Cursor tracking for manual aim ──────────────────────────────
+    const pointer = this.input.activePointer
+    const wp = this.cameras.main.getWorldPoint(pointer.x, pointer.y)
+    this.player.updateCursorPosition(wp.x, wp.y)
+    this.updateAimCrosshair()
 
     this.player.handleMovement(time, this.joystick?.direction)
     this.player.updateAttacks(time, delta)
@@ -969,6 +989,24 @@ export class GameScene extends Phaser.Scene {
       megaActive: getMegaSystem()?.isActive() ?? false,
       megaTimeRemaining: getMegaSystem()?.getMegaTimeRemaining(this.gameTime) ?? 0,
       companions: getCompanionSystem()?.getCompanions() ?? [],
+      manualAimEnabled: this.player.isManualAimEnabled(),
     })
+  }
+
+  private updateAimCrosshair(): void {
+    const active = this.player.isManualAimEnabled()
+    this.aimCrosshair.setVisible(active)
+    if (!active) return
+    const pointer = this.input.activePointer
+    const wp = this.cameras.main.getWorldPoint(pointer.x, pointer.y)
+    const dx = wp.x - this.player.x
+    const dy = wp.y - this.player.y
+    const angle = Math.atan2(dy, dx)
+    const dist = Math.min(Math.sqrt(dx * dx + dy * dy), 60)
+    this.aimCrosshair.setPosition(
+      this.player.x + Math.cos(angle) * dist,
+      this.player.y + Math.sin(angle) * dist,
+    )
+    this.aimCrosshair.setRotation(angle)
   }
 }

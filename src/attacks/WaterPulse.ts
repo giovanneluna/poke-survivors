@@ -46,10 +46,12 @@ export class WaterPulse implements Attack {
   }
 
   private fire(): void {
-    const activeEnemies = getSpatialGrid().getActiveEnemies();
-    if (activeEnemies.length === 0) return;
+    const aimTarget = this.player.getAimTarget();
 
-    const sorted = activeEnemies
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (!aimTarget && activeEnemies.length === 0) return;
+
+    const sorted = aimTarget ? [] : activeEnemies
       .map(enemy => ({
         enemy,
         dist: Phaser.Math.Distance.Between(
@@ -59,20 +61,21 @@ export class WaterPulse implements Attack {
       }))
       .sort((a, b) => a.dist - b.dist);
 
-    const count = Math.min(this.projectileCount + this.player.stats.projectileBonus, sorted.length);
+    const totalCount = this.projectileCount + this.player.stats.projectileBonus;
+    const count = aimTarget ? totalCount : Math.min(totalCount, sorted.length);
 
     for (let i = 0; i < count; i++) {
-      const target = sorted[i].enemy;
+      const target = aimTarget ? null : sorted[i].enemy;
 
-      if (sorted[i].dist < 20) {
-        if (typeof target.takeDamage === 'function') {
+      if (!aimTarget && sorted[i].dist < 20) {
+        if (typeof target!.takeDamage === 'function') {
           setDamageSource(this.type);
-          const killed = target.takeDamage(this.damage);
+          const killed = target!.takeDamage(this.damage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', target.x, target.y, target.xpValue);
+            this.scene.events.emit('cone-attack-kill', target!.x, target!.y, target!.xpValue);
           }
         }
-        this.spawnImpact(target.x, target.y);
+        this.spawnImpact(target!.x, target!.y);
         continue;
       }
 
@@ -94,7 +97,16 @@ export class WaterPulse implements Attack {
       body.enable = true;
       body.reset(this.player.x, this.player.y);
 
-      this.scene.physics.moveToObject(bullet, target, 250);
+      if (aimTarget) {
+        const spread = count > 1 ? (i - (count - 1) / 2) * 0.15 : 0;
+        const aimAngle = Math.atan2(aimTarget.y - this.player.y, aimTarget.x - this.player.x);
+        body.setVelocity(
+          Math.cos(aimAngle + spread) * 250,
+          Math.sin(aimAngle + spread) * 250
+        );
+      } else {
+        this.scene.physics.moveToObject(bullet, target!, 250);
+      }
 
       const trail = this.scene.add.particles(0, 0, 'water-particle', {
         follow: bullet,

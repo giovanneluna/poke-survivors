@@ -42,7 +42,7 @@ export class SleepPowder implements Attack {
   }
 
   private spore(): void {
-    const dir = this.player.getLastDirection();
+    const dir = this.player.getAimDirection();
     const dirAngleRad = Math.atan2(dir.y, dir.x);
 
     // Visual: sprite de esporo na direção

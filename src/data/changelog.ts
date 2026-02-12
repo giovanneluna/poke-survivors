@@ -14,9 +14,21 @@ export interface VersionLog {
   readonly entries: readonly ChangeEntry[];
 }
 
-export const CURRENT_VERSION = '0.50';
+export const CURRENT_VERSION = '0.51';
 
 export const CHANGELOG: readonly VersionLog[] = [
+  {
+    version: '0.51',
+    date: '2026-02-12',
+    entries: [
+      // ── Manual Aim ──────────────────────────────────────────────────
+      { tag: 'NEW', text: 'Manual Aim — pressione Shift para alternar entre mira automática e manual' },
+      { tag: 'NEW', text: 'No modo manual, todos os ataques seguem a direção do cursor do mouse' },
+      { tag: 'NEW', text: 'Crosshair visual (seta verde) indica a direção de mira no mundo' },
+      { tag: 'NEW', text: 'Indicador → ao lado de cada ataque na HUD quando manual aim está ativo' },
+      { tag: 'NEW', text: 'Projéteis com spread angular automático para multi-projétil no modo manual' },
+    ],
+  },
   {
     version: '0.50',
     date: '2026-02-11',

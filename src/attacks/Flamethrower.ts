@@ -49,7 +49,7 @@ export class Flamethrower implements Attack {
   }
 
   private fire(): void {
-    const dir = this.player.getLastDirection();
+    const dir = this.player.getAimDirection();
     const dirAngleDeg = Phaser.Math.RadToDeg(Math.atan2(dir.y, dir.x));
     const dirAngleRad = Math.atan2(dir.y, dir.x);
 

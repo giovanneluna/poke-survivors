@@ -44,6 +44,61 @@ export class HyperBeam2 implements Attack {
   }
 
   private fire(): void {
+    const aimTarget = this.player.getAimTarget();
+
+    if (aimTarget) {
+      const bullet = this.bullets.get(
+        this.player.x,
+        this.player.y,
+        'atk-solar-beam'
+      ) as Phaser.Physics.Arcade.Sprite | null;
+
+      if (!bullet) return;
+
+      const currentFireId = ++this.fireId;
+      bullet.setData('fireId', currentFireId);
+      bullet.setData('hitSet', new Set<number>());
+      bullet.setActive(true).setVisible(true).setScale(2.0);
+      bullet.setTexture('atk-solar-beam');
+      bullet.setDepth(8);
+      bullet.play('anim-solar-beam');
+
+      const body = bullet.body as Phaser.Physics.Arcade.Body;
+      body.enable = true;
+      body.reset(this.player.x, this.player.y);
+      body.checkCollision.none = false;
+      body.setSize(24, 120);
+
+      const angle = Math.atan2(aimTarget.y - this.player.y, aimTarget.x - this.player.x);
+      bullet.setRotation(angle);
+      body.setVelocity(Math.cos(angle) * 400, Math.sin(angle) * 400);
+
+      // Trail dourado
+      let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+      if (shouldShowVfx()) {
+        trail = this.scene.add.particles(0, 0, 'fire-particle', {
+          follow: bullet,
+          speed: { min: 5, max: 25 },
+          lifespan: 250,
+          scale: { start: 1.5, end: 0 },
+          quantity: getVfxQuantity(2),
+          frequency: 40,
+          tint: [0xffdd44, 0xffaa22],
+        });
+      }
+
+      // Auto-destruir apos 3s (protecao contra stale timer)
+      this.scene.time.delayedCall(3000, () => {
+        if (bullet.active && bullet.getData('fireId') === currentFireId) {
+          this.bullets.killAndHide(bullet);
+          body.checkCollision.none = true;
+          body.enable = false;
+        }
+        trail?.destroy();
+      });
+      return;
+    }
+
     const activeEnemies = getSpatialGrid().getActiveEnemies();
     if (activeEnemies.length === 0) return;
 

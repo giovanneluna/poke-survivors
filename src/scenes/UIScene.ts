@@ -30,6 +30,7 @@ interface StatsData extends PlayerState {
   megaActive: boolean;
   megaTimeRemaining: number;
   companions: readonly CompanionInfo[];
+  manualAimEnabled: boolean;
 }
 
 interface GameOverData {
@@ -450,7 +451,8 @@ export class UIScene extends Phaser.Scene {
     }
 
     // Attacks display (top-left, below slots) — skip rebuild if unchanged
-    const attacksHash = stats.attacks?.map(a => `${a.type}:${a.level}`).join(',') ?? '';
+    const aimSuffix = stats.manualAimEnabled ? ':M' : ':A';
+    const attacksHash = (stats.attacks?.map(a => `${a.type}:${a.level}`).join(',') ?? '') + aimSuffix;
     if (attacksHash !== this.lastAttacksHash) {
       this.lastAttacksHash = attacksHash;
       this.attacksContainer.removeAll(true);
@@ -459,11 +461,22 @@ export class UIScene extends Phaser.Scene {
       if (stats.attacks) {
         stats.attacks.forEach((atk, i) => {
           const name = atk.type.charAt(0).toUpperCase() + atk.type.slice(1);
-          const atkText = this.add.text(0, i * scaled(14), `${name} Lv${atk.level}`, {
+          const label = stats.manualAimEnabled
+            ? `${name} Lv${atk.level}`
+            : `${name} Lv${atk.level}`;
+          const atkText = this.add.text(0, i * scaled(14), label, {
             fontSize: fontSize(10), color: '#ff8844', fontFamily: 'monospace',
             stroke: '#000000', strokeThickness: scaled(2),
           });
           this.attacksContainer.add(atkText);
+
+          if (stats.manualAimEnabled) {
+            const arrow = this.add.text(atkText.width + scaled(4), i * scaled(14), '\u2192', {
+              fontSize: fontSize(10), color: '#44ff88', fontFamily: 'monospace',
+              stroke: '#000000', strokeThickness: scaled(2),
+            });
+            this.attacksContainer.add(arrow);
+          }
         });
       }
     }

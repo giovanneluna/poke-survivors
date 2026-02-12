@@ -66,10 +66,12 @@ export class FlashCannon implements Attack {
   }
 
   private fire(): void {
-    const activeEnemies = getSpatialGrid().getActiveEnemies();
-    if (activeEnemies.length === 0) return;
+    const aimTarget = this.player.getAimTarget();
 
-    const sorted = activeEnemies
+    const activeEnemies = getSpatialGrid().getActiveEnemies();
+    if (!aimTarget && activeEnemies.length === 0) return;
+
+    const sorted = aimTarget ? [] : activeEnemies
       .map(enemy => ({
         enemy,
         dist: Phaser.Math.Distance.Between(
@@ -79,18 +81,19 @@ export class FlashCannon implements Attack {
       }))
       .sort((a, b) => a.dist - b.dist);
 
-    const count = Math.min(this.projectileCount + this.player.stats.projectileBonus, sorted.length);
+    const totalCount = this.projectileCount + this.player.stats.projectileBonus;
+    const count = aimTarget ? totalCount : Math.min(totalCount, sorted.length);
 
     for (let i = 0; i < count; i++) {
-      const target = sorted[i].enemy;
+      const target = aimTarget ? null : sorted[i].enemy;
 
-      // Inimigo muito perto: dano direto
-      if (sorted[i].dist < 20) {
-        if (typeof target.takeDamage === 'function') {
+      // Inimigo muito perto: dano direto (auto-aim only)
+      if (!aimTarget && sorted[i].dist < 20) {
+        if (typeof target!.takeDamage === 'function') {
           setDamageSource(this.type);
-          const killed = target.takeDamage(this.damage);
+          const killed = target!.takeDamage(this.damage);
           if (killed) {
-            this.scene.events.emit('cone-attack-kill', target.x, target.y, target.xpValue);
+            this.scene.events.emit('cone-attack-kill', target!.x, target!.y, target!.xpValue);
           }
         }
         continue;
@@ -117,7 +120,16 @@ export class FlashCannon implements Attack {
       body.reset(this.player.x, this.player.y);
       body.checkCollision.none = false;
 
-      this.scene.physics.moveToObject(bullet, target, 350);
+      if (aimTarget) {
+        const spread = count > 1 ? (i - (count - 1) / 2) * 0.15 : 0;
+        const aimAngle = Math.atan2(aimTarget.y - this.player.y, aimTarget.x - this.player.x);
+        body.setVelocity(
+          Math.cos(aimAngle + spread) * 350,
+          Math.sin(aimAngle + spread) * 350
+        );
+      } else {
+        this.scene.physics.moveToObject(bullet, target!, 350);
+      }
 
       // Trail de particulas brancas
       let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;

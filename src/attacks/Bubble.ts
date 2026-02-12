@@ -51,6 +51,69 @@ export class Bubble implements Attack {
   }
 
   private fire(): void {
+    const aimTarget = this.player.getAimTarget();
+
+    if (aimTarget) {
+      const baseAngle = Math.atan2(
+        aimTarget.y - this.player.y,
+        aimTarget.x - this.player.x,
+      );
+
+      for (let i = 0; i < this.bubblesPerBurst; i++) {
+        const bubble = this.bullets.get(
+          this.player.x,
+          this.player.y,
+          'atk-bubble-shot',
+        ) as Phaser.Physics.Arcade.Sprite | null;
+
+        if (!bubble) continue;
+
+        const currentFireId = ++this.fireId;
+        bubble.setData('fireId', currentFireId);
+        bubble.setData('chainsLeft', this.maxChains);
+        bubble.setData('lastHitUid', -1);
+        bubble.setActive(true).setVisible(true).setScale(1.0).setAlpha(0.85);
+        bubble.setDepth(8);
+        bubble.play('anim-bubble-shot');
+
+        const body = bubble.body as Phaser.Physics.Arcade.Body;
+        body.enable = true;
+        body.reset(this.player.x, this.player.y);
+        body.checkCollision.none = false;
+        body.setCircle(12, -8, -8);
+
+        const spread = this.bubblesPerBurst > 1
+          ? (i - (this.bubblesPerBurst - 1) / 2) * 0.15
+          : 0;
+
+        body.setVelocity(
+          Math.cos(baseAngle + spread) * this.speed,
+          Math.sin(baseAngle + spread) * this.speed,
+        );
+
+        let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+        if (shouldShowVfx()) {
+          trail = this.scene.add.particles(0, 0, 'water-particle', {
+            follow: bubble,
+            speed: { min: 3, max: 12 },
+            lifespan: 250,
+            scale: { start: 0.8, end: 0 },
+            quantity: getVfxQuantity(1),
+            frequency: 60,
+            tint: [0x44aaff, 0x88ccff, 0xaaddff],
+          });
+        }
+
+        this.scene.time.delayedCall(2500, () => {
+          if (bubble.active && bubble.getData('fireId') === currentFireId) {
+            this.popBubble(bubble);
+          }
+          trail?.destroy();
+        });
+      }
+      return;
+    }
+
     const activeEnemies = getSpatialGrid().getActiveEnemies();
     if (activeEnemies.length === 0) return;
 

@@ -49,6 +49,65 @@ export class MuddyWater implements Attack {
   }
 
   private fire(): void {
+    const aimTarget = this.player.getAimTarget();
+
+    if (aimTarget) {
+      const count = this.projectileCount + this.player.stats.projectileBonus;
+      const angle = Math.atan2(aimTarget.y - this.player.y, aimTarget.x - this.player.x);
+
+      for (let i = 0; i < count; i++) {
+        const bullet = this.bullets.get(
+          this.player.x,
+          this.player.y,
+          'atk-water-pulse'
+        ) as Phaser.Physics.Arcade.Sprite | null;
+
+        if (!bullet) continue;
+
+        const currentFireId = ++this.fireId;
+        bullet.setData('fireId', currentFireId);
+        bullet.setData('pierceCount', 0);
+        bullet.setData('hitEnemies', new Set<number>());
+        bullet.setActive(true).setVisible(true).setScale(0.5);
+        bullet.setDepth(8).setTint(0x664422);
+        bullet.play('anim-water-pulse');
+
+        const body = bullet.body as Phaser.Physics.Arcade.Body;
+        body.enable = true;
+        body.reset(this.player.x, this.player.y);
+        body.checkCollision.none = false;
+
+        const spread = count > 1 ? (i - (count - 1) / 2) * 0.15 : 0;
+        body.setVelocity(
+          Math.cos(angle + spread) * MuddyWater.SPEED,
+          Math.sin(angle + spread) * MuddyWater.SPEED,
+        );
+
+        // Trail de particulas com tint lamacento
+        let trail: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+        if (shouldShowVfx()) {
+          trail = this.scene.add.particles(0, 0, 'water-particle', {
+            follow: bullet,
+            speed: { min: 5, max: 20 },
+            lifespan: 200,
+            scale: { start: 1.2, end: 0 },
+            quantity: getVfxQuantity(1),
+            frequency: 50,
+            tint: MuddyWater.MUDDY_TINTS as unknown as number[],
+          });
+        }
+
+        // Auto-destruir apos 3s (so se ainda for o mesmo disparo)
+        this.scene.time.delayedCall(3000, () => {
+          if (bullet.active && bullet.getData('fireId') === currentFireId) {
+            this.killBullet(bullet);
+          }
+          trail?.destroy();
+        });
+      }
+      return;
+    }
+
     const activeEnemies = getSpatialGrid().getActiveEnemies();
     if (activeEnemies.length === 0) return;
 

@@ -41,7 +41,7 @@ export class VineWhip implements Attack {
   }
 
   private swipe(): void {
-    const dir = this.player.getLastDirection();
+    const dir = this.player.getAimDirection();
     const dirAngleRad = Math.atan2(dir.y, dir.x);
 
     // Visual: sprite de vinha na direcao

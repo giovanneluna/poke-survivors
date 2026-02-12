@@ -48,7 +48,7 @@ export class OriginPulse implements Attack {
   }
 
   private fire(): void {
-    const dir = this.player.getLastDirection();
+    const dir = this.player.getAimDirection();
     const dirAngleRad = Math.atan2(dir.y, dir.x);
     const dirAngleDeg = Phaser.Math.RadToDeg(dirAngleRad);
 

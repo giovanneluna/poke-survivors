@@ -35,7 +35,7 @@ export class DragonPulse implements Attack {
   }
 
   private fire(): void {
-    const dir = this.player.getLastDirection();
+    const dir = this.player.getAimDirection();
     const angle = Math.atan2(dir.y, dir.x);
     const endX = this.player.x + Math.cos(angle) * this.beamLength;
     const endY = this.player.y + Math.sin(angle) * this.beamLength;

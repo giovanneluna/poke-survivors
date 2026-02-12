@@ -35,7 +35,7 @@ export class AirSlash implements Attack {
   }
 
   private slash(): void {
-    const dir = this.player.getLastDirection();
+    const dir = this.player.getAimDirection();
     const baseAngle = Math.atan2(dir.y, dir.x);
 
     for (let i = 0; i < this.bladeCount; i++) {
