@@ -104,12 +104,16 @@ export class SpawnSystem {
       // Boss attacks
       if (enemy instanceof Boss) {
         const bossAtk = enemy.tryBossAttack(playerX, playerY, time);
-        if (bossAtk) this.executeBossAttack(enemy, bossAtk);
+        if (bossAtk) {
+          this.executeBossAttack(enemy, bossAtk);
+          enemy.playAttackAnim();
+        }
       }
 
       // Ranged attacks
       const attack = enemy.tryRangedAttack(playerX, playerY, time);
       if (attack) {
+        enemy.playAttackAnim();
         if (attack.config.beam) {
           this.fireEnemyBeam(enemy, attack.config);
         } else {

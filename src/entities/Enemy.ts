@@ -4,6 +4,7 @@ import type {
   EnemyBehavior,
   Direction,
   SpriteConfig,
+  AttackAnimConfig,
   EnemyRangedConfig,
   EnemyContactEffect,
   EnemyHealAuraConfig,
@@ -13,6 +14,7 @@ import type {
   EnemyBoomerangConfig,
   EnemySlowAuraConfig,
 } from "../types"
+import { ENEMY_ATTACK_SPRITES } from "../data/sprites/enemies"
 import { getPassive } from "../systems/PassiveSystem"
 import { getSpatialGrid } from "../systems/SpatialHashGrid"
 import {
@@ -50,6 +52,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   readonly boomerang: EnemyBoomerangConfig | undefined
   readonly slowAura: EnemySlowAuraConfig | undefined
   readonly behavior: EnemyBehavior | undefined
+  private readonly attackAnimConfig: AttackAnimConfig | undefined
+  private isPlayingAttack = false
   private lastAttackTime = 0
   private lastTeleportTime = 0
   private lastBoomerangTime = 0
@@ -87,6 +91,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.boomerang = config.boomerang
     this.slowAura = config.slowAura
     this.behavior = config.behavior
+
+    // Resolve attack animation from registry (key without '-boss' suffix)
+    const baseKey = config.key.replace(/-boss$/, '')
+    this.attackAnimConfig = ENEMY_ATTACK_SPRITES[baseKey]
 
     this.setScale(config.scale)
     this.setDepth(5)
@@ -175,14 +183,42 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const newDir = this.velocityToDirection(vx, vy)
     if (newDir !== this.currentDir) {
       this.currentDir = newDir
-      const animKey = `${this.spriteConfig.key}-${newDir}`
-      if (this.anims.currentAnim?.key !== animKey) {
-        this.play(animKey)
+      // Don't interrupt attack animation with walk
+      if (!this.isPlayingAttack) {
+        const animKey = `${this.spriteConfig.key}-${newDir}`
+        if (this.anims.currentAnim?.key !== animKey) {
+          this.play(animKey)
+        }
       }
     }
     if (this.shadow) {
       this.shadow.setPosition(this.x, this.y + 8)
     }
+  }
+
+  /**
+   * Play attack animation (Attack/Shoot/Charge) once, then return to walk.
+   * Safe to call even if no attack anim exists (no-op).
+   */
+  playAttackAnim(): void {
+    if (!this.attackAnimConfig || this.isPlayingAttack || !this.active || !this.scene) return
+
+    this.isPlayingAttack = true
+    const atkKey = `${this.attackAnimConfig.key}-${this.currentDir}`
+
+    // Attack sprites may have different frame size — Phaser handles this per-texture
+    this.play(atkKey)
+
+    this.once('animationcomplete', () => {
+      if (!this.active || !this.scene) {
+        this.isPlayingAttack = false
+        return
+      }
+      this.isPlayingAttack = false
+      // Return to walk animation in current direction
+      const walkKey = `${this.spriteConfig.key}-${this.currentDir}`
+      this.play(walkKey)
+    })
   }
 
   moveToward(target: Phaser.Math.Vector2): void {
@@ -549,6 +585,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   cleanup(): void {
     this.isDead = true
+    this.isPlayingAttack = false
+    this.removeAllListeners('animationcomplete')
     getSpatialGrid().remove(this)
     if (this.hpBar) {
       this.hpBar.destroy()

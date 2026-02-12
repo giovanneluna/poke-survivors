@@ -14,9 +14,25 @@ export interface VersionLog {
   readonly entries: readonly ChangeEntry[];
 }
 
-export const CURRENT_VERSION = '0.47';
+export const CURRENT_VERSION = '0.50';
 
 export const CHANGELOG: readonly VersionLog[] = [
+  {
+    version: '0.50',
+    date: '2026-02-11',
+    entries: [
+      // ── Animações de Ataque ────────────────────────────────────────
+      { tag: 'NEW', text: 'Animações de ataque para todos os 56 Pokémon inimigos e bosses' },
+      { tag: 'NEW', text: 'Sprites do PMDCollab: Attack, Shoot e Charge por contexto' },
+      { tag: 'NEW', text: 'Ranged (Gastly, Haunter, Drowzee, Hypno) usam Shoot-Anim ao disparar' },
+      { tag: 'NEW', text: 'Chargers (Geodude, Crobat, Rhyhorn, Rhydon, Hitmonlee) usam Charge-Anim ao investir' },
+      { tag: 'NEW', text: 'Bosses e melee usam Attack-Anim ao atacar o jogador' },
+      // ── Temas Visuais ──────────────────────────────────────────────
+      { tag: 'NEW', text: '3 temas visuais para o mapa: Emerald, FireRed e Mystery Dungeon' },
+      { tag: 'NEW', text: 'Seletor de tema na tela de seleção com preview visual' },
+      { tag: 'NEW', text: 'Tiles 16px do GBA escalados para manter grid de 24px' },
+    ],
+  },
   {
     version: '0.47',
     date: '2026-02-11',

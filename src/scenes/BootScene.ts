@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
 import { ENEMIES, STARTERS, CHARMANDER_FORMS, SQUIRTLE_FORMS, BULBASAUR_FORMS } from '../config';
-import type { SpriteConfig, Direction } from '../types';
+import type { SpriteConfig, AttackAnimConfig, Direction } from '../types';
 import { DIRECTION_ROW } from '../types';
 import { EDITOR_TILES } from '../data/editor-tiles';
+import { ENEMY_ATTACK_SPRITES } from '../data/sprites/enemies';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -38,6 +39,10 @@ export class BootScene extends Phaser.Scene {
     }
     for (const config of Object.values(ENEMIES)) {
       this.loadSpritesheet(config.sprite);
+    }
+    // Attack/Shoot/Charge animation spritesheets (PMDCollab)
+    for (const atkSprite of Object.values(ENEMY_ATTACK_SPRITES)) {
+      this.loadSpritesheet(atkSprite);
     }
 
     // Artwork oficial dos starters + evoluções (para Title Screen / evolução)
@@ -346,6 +351,10 @@ export class BootScene extends Phaser.Scene {
     }
     for (const config of Object.values(ENEMIES)) {
       this.createWalkAnims(config.sprite);
+    }
+    // Attack/Shoot/Charge animations (play once, then return to walk)
+    for (const atkSprite of Object.values(ENEMY_ATTACK_SPRITES)) {
+      this.createEnemyAttackAnims(atkSprite);
     }
     // Mew walk anims (Legendary event — not in ENEMIES registry)
     this.createWalkAnims({ key: 'mew-walk', path: 'assets/pokemon/mew-walk.png', frameWidth: 40, frameHeight: 64, frameCount: 6, directions: 8 });
@@ -913,6 +922,23 @@ export class BootScene extends Phaser.Scene {
         frames: this.anims.generateFrameNumbers(sprite.key, { start: startFrame, end: endFrame }),
         frameRate: fps,
         repeat: -1,
+      });
+    }
+  }
+
+  private createEnemyAttackAnims(sprite: AttackAnimConfig): void {
+    if (this.anims.exists(`${sprite.key}-down`)) return;
+    const directions: Direction[] = ['down', 'downRight', 'right', 'upRight', 'up', 'upLeft', 'left', 'downLeft'];
+    const fps = Math.max(8, Math.min(16, sprite.frameCount * 2));
+    for (const dir of directions) {
+      const row = DIRECTION_ROW[dir];
+      const startFrame = row * sprite.frameCount;
+      const endFrame = startFrame + sprite.frameCount - 1;
+      this.anims.create({
+        key: `${sprite.key}-${dir}`,
+        frames: this.anims.generateFrameNumbers(sprite.key, { start: startFrame, end: endFrame }),
+        frameRate: fps,
+        repeat: 0,  // play once, then fire animationcomplete
       });
     }
   }

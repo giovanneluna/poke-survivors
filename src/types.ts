@@ -128,6 +128,19 @@ export interface SpriteConfig {
   readonly directions: 8;
 }
 
+// ── Attack animation config (PMDCollab Attack/Shoot/Charge) ────────
+export type AttackAnimType = 'attack' | 'shoot' | 'charge';
+
+export interface AttackAnimConfig {
+  readonly key: string;
+  readonly path: string;
+  readonly frameWidth: number;
+  readonly frameHeight: number;
+  readonly frameCount: number;
+  readonly directions: 8;
+  readonly animType: AttackAnimType;
+}
+
 // ── Configuração de Ataque ────────────────────────────────────────
 export interface AttackConfig {
   readonly key: AttackType;

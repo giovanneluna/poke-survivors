@@ -187,6 +187,7 @@ function updateCharger(enemy: Enemy, player: Player, time: number): void {
       const a = Phaser.Math.Angle.Between(enemy.x, enemy.y, player.x, player.y);
       d.set('ch_angle', a);
       enemy.setTint(0xff4400);
+      enemy.playAttackAnim();
     }
   } else {
     // Charge at 3x in locked direction
@@ -349,6 +350,7 @@ function updateDasher(enemy: Enemy, player: Player, time: number): void {
     const dashSpeed = speed * 4;
     enemy.setVelocity(Math.cos(a) * dashSpeed, Math.sin(a) * dashSpeed);
     enemy.setTint(0xaa44ff);
+    enemy.playAttackAnim();
   }
 
   enemy.updateAnimation();
@@ -789,6 +791,7 @@ function updateRammer(enemy: Enemy, player: Player, time: number): void {
     if (time >= (d.get('rm_stateEnd') as number)) {
       d.set('rm_state', 2);
       d.set('rm_stateEnd', time + RAMMER_CHARGE_DURATION);
+      enemy.playAttackAnim();
     }
   } else if (state === 2) {
     // Charging: move in locked angle
@@ -1007,6 +1010,7 @@ function updateLeaper(enemy: Enemy, player: Player, time: number): void {
       enemy.setScale(enemy.scaleX, d.get('lp_origScaleY') as number);
       d.set('lp_state', 2);
       d.set('lp_stateEnd', time + LEAPER_LEAP_DURATION);
+      enemy.playAttackAnim();
     }
   } else if (state === 2) {
     // Leaping to locked target

@@ -39,6 +39,7 @@ export class CollisionSystem {
         if (enemy.active) {
           const took = player.takeDamage(enemy.getContactDamage(), scene.time.now);
           if (took) {
+            enemy.playAttackAnim();
             SoundManager.playPlayerHit();
             const ce = enemy.contactEffect;
             if (ce) {
