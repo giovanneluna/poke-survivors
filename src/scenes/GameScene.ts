@@ -58,6 +58,8 @@ export class GameScene extends Phaser.Scene {
   private onBeforeUnload: (() => void) | null = null
   private starterKey = "charmander"
   private difficulty: Difficulty = "hard"
+  private tileThemeId = "emerald"
+  private mapId: string | null = null
   private starterConfig!: StarterConfig
   private devConfig?: DevConfig
 
@@ -78,10 +80,14 @@ export class GameScene extends Phaser.Scene {
     starterKey?: string
     devConfig?: DevConfig
     difficulty?: Difficulty
+    tileThemeId?: string
+    mapId?: string | null
   }): void {
     this.debugMode = data?.debugMode ?? false
     this.devConfig = data?.devConfig
     this.difficulty = data?.difficulty ?? "hard"
+    this.tileThemeId = data?.tileThemeId ?? "emerald"
+    this.mapId = data?.mapId ?? null
     this.starterKey =
       this.devConfig?.starterKey ?? data?.starterKey ?? "charmander"
   }
@@ -156,6 +162,8 @@ export class GameScene extends Phaser.Scene {
       debugMode: this.debugMode,
       devConfig: this.devConfig,
       difficulty: this.difficulty,
+      tileThemeId: this.tileThemeId,
+      mapId: this.mapId,
     }
 
     // ── Persistent systems ───────────────────────────────────────────

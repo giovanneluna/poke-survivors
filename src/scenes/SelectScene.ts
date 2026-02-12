@@ -5,9 +5,9 @@ import type { DevConfig, Difficulty, PokemonForm } from '../types';
 import { SoundManager } from '../audio/SoundManager';
 import { getCoins, getLastRun, initSaveSystem } from '../systems/SaveSystem';
 import { fontSize, scaled } from '../utils/ui-scale';
-
 export class SelectScene extends Phaser.Scene {
   private selectedIndex = 0;
+  private selectedThemeId = 'emerald';
   private cards: Phaser.GameObjects.Container[] = [];
   private cardGraphics: Phaser.GameObjects.Graphics[] = [];
   private phaseOverlay: Phaser.GameObjects.Container | null = null;
@@ -22,12 +22,20 @@ export class SelectScene extends Phaser.Scene {
 
   create(): void {
     this.selectedIndex = 0;
+    this.selectedThemeId = 'emerald';
     this.cards = [];
     this.cardGraphics = [];
     this.phaseOverlay = null;
     this.difficultyOverlay = null;
     this.devConfigOverlay = null;
     this.wipOverlay = null;
+    // ── URL param shortcut: ?editor=true ─────────────────────────────
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('editor') === 'true') {
+      this.scene.start('MapEditorScene');
+      return;
+    }
+
     const { width, height } = this.cameras.main;
 
     // ── Background ───────────────────────────────────────────────────
@@ -75,6 +83,9 @@ export class SelectScene extends Phaser.Scene {
       const cy = baseY + row * (cardHeight + rowGap);
       this.createCharacterCard(starter, i, cx, cy, cardWidth, cardHeight);
     });
+
+    // Tema fixo: Emerald (seletor removido — biomas virão na Fase 2)
+    this.selectedThemeId = 'emerald';
 
     // ── Botão "COMEÇAR" ──────────────────────────────────────────────
     const btnY = height - scaled(55);
@@ -144,6 +155,18 @@ export class SelectScene extends Phaser.Scene {
         dataBtn.on('pointerdown', () => {
           SoundManager.playClick();
           this.scene.start('DataViewerScene');
+        });
+
+        // ── Botão [EDITOR] ──────────────────────────────────────
+        const editorBtn = this.add.text(width - scaled(20), height - scaled(45), '[EDITOR]', {
+          fontSize: fontSize(12), color: '#ffaa00', fontFamily: 'monospace', fontStyle: 'bold',
+        }).setOrigin(1, 0.5).setDepth(10).setInteractive({ useHandCursor: true });
+
+        editorBtn.on('pointerover', () => { editorBtn.setColor('#ffdd44'); SoundManager.playHover(); });
+        editorBtn.on('pointerout', () => editorBtn.setColor('#ffaa00'));
+        editorBtn.on('pointerdown', () => {
+          SoundManager.playClick();
+          this.scene.start('MapEditorScene');
         });
       }
     }
@@ -529,9 +552,10 @@ export class SelectScene extends Phaser.Scene {
 
   private startGame(debugMode: boolean, devConfig?: DevConfig, difficulty: Difficulty = 'hard'): void {
     const starterKey = devConfig?.starterKey ?? STARTERS[this.selectedIndex].key;
+    const tileThemeId = this.selectedThemeId;
     this.cameras.main.fade(500, 0, 0, 0, false, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
       if (progress >= 1) {
-        this.scene.start('GameScene', { debugMode, starterKey, devConfig, difficulty });
+        this.scene.start('GameScene', { debugMode, starterKey, devConfig, difficulty, tileThemeId });
       }
     });
   }

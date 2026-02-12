@@ -4,20 +4,89 @@ import type { DestructibleType } from '../types';
 import { Destructible } from '../entities/Destructible';
 import { safeExplode } from '../utils/particles';
 import type { GameContext } from './GameContext';
+import { getThemeById } from '../data/tile-themes';
+import { pickBiomeHint } from '../utils/map-noise';
+import type { BiomeHint } from '../utils/map-noise';
+import type { GameMap } from '../data/maps/map-types';
+
+/** Map from biome string names (used in map JSON) to BiomeHint keys */
+const BIOME_NAME_TO_HINT: Record<string, BiomeHint> = {
+  grassland: 'grassLight',
+  grassLight: 'grassLight',
+  grassDark: 'grassDark',
+  grassFlower: 'grassFlower',
+  forest: 'tree',
+  tree: 'tree',
+  lake: 'water',
+  water: 'water',
+  waterEdge: 'waterEdge',
+  dirt: 'dirt',
+  dirt_zone: 'dirt',
+  rock: 'rock',
+  path: 'path',
+};
 
 export class WorldSystem {
   constructor(private readonly ctx: GameContext) {}
 
-  generateWorld(): void {
+  generateWorld(mapData?: GameMap | null): void {
+    const theme = getThemeById(this.ctx.tileThemeId);
     const T = GAME.tileSize;
-    const cols = Math.ceil(GAME.worldWidth / T);
-    const rows = Math.ceil(GAME.worldHeight / T);
+    const tileScale = theme.tileSize === 16 ? 1.5 : 1.0;
+
+    const cols = mapData ? mapData.width : Math.ceil(GAME.worldWidth / T);
+    const rows = mapData ? mapData.height : Math.ceil(GAME.worldHeight / T);
+
     for (let col = 0; col < cols; col++) {
       for (let row = 0; row < rows; row++) {
-        const tile = this.pickTile(col, row, cols, rows);
-        this.ctx.scene.add.image(col * T, row * T, tile).setOrigin(0, 0).setDepth(0);
+        const hint = this.resolveHint(col, row, cols, rows, mapData);
+        const textureKey = theme.tiles[hint];
+        this.ctx.scene.add.image(col * T, row * T, textureKey)
+          .setOrigin(0, 0)
+          .setDepth(0)
+          .setScale(tileScale);
       }
     }
+  }
+
+  /**
+   * Resolve the biome hint for a cell.
+   * If mapData is provided, checks terrain data first.
+   * Falls back to procedural noise.
+   */
+  private resolveHint(
+    col: number,
+    row: number,
+    maxCols: number,
+    maxRows: number,
+    mapData?: GameMap | null,
+  ): BiomeHint {
+    if (mapData) {
+      const key = `${col},${row}`;
+      const terrainValue = mapData.terrain[key];
+      if (terrainValue !== undefined) {
+        // Value with source prefix (e.g. 'emerald:ground-grass-light') = exact tile ID
+        // Currently we resolve it to the closest biome hint
+        if (terrainValue.includes(':')) {
+          // Extract the tile name after the category prefix
+          // Format: 'source:category-name' e.g. 'emerald:ground-grass-light'
+          const afterColon = terrainValue.split(':')[1];
+          const tileName = afterColon.replace(/^[^-]+-/, '');
+          // Try to map common tile names to biome hints
+          const mapped = BIOME_NAME_TO_HINT[tileName];
+          if (mapped) return mapped;
+          // Fallback: try the full value after colon
+          const mapped2 = BIOME_NAME_TO_HINT[afterColon];
+          if (mapped2) return mapped2;
+        }
+        // Value is a biome name
+        const mapped = BIOME_NAME_TO_HINT[terrainValue];
+        if (mapped) return mapped;
+      }
+    }
+
+    // Default: procedural noise
+    return pickBiomeHint(col, row, maxCols, maxRows);
   }
 
   spawnDestructibles(): void {
@@ -56,24 +125,5 @@ export class WorldSystem {
       speed: { min: 20, max: 50 }, lifespan: 500, quantity: 10,
       scale: { start: 2, end: 0 }, tint: [0xFFD700, 0xFFE44D],
     });
-  }
-
-  private pickTile(col: number, row: number, maxCols: number, maxRows: number): string {
-    const edgeMargin = 3;
-    if (col < edgeMargin || col >= maxCols - edgeMargin || row < edgeMargin || row >= maxRows - edgeMargin) {
-      const isOuterEdge = col < 1 || col >= maxCols - 1 || row < 1 || row >= maxRows - 1;
-      return isOuterEdge ? 'tile-water' : 'tile-tree';
-    }
-    const noise = Math.sin(col * 0.7 + row * 0.3) * Math.cos(col * 0.2 + row * 0.9);
-    const rand = Math.random();
-    if (noise > 0.7 && rand < 0.3) return 'tile-flowers';
-    if (noise < -0.6 && rand < 0.2) return 'tile-dirt';
-    if (rand < 0.02) return 'tile-rock';
-    // Clusters de árvores espalhados pelo mapa
-    const treeNoise = Math.sin(col * 1.3 + row * 0.5) * Math.cos(col * 0.4 + row * 1.1);
-    if (treeNoise > 0.5 && rand < 0.4) return 'tile-tree';
-    if (rand < 0.04) return 'tile-tree';
-    if (rand < 0.15) return 'tile-grass-2';
-    return 'tile-grass-1';
   }
 }

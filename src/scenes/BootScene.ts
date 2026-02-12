@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { ENEMIES, STARTERS, CHARMANDER_FORMS, SQUIRTLE_FORMS, BULBASAUR_FORMS } from '../config';
 import type { SpriteConfig, Direction } from '../types';
 import { DIRECTION_ROW } from '../types';
+import { EDITOR_TILES } from '../data/editor-tiles';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -83,6 +84,21 @@ export class BootScene extends Phaser.Scene {
     this.load.image('coin-small', 'assets/items/nugget.png');
     this.load.image('coin-medium', 'assets/items/nugget.png');
     this.load.image('coin-large', 'assets/items/big-nugget.png');
+
+    // ── Tile themes (game world tiles — used by WorldSystem) ─────
+    const tileThemes = ['emerald', 'frlg', 'pmd'] as const;
+    const tileNames = ['grass-light', 'grass-dark', 'grass-flower', 'dirt', 'water', 'water-edge', 'tree', 'rock', 'path'] as const;
+    for (const theme of tileThemes) {
+      this.load.image(`theme-preview-${theme}`, `assets/tiles/${theme}/preview.png`);
+      for (const tile of tileNames) {
+        this.load.image(`tile-${theme}-${tile}`, `assets/tiles/${theme}/${tile}.png`);
+      }
+    }
+
+    // ── Editor tiles (Map Editor palette — all extracted tiles) ─
+    for (const edTile of EDITOR_TILES) {
+      this.load.image(edTile.id, edTile.path);
+    }
 
     // ── Destructible sprites (PokeAPI items) ─────────────────────
     this.load.image('dest-tall-grass', 'assets/items/dest-tall-grass.png');
