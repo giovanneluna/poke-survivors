@@ -25,6 +25,8 @@ export class WaterGun implements Attack {
   private fireId = 0;
   private maxChains = 2;
   private readonly speed = 300;
+  private static readonly RICOCHET_DAMAGE_MULT = 0.5;
+  private static readonly RICOCHET_SPEED_MULT = 0.6;
 
   private static readonly HIT_RADIUS = 20;
 
@@ -174,7 +176,7 @@ export class WaterGun implements Attack {
     }
   }
 
-  /** Colisão manual com chain ricochet */
+  /** Colisão manual com chain ricochet (nerfado: dano e velocidade decaem) */
   update(_time: number, _delta: number): void {
     const activeBullets = this.bullets.getChildren().filter(
       (b): b is Phaser.Physics.Arcade.Sprite => (b as Phaser.Physics.Arcade.Sprite).active
@@ -194,9 +196,14 @@ export class WaterGun implements Attack {
         );
         if (dist > WaterGun.HIT_RADIUS) continue;
 
+        const bouncesDone = this.maxChains - ((bullet.getData('chainsLeft') as number) ?? 0);
+        const hitDamage = bouncesDone > 0
+          ? Math.floor(this.damage * WaterGun.RICOCHET_DAMAGE_MULT)
+          : this.damage;
+
         if (typeof enemy.takeDamage === 'function') {
           setDamageSource(this.type);
-          const killed = enemy.takeDamage(this.damage);
+          const killed = enemy.takeDamage(hitDamage);
           if (killed) {
             this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
           }
@@ -228,7 +235,9 @@ export class WaterGun implements Attack {
           return d < bd ? e : best;
         });
 
-        this.scene.physics.moveToObject(bullet, nextTarget, this.speed);
+        const ricochetSpeed = this.speed * WaterGun.RICOCHET_SPEED_MULT;
+        this.scene.physics.moveToObject(bullet, nextTarget, ricochetSpeed);
+        bullet.setScale(bullet.scaleX * 0.8);
 
         // Flash visual de ricochete
         const p = this.scene.add.particles(bullet.x, bullet.y, 'water-particle', {

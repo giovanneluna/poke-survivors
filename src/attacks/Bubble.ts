@@ -29,6 +29,8 @@ export class Bubble implements Attack {
   private readonly slowVelocityScale = 0.6;
   private readonly slowDurationMs = 1500;
   private readonly speed = 100;
+  private static readonly RICOCHET_DAMAGE_MULT = 0.5;
+  private static readonly RICOCHET_SPEED_MULT = 0.6;
 
   private static readonly HIT_RADIUS = 22;
 
@@ -186,7 +188,7 @@ export class Bubble implements Attack {
     }
   }
 
-  /** Colisão manual com chain ricochet */
+  /** Colisão manual com chain ricochet (nerfado: dano e velocidade decaem) */
   update(_time: number, _delta: number): void {
     const activeBullets = this.bullets.getChildren().filter(
       (b): b is Phaser.Physics.Arcade.Sprite => (b as Phaser.Physics.Arcade.Sprite).active
@@ -206,9 +208,14 @@ export class Bubble implements Attack {
         );
         if (dist > Bubble.HIT_RADIUS) continue;
 
+        const bouncesDone = this.maxChains - ((bullet.getData('chainsLeft') as number) ?? 0);
+        const hitDamage = bouncesDone > 0
+          ? Math.floor(this.damage * Bubble.RICOCHET_DAMAGE_MULT)
+          : this.damage;
+
         if (typeof enemy.takeDamage === 'function') {
           setDamageSource(this.type);
-          const killed = enemy.takeDamage(this.damage);
+          const killed = enemy.takeDamage(hitDamage);
           if (killed) {
             this.scene.events.emit('cone-attack-kill', enemy.x, enemy.y, enemy.xpValue);
           }
@@ -240,7 +247,9 @@ export class Bubble implements Attack {
           return d < bd ? e : best;
         });
 
-        this.scene.physics.moveToObject(bullet, nextTarget, this.speed);
+        const ricochetSpeed = this.speed * Bubble.RICOCHET_SPEED_MULT;
+        this.scene.physics.moveToObject(bullet, nextTarget, ricochetSpeed);
+        bullet.setScale(bullet.scaleX * 0.85);
 
         // Flash visual de bounce
         const p = this.scene.add.particles(bullet.x, bullet.y, 'water-particle', {

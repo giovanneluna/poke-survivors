@@ -27,6 +27,9 @@ export const CHANGELOG: readonly VersionLog[] = [
       { tag: 'NEW', text: 'Crosshair visual (seta verde) indica a direção de mira no mundo' },
       { tag: 'NEW', text: 'Indicador → ao lado de cada ataque na HUD quando manual aim está ativo' },
       { tag: 'NEW', text: 'Projéteis com spread angular automático para multi-projétil no modo manual' },
+      // ── Nerf Squirtle ─────────────────────────────────────────────
+      { tag: 'BALANCE', text: 'Nerf Squirtle: ricochete agora causa 50% de dano (era 100%)' },
+      { tag: 'BALANCE', text: 'Nerf Squirtle: ricochete 60% mais lento e projétil encolhe visualmente' },
     ],
   },
   {
