@@ -31,6 +31,11 @@ export const CHANGELOG: readonly VersionLog[] = [
       { tag: 'NEW', text: '3 temas visuais para o mapa: Emerald, FireRed e Mystery Dungeon' },
       { tag: 'NEW', text: 'Seletor de tema na tela de seleção com preview visual' },
       { tag: 'NEW', text: 'Tiles 16px do GBA escalados para manter grid de 24px' },
+      // ── Idioma ────────────────────────────────────────────────────────
+      { tag: 'NEW', text: 'Suporte a Português e Inglês com seletor na tela inicial' },
+      { tag: 'NEW', text: 'Idioma salvo automaticamente (localStorage)' },
+      // ── Comunidade ────────────────────────────────────────────────────
+      { tag: 'NEW', text: 'Seção "Quero Contribuir" com link para o Discord' },
     ],
   },
   {

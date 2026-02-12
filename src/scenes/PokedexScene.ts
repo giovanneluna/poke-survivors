@@ -5,6 +5,7 @@ import { ENEMIES } from '../config';
 import { ENEMY_TYPES } from '../data/type-chart';
 import { fontSize, scaled } from '../utils/ui-scale';
 import type { EnemyType } from '../types';
+import { t } from '../i18n';
 
 // ── Color by element type ─────────────────────────────────────────
 const TYPE_COLORS: Record<string, number> = {
@@ -35,12 +36,12 @@ export class PokedexScene extends Phaser.Scene {
     for (let y = 0; y < height; y += 40) bg.lineBetween(0, y, width, y);
 
     // ── Header ─────────────────────────────────────────────────────
-    this.add.text(width / 2, scaled(28), 'POKÉDEX', {
+    this.add.text(width / 2, scaled(28), t('pokedex.title'), {
       fontSize: fontSize(24), color: '#ff4444', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: scaled(4),
     }).setOrigin(0.5).setDepth(10);
 
-    this.add.text(width / 2, scaled(52), `${discovered} / ${total} Descobertos`, {
+    this.add.text(width / 2, scaled(52), t('pokedex.discovered', { found: discovered, total }), {
       fontSize: fontSize(12), color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: scaled(3),
     }).setOrigin(0.5).setDepth(10);
@@ -165,7 +166,7 @@ export class PokedexScene extends Phaser.Scene {
     };
     drawBtn(false);
 
-    const btnText = this.add.text(width / 2, btnY, '<- VOLTAR', {
+    const btnText = this.add.text(width / 2, btnY, t('ui.back'), {
       fontSize: fontSize(14), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: scaled(2),
     }).setOrigin(0.5).setDepth(11);

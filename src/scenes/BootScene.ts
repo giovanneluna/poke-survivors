@@ -4,6 +4,7 @@ import type { SpriteConfig, AttackAnimConfig, Direction } from '../types';
 import { DIRECTION_ROW } from '../types';
 import { EDITOR_TILES } from '../data/editor-tiles';
 import { ENEMY_ATTACK_SPRITES } from '../data/sprites/enemies';
+import { initLanguage, t } from '../i18n';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -11,12 +12,13 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
+    initLanguage();
     const { width, height } = this.cameras.main;
 
     const barBg = this.add.rectangle(width / 2, height / 2, 300, 20, 0x333333);
     const bar = this.add.rectangle(width / 2 - 148, height / 2, 0, 16, 0xff6600);
     bar.setOrigin(0, 0.5);
-    const loadingText = this.add.text(width / 2, height / 2 - 30, 'Carregando...', {
+    const loadingText = this.add.text(width / 2, height / 2 - 30, t('boot.loading'), {
       fontSize: '16px', color: '#ffffff', fontFamily: 'monospace',
     }).setOrigin(0.5);
 

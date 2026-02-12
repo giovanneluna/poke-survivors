@@ -5,6 +5,7 @@ import type { DevConfig, Difficulty, PokemonForm } from '../types';
 import { SoundManager } from '../audio/SoundManager';
 import { getCoins, getLastRun, initSaveSystem } from '../systems/SaveSystem';
 import { fontSize, scaled } from '../utils/ui-scale';
+import { t } from '../i18n';
 export class SelectScene extends Phaser.Scene {
   private selectedIndex = 0;
   private selectedThemeId = 'emerald';
@@ -49,7 +50,7 @@ export class SelectScene extends Phaser.Scene {
     for (let y = 0; y < height; y += 40) bg.lineBetween(0, y, width, y);
 
     // ── Título ───────────────────────────────────────────────────────
-    this.add.text(width / 2, scaled(35), 'ESCOLHA SEU POKÉMON', {
+    this.add.text(width / 2, scaled(35), t('select.title'), {
       fontSize: fontSize(24),
       color: '#ffcc00',
       fontFamily: 'monospace',
@@ -58,7 +59,7 @@ export class SelectScene extends Phaser.Scene {
       strokeThickness: 4,
     }).setOrigin(0.5).setDepth(10);
 
-    this.add.text(width / 2, scaled(60), 'Selecione seu starter e comece a aventura!', {
+    this.add.text(width / 2, scaled(60), t('select.subtitle'), {
       fontSize: fontSize(10),
       color: '#888888',
       fontFamily: 'monospace',
@@ -95,7 +96,7 @@ export class SelectScene extends Phaser.Scene {
     const btnBg = this.add.graphics().setDepth(10);
     this.drawStartButton(btnBg, width / 2, btnY, btnW, btnH, false);
 
-    const btnText = this.add.text(width / 2, btnY, 'COMEÇAR!', {
+    const btnText = this.add.text(width / 2, btnY, t('select.start'), {
       fontSize: fontSize(18),
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -131,7 +132,7 @@ export class SelectScene extends Phaser.Scene {
     });
 
     // ── Botão "Voltar" ───────────────────────────────────────────────
-    const backBtn = this.add.text(scaled(20), height - scaled(25), '<- Voltar', {
+    const backBtn = this.add.text(scaled(20), height - scaled(25), t('ui.back'), {
       fontSize: fontSize(12),
       color: '#666666',
       fontFamily: 'monospace',
@@ -189,7 +190,7 @@ export class SelectScene extends Phaser.Scene {
       const lTime = `${lm}:${String(ls).padStart(2, '0')}`;
       this.add.text(
         width / 2, scaled(76),
-        `Última: ${lastRun.formName} Lv.${lastRun.level} · ${lTime} · ${lastRun.kills} kills · ₽${lastRun.coinsEarned}`,
+        t('select.lastRun', { form: lastRun.formName, level: lastRun.level, time: lTime, kills: lastRun.kills, coins: lastRun.coinsEarned }),
         { fontSize: fontSize(9), color: '#555555', fontFamily: 'monospace' },
       ).setOrigin(0.5).setDepth(10);
     }
@@ -218,17 +219,17 @@ export class SelectScene extends Phaser.Scene {
       stroke: '#000000', strokeThickness: 6,
     }).setOrigin(0.5));
 
-    this.wipOverlay.add(this.add.text(width / 2, height / 2 - scaled(30), 'EM DESENVOLVIMENTO', {
+    this.wipOverlay.add(this.add.text(width / 2, height / 2 - scaled(30), t('select.wipTitle'), {
       fontSize: fontSize(18), color: '#ff8800', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5));
 
-    this.wipOverlay.add(this.add.text(width / 2, height / 2 + scaled(5), 'Bulbasaur ainda não está completo.\nAlguns ataques e efeitos podem\nnão funcionar corretamente.', {
+    this.wipOverlay.add(this.add.text(width / 2, height / 2 + scaled(5), t('select.wipMsg'), {
       fontSize: fontSize(12), color: '#aaaaaa', fontFamily: 'monospace',
       align: 'center', lineSpacing: scaled(4),
     }).setOrigin(0.5));
 
-    this.wipOverlay.add(this.add.text(width / 2, height / 2 + scaled(45), 'Deseja continuar mesmo assim?', {
+    this.wipOverlay.add(this.add.text(width / 2, height / 2 + scaled(45), t('select.wipConfirm'), {
       fontSize: fontSize(12), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5));
 
@@ -247,7 +248,7 @@ export class SelectScene extends Phaser.Scene {
     drawYes(false);
     this.wipOverlay.add(yesGfx);
 
-    const yesText = this.add.text(width / 2 - btnW / 2 - scaled(10), btnY, 'SIM, JOGAR', {
+    const yesText = this.add.text(width / 2 - btnW / 2 - scaled(10), btnY, t('select.wipYes'), {
       fontSize: fontSize(12), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.wipOverlay.add(yesText);
@@ -276,7 +277,7 @@ export class SelectScene extends Phaser.Scene {
     drawNo(false);
     this.wipOverlay.add(noGfx);
 
-    const noText = this.add.text(width / 2 + btnW / 2 + scaled(10), btnY, 'VOLTAR', {
+    const noText = this.add.text(width / 2 + btnW / 2 + scaled(10), btnY, t('select.wipNo'), {
       fontSize: fontSize(12), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5);
     this.wipOverlay.add(noText);
@@ -313,7 +314,7 @@ export class SelectScene extends Phaser.Scene {
     this.phaseOverlay.add(bg);
 
     // Título
-    this.phaseOverlay.add(this.add.text(width / 2, height / 2 - scaled(120), 'SELECIONE A FASE', {
+    this.phaseOverlay.add(this.add.text(width / 2, height / 2 - scaled(120), t('phase.title'), {
       fontSize: fontSize(22), color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5));
@@ -324,21 +325,21 @@ export class SelectScene extends Phaser.Scene {
 
     const cardY = height / 2 + scaled(10);
     const card1X = isLocal ? width / 2 - scaled(130) : width / 2;
-    this.createPhaseCard(card1X, cardY, 'FASE 1', 'FIRE RED', 0xff4400, 0xff6622,
-      'Jogo completo com\ninimigos, bosses\ne evoluções.', () => {
+    this.createPhaseCard(card1X, cardY, t('phase.1.title'), t('phase.1.subtitle'), 0xff4400, 0xff6622,
+      t('phase.1.desc'), () => {
         this.showDifficultySelection();
       });
 
     if (isLocal) {
       const card2X = width / 2 + scaled(130);
-      this.createPhaseCard(card2X, cardY, 'FASE DEV', 'DEBUGGER', 0x44aaff, 0x66ccff,
-        'Cenários de teste\npré-configurados\npara debugging.', () => {
+      this.createPhaseCard(card2X, cardY, t('phase.dev.title'), t('phase.dev.subtitle'), 0x44aaff, 0x66ccff,
+        t('phase.dev.desc'), () => {
           this.showDevConfigOverlay();
         });
     }
 
     // Botão cancelar
-    const cancelBtn = this.add.text(width / 2, height / 2 + scaled(145), 'Cancelar', {
+    const cancelBtn = this.add.text(width / 2, height / 2 + scaled(145), t('ui.cancel'), {
       fontSize: fontSize(12), color: '#666666', fontFamily: 'monospace',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     cancelBtn.on('pointerover', () => cancelBtn.setColor('#ffffff'));
@@ -450,12 +451,12 @@ export class SelectScene extends Phaser.Scene {
     this.difficultyOverlay.add(bg);
 
     // Título
-    this.difficultyOverlay.add(this.add.text(width / 2, height / 2 - scaled(130), 'DIFICULDADE', {
+    this.difficultyOverlay.add(this.add.text(width / 2, height / 2 - scaled(130), t('difficulty.title'), {
       fontSize: fontSize(22), color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5));
 
-    this.difficultyOverlay.add(this.add.text(width / 2, height / 2 - scaled(105), 'Escolha o nível de desafio', {
+    this.difficultyOverlay.add(this.add.text(width / 2, height / 2 - scaled(105), t('difficulty.subtitle'), {
       fontSize: fontSize(10), color: '#888888', fontFamily: 'monospace',
     }).setOrigin(0.5));
 
@@ -474,7 +475,7 @@ export class SelectScene extends Phaser.Scene {
     });
 
     // Botão voltar
-    const backBtn = this.add.text(width / 2, height / 2 + scaled(140), '<- Voltar', {
+    const backBtn = this.add.text(width / 2, height / 2 + scaled(140), t('ui.back'), {
       fontSize: fontSize(12), color: '#666666', fontFamily: 'monospace',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     backBtn.on('pointerover', () => { backBtn.setColor('#ffffff'); SoundManager.playHover(); });
@@ -518,13 +519,13 @@ export class SelectScene extends Phaser.Scene {
     this.difficultyOverlay.add(gfx);
 
     // Label
-    this.difficultyOverlay.add(this.add.text(cx, cy - cardH / 2 + scaled(20), cfg.label, {
+    this.difficultyOverlay.add(this.add.text(cx, cy - cardH / 2 + scaled(20), t(`difficulty.${difficulty}`), {
       fontSize: fontSize(16), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5));
 
     // Descrição
-    this.difficultyOverlay.add(this.add.text(cx, cy + scaled(5), cfg.description, {
+    this.difficultyOverlay.add(this.add.text(cx, cy + scaled(5), t(`difficulty.${difficulty}.desc`), {
       fontSize: fontSize(11), color: '#aaaaaa', fontFamily: 'monospace',
       align: 'center', lineSpacing: scaled(6),
     }).setOrigin(0.5));
@@ -764,7 +765,7 @@ export class SelectScene extends Phaser.Scene {
     this.devConfigOverlay.add(debugBtn);
 
     // ── Cancel ──────────────────────────────────────────────────
-    const cancelBtn = this.add.text(panelX, yPos + scaled(25), 'Cancelar', {
+    const cancelBtn = this.add.text(panelX, yPos + scaled(25), t('ui.cancel'), {
       fontSize: fontSize(11), color: '#666666', fontFamily: 'monospace',
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     cancelBtn.on('pointerover', () => cancelBtn.setColor('#ffffff'));
@@ -848,6 +849,10 @@ export class SelectScene extends Phaser.Scene {
       'Fogo': 0xff6600, 'Água': 0x4488ff, 'Planta': 0x44bb44,
       'Fada': 0xff77cc, 'Fantasma': 0x6644aa, 'Psíquico': 0xff4488,
     };
+    const TYPE_KEY_MAP: Record<string, string> = {
+      'Fogo': 'type.fire', 'Água': 'type.water', 'Planta': 'type.grass',
+      'Fada': 'type.fairy', 'Fantasma': 'type.ghost', 'Psíquico': 'type.psychic',
+    };
     const typeColor = typeColors[starter.type] ?? 0x888888;
 
     const typeBadge = this.add.graphics();
@@ -857,7 +862,7 @@ export class SelectScene extends Phaser.Scene {
     typeBadge.fillRoundedRect(cx - badgeW / 2, cy + scaled(28), badgeW, badgeH, 5);
     container.add(typeBadge);
 
-    const typeText = this.add.text(cx, cy + scaled(37), starter.type.toUpperCase(), {
+    const typeText = this.add.text(cx, cy + scaled(37), t(TYPE_KEY_MAP[starter.type] ?? 'type.normal').toUpperCase(), {
       fontSize: fontSize(9),
       color: starter.unlocked ? '#ffffff' : '#555555',
       fontFamily: 'monospace',
@@ -867,7 +872,7 @@ export class SelectScene extends Phaser.Scene {
 
     // ── Descrição ────────────────────────────────────────────────────
     if (starter.unlocked) {
-      const desc = this.add.text(cx, cy + scaled(55), starter.description, {
+      const desc = this.add.text(cx, cy + scaled(55), t(`starter.${starter.key}.desc`), {
         fontSize: fontSize(8),
         color: '#aaaaaa',
         fontFamily: 'monospace',
@@ -898,7 +903,7 @@ export class SelectScene extends Phaser.Scene {
       }).setOrigin(0.5);
       container.add(lockText);
 
-      const lockedLabel = this.add.text(cx, cy + scaled(85), 'EM BREVE', {
+      const lockedLabel = this.add.text(cx, cy + scaled(85), t('select.comingSoon'), {
         fontSize: fontSize(9),
         color: '#666666',
         fontFamily: 'monospace',

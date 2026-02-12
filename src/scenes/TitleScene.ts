@@ -4,12 +4,13 @@ import { getCoins, initSaveSystem } from "../systems/SaveSystem"
 import { fontSize, scaled } from "../utils/ui-scale"
 import { CHANGELOG, CURRENT_VERSION } from "../data/changelog"
 import type { ChangeTag } from "../data/changelog"
-
-const CL_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+import { t, getLanguage, setLanguage } from "../i18n"
+import type { Language } from "../i18n"
 
 function fmtDate(iso: string): string {
   const [y, m, d] = iso.split("-")
-  return `${parseInt(d, 10)} ${CL_MONTHS[parseInt(m, 10) - 1]} ${y}`
+  const monthIdx = parseInt(m, 10) - 1
+  return `${parseInt(d, 10)} ${t(`month.${monthIdx}`)} ${y}`
 }
 
 const TAG_COLORS: Record<ChangeTag, string> = {
@@ -25,6 +26,7 @@ export class TitleScene extends Phaser.Scene {
   private clContentTop = 0
   private clScrollOffset = 0
   private clMaxScroll = 0
+  private contributeOverlay: Phaser.GameObjects.GameObject[] = []
 
   constructor() {
     super({ key: "TitleScene" })
@@ -82,7 +84,7 @@ export class TitleScene extends Phaser.Scene {
 
     // ── Título: "POKÉ WORLD" ─────────────────────────────────────────
     const titleLine1 = this.add
-      .text(width / 2, 55, "POKÉ WORLD", {
+      .text(width / 2, 55, t('title.main'), {
         fontSize: fontSize(42),
         color: "#ffcc00",
         fontFamily: "monospace",
@@ -104,7 +106,7 @@ export class TitleScene extends Phaser.Scene {
 
     // ── Subtítulo: "SURVIVORS" ────────────────────────────────────────
     const titleLine2 = this.add
-      .text(width / 2, 100, "SURVIVORS", {
+      .text(width / 2, 100, t('title.subtitle'), {
         fontSize: fontSize(52),
         color: "#ff6600",
         fontFamily: "monospace",
@@ -215,7 +217,7 @@ export class TitleScene extends Phaser.Scene {
 
     // ── Tipo badge ───────────────────────────────────────────────────
     this.add
-      .text(width / 2, 133, "🔥 FIRE RED EDITION 🔥", {
+      .text(width / 2, 133, t('title.edition'), {
         fontSize: fontSize(11),
         color: "#ff8844",
         fontFamily: "monospace",
@@ -240,7 +242,7 @@ export class TitleScene extends Phaser.Scene {
     )
 
     const btnText = this.add
-      .text(width / 2, btnY, "▶  ENTRAR AGORA", {
+      .text(width / 2, btnY, t('menu.play'), {
         fontSize: fontSize(18),
         color: "#ffffff",
         fontFamily: "monospace",
@@ -384,7 +386,7 @@ export class TitleScene extends Phaser.Scene {
     const secStartX = width / 2 - secTotalW / 2 + secBtnW / 2
     createSecBtn(
       secStartX,
-      "MELHORIAS",
+      t('menu.powerups'),
       0x1a1a44,
       0x2a2a55,
       "#aaaaff",
@@ -392,7 +394,7 @@ export class TitleScene extends Phaser.Scene {
     )
     createSecBtn(
       secStartX + secBtnW + secGap,
-      "POKÉDEX",
+      t('menu.pokedex'),
       0x2a1122,
       0x442244,
       "#ff6688",
@@ -400,7 +402,7 @@ export class TitleScene extends Phaser.Scene {
     )
     createSecBtn(
       secStartX + 2 * (secBtnW + secGap),
-      "ESTATÍSTICAS",
+      t('menu.stats'),
       0x112233,
       0x223344,
       "#66aaff",
@@ -408,7 +410,7 @@ export class TitleScene extends Phaser.Scene {
     )
     createSecBtn(
       secStartX + 3 * (secBtnW + secGap),
-      "SAVE DATA",
+      t('menu.save'),
       0x1a2a1a,
       0x2a3a2a,
       "#88cc88",
@@ -471,7 +473,7 @@ export class TitleScene extends Phaser.Scene {
       drawDl(false)
 
       const dlText = this.add
-        .text(dlX, dlY, "DOWNLOAD", {
+        .text(dlX, dlY, t('menu.download'), {
           fontSize: fontSize(11),
           color: "#66dd66",
           fontFamily: "monospace",
@@ -522,7 +524,7 @@ export class TitleScene extends Phaser.Scene {
     drawBadge(false)
 
     const versionText = this.add
-      .text(width / 2, badgeY + badgeH / 2, `BETA ${CURRENT_VERSION} ▸`, {
+      .text(width / 2, badgeY + badgeH / 2, `${t('version.beta')} ${CURRENT_VERSION} ▸`, {
         fontSize: fontSize(11),
         color: "#ff8844",
         fontFamily: "monospace",
@@ -555,7 +557,7 @@ export class TitleScene extends Phaser.Scene {
       .text(
         width / 2,
         height - 12,
-        "Desenvolvido por Giovanne  •  github.com/giovanneluna",
+        t('credits.dev'),
         {
           fontSize: fontSize(10),
           color: "#666666",
@@ -573,6 +575,66 @@ export class TitleScene extends Phaser.Scene {
       import("@tauri-apps/plugin-shell")
         .then(({ open }) => open(url))
         .catch(() => window.open(url, "_blank"))
+    })
+
+    // ── Seletor de idioma (top-left) ──────────────────────────────────
+    this.createLanguageSelector(width, height)
+
+    // ── Botão "Quero Contribuir" ────────────────────────────────────
+    const contribBtnW = scaled(140)
+    const contribBtnH = scaled(26)
+    const contribX = scaled(10) + contribBtnW / 2
+    const contribY = height - scaled(14)
+
+    const contribGfx = this.add.graphics().setDepth(10)
+    const drawContrib = (hover: boolean): void => {
+      contribGfx.clear()
+      contribGfx.fillStyle(hover ? 0x3a2266 : 0x221144, 0.9)
+      contribGfx.fillRoundedRect(
+        contribX - contribBtnW / 2,
+        contribY - contribBtnH / 2,
+        contribBtnW,
+        contribBtnH,
+        6,
+      )
+      contribGfx.lineStyle(1, hover ? 0xaa66ff : 0x7744cc, 0.8)
+      contribGfx.strokeRoundedRect(
+        contribX - contribBtnW / 2,
+        contribY - contribBtnH / 2,
+        contribBtnW,
+        contribBtnH,
+        6,
+      )
+    }
+    drawContrib(false)
+
+    const contribText = this.add
+      .text(contribX, contribY, t("contribute.title"), {
+        fontSize: fontSize(9),
+        color: "#aa88ff",
+        fontFamily: "monospace",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5)
+      .setDepth(11)
+
+    const contribHit = this.add
+      .rectangle(contribX, contribY, contribBtnW, contribBtnH, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(12)
+
+    contribHit.on("pointerover", () => {
+      drawContrib(true)
+      contribText.setColor("#ccaaff")
+      SoundManager.playHover()
+    })
+    contribHit.on("pointerout", () => {
+      drawContrib(false)
+      contribText.setColor("#aa88ff")
+    })
+    contribHit.on("pointerdown", () => {
+      SoundManager.playClick()
+      this.showContributeOverlay()
     })
 
     // ── Fade in ──────────────────────────────────────────────────────
@@ -619,7 +681,7 @@ export class TitleScene extends Phaser.Scene {
 
     // Header
     const header = this.add
-      .text(width / 2, py + scaled(18), "WHAT'S NEW", {
+      .text(width / 2, py + scaled(18), t('changelog.title'), {
         fontSize: fontSize(18),
         color: "#ff8844",
         fontFamily: "monospace",
@@ -639,7 +701,7 @@ export class TitleScene extends Phaser.Scene {
 
     // Close button
     const closeBtn = this.add
-      .text(px + pw - scaled(12), py + scaled(8), "[X]", {
+      .text(px + pw - scaled(12), py + scaled(8), t('ui.close'), {
         fontSize: fontSize(11),
         color: "#ff4444",
         fontFamily: "monospace",
@@ -726,7 +788,7 @@ export class TitleScene extends Phaser.Scene {
     // Scroll hint if content overflows
     if (this.clMaxScroll > 0) {
       const hint = this.add
-        .text(width / 2, py + ph - scaled(12), "▼ scroll ▼", {
+        .text(width / 2, py + ph - scaled(12), t('changelog.scroll'), {
           fontSize: fontSize(8),
           color: "#666666",
           fontFamily: "monospace",
@@ -785,6 +847,237 @@ export class TitleScene extends Phaser.Scene {
     if (this.clContainer) {
       this.clContainer.y = this.clContentTop - this.clScrollOffset
     }
+  }
+
+  // ── Language Selector ──────────────────────────────────────────────
+
+  private createLanguageSelector(_width: number, _height: number): void {
+    const langs: Language[] = ["pt", "en"]
+    const current = getLanguage()
+    const y = scaled(15)
+    const btnW = scaled(32)
+    const gap = scaled(4)
+    const startX = scaled(12)
+
+    langs.forEach((lang, i) => {
+      const x = startX + i * (btnW + gap) + btnW / 2
+      const isActive = lang === current
+
+      const gfx = this.add.graphics().setDepth(10)
+      const draw = (active: boolean, hover: boolean): void => {
+        gfx.clear()
+        if (active) {
+          gfx.fillStyle(0xff6600, 0.9)
+          gfx.fillRoundedRect(x - btnW / 2, y - 10, btnW, 20, 4)
+        } else {
+          gfx.fillStyle(hover ? 0x333355 : 0x222244, 0.8)
+          gfx.fillRoundedRect(x - btnW / 2, y - 10, btnW, 20, 4)
+          gfx.lineStyle(1, hover ? 0x666688 : 0x444466, 0.6)
+          gfx.strokeRoundedRect(x - btnW / 2, y - 10, btnW, 20, 4)
+        }
+      }
+      draw(isActive, false)
+
+      const label = this.add
+        .text(x, y, lang.toUpperCase(), {
+          fontSize: fontSize(10),
+          color: isActive ? "#ffffff" : "#888888",
+          fontFamily: "monospace",
+          fontStyle: "bold",
+        })
+        .setOrigin(0.5)
+        .setDepth(11)
+
+      const hit = this.add
+        .rectangle(x, y, btnW, 20, 0xffffff, 0)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(12)
+
+      hit.on("pointerover", () => {
+        if (lang !== getLanguage()) {
+          draw(false, true)
+          label.setColor("#cccccc")
+        }
+        SoundManager.playHover()
+      })
+      hit.on("pointerout", () => {
+        const active = lang === getLanguage()
+        draw(active, false)
+        label.setColor(active ? "#ffffff" : "#888888")
+      })
+      hit.on("pointerdown", () => {
+        if (lang !== getLanguage()) {
+          SoundManager.playClick()
+          setLanguage(lang)
+          this.scene.restart()
+        }
+      })
+    })
+  }
+
+  // ── Contribute Overlay ────────────────────────────────────────────
+
+  private showContributeOverlay(): void {
+    if (this.contributeOverlay.length > 0) return
+    const { width, height } = this.cameras.main
+
+    const backdrop = this.add
+      .rectangle(width / 2, height / 2, width, height, 0x000000, 0.88)
+      .setDepth(50)
+      .setInteractive()
+    backdrop.on("pointerdown", () => this.hideContributeOverlay())
+    this.contributeOverlay.push(backdrop)
+
+    const pw = Math.min(width * 0.85, scaled(440))
+    const ph = scaled(340)
+    const px = (width - pw) / 2
+    const py = (height - ph) / 2
+
+    const panel = this.add.graphics().setDepth(51)
+    panel.fillStyle(0x1a1a2e, 0.98)
+    panel.fillRoundedRect(px, py, pw, ph, 12)
+    panel.lineStyle(2, 0xaa66ff, 0.8)
+    panel.strokeRoundedRect(px, py, pw, ph, 12)
+    this.contributeOverlay.push(panel)
+
+    const panelHit = this.add
+      .rectangle(width / 2, height / 2, pw, ph, 0xffffff, 0)
+      .setDepth(51)
+      .setInteractive()
+    this.contributeOverlay.push(panelHit)
+
+    // Título
+    const title = this.add
+      .text(width / 2, py + scaled(22), t("contribute.title"), {
+        fontSize: fontSize(18),
+        color: "#aa88ff",
+        fontFamily: "monospace",
+        fontStyle: "bold",
+        stroke: "#000000",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(52)
+    this.contributeOverlay.push(title)
+
+    // Separador
+    const sep = this.add.graphics().setDepth(52)
+    sep.lineStyle(1, 0xaa66ff, 0.3)
+    sep.lineBetween(px + scaled(15), py + scaled(46), px + pw - scaled(15), py + scaled(46))
+    this.contributeOverlay.push(sep)
+
+    // Descrição
+    const desc = this.add
+      .text(width / 2, py + scaled(58), t("contribute.desc"), {
+        fontSize: fontSize(10),
+        color: "#cccccc",
+        fontFamily: "monospace",
+        lineSpacing: scaled(4),
+        align: "center",
+        wordWrap: { width: pw - scaled(40) },
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(52)
+    this.contributeOverlay.push(desc)
+
+    // Botão Discord
+    const discordY = py + ph - scaled(75)
+    const discordW = scaled(200)
+    const discordH = scaled(38)
+
+    const discordGfx = this.add.graphics().setDepth(52)
+    const drawDiscord = (hover: boolean): void => {
+      discordGfx.clear()
+      discordGfx.fillStyle(0x000000, 0.4)
+      discordGfx.fillRoundedRect(
+        width / 2 - discordW / 2 + 2,
+        discordY - discordH / 2 + 2,
+        discordW,
+        discordH,
+        8,
+      )
+      discordGfx.fillStyle(hover ? 0x6644cc : 0x5533aa, 0.95)
+      discordGfx.fillRoundedRect(
+        width / 2 - discordW / 2,
+        discordY - discordH / 2,
+        discordW,
+        discordH,
+        8,
+      )
+      discordGfx.lineStyle(2, hover ? 0xaa88ff : 0x8866dd)
+      discordGfx.strokeRoundedRect(
+        width / 2 - discordW / 2,
+        discordY - discordH / 2,
+        discordW,
+        discordH,
+        8,
+      )
+    }
+    drawDiscord(false)
+    this.contributeOverlay.push(discordGfx)
+
+    const discordText = this.add
+      .text(width / 2, discordY, t("contribute.discord"), {
+        fontSize: fontSize(14),
+        color: "#ffffff",
+        fontFamily: "monospace",
+        fontStyle: "bold",
+        stroke: "#000000",
+        strokeThickness: 2,
+      })
+      .setOrigin(0.5)
+      .setDepth(53)
+    this.contributeOverlay.push(discordText)
+
+    const discordHit = this.add
+      .rectangle(width / 2, discordY, discordW, discordH, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(54)
+    discordHit.on("pointerover", () => {
+      drawDiscord(true)
+      discordText.setColor("#ffcc00")
+      SoundManager.playHover()
+    })
+    discordHit.on("pointerout", () => {
+      drawDiscord(false)
+      discordText.setColor("#ffffff")
+    })
+    discordHit.on("pointerdown", () => {
+      SoundManager.playClick()
+      const url = "https://discord.gg/pFqPHV5zZ2"
+      import("@tauri-apps/plugin-shell")
+        .then(({ open }) => open(url))
+        .catch(() => window.open(url, "_blank"))
+    })
+    this.contributeOverlay.push(discordHit)
+
+    // Botão fechar
+    const closeBtn = this.add
+      .text(width / 2, py + ph - scaled(25), t("contribute.close"), {
+        fontSize: fontSize(10),
+        color: "#666666",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5)
+      .setDepth(52)
+      .setInteractive({ useHandCursor: true })
+    closeBtn.on("pointerover", () => closeBtn.setColor("#ffffff"))
+    closeBtn.on("pointerout", () => closeBtn.setColor("#666666"))
+    closeBtn.on("pointerdown", () => this.hideContributeOverlay())
+    this.contributeOverlay.push(closeBtn)
+
+    // ESC para fechar
+    this.input.keyboard?.on("keydown-ESC", this.onContribEsc, this)
+  }
+
+  private onContribEsc = (): void => {
+    this.hideContributeOverlay()
+  }
+
+  private hideContributeOverlay(): void {
+    for (const obj of this.contributeOverlay) obj.destroy()
+    this.contributeOverlay = []
+    this.input.keyboard?.off("keydown-ESC", this.onContribEsc, this)
   }
 
   // ── Helper methods ────────────────────────────────────────────────

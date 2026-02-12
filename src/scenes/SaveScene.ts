@@ -5,6 +5,7 @@ import {
   importSaveCode, importSaveFile, resetSave,
 } from '../systems/SaveSystem';
 import { fontSize, scaled } from '../utils/ui-scale';
+import { t } from '../i18n';
 
 export class SaveScene extends Phaser.Scene {
   private overlay: Phaser.GameObjects.Container | null = null;
@@ -28,12 +29,12 @@ export class SaveScene extends Phaser.Scene {
     for (let y = 0; y < height; y += gridStep) bg.lineBetween(0, y, width, y);
 
     // ── Header ───────────────────────────────────────────────────
-    this.add.text(width / 2, scaled(28), 'SAVE DATA', {
+    this.add.text(width / 2, scaled(28), t('menu.save'), {
       fontSize: fontSize(22), color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5).setDepth(10);
 
-    this.add.text(width / 2, scaled(52), 'Gerencie seus dados de jogo', {
+    this.add.text(width / 2, scaled(52), t('save.subtitle'), {
       fontSize: fontSize(10), color: '#888888', fontFamily: 'monospace',
     }).setOrigin(0.5).setDepth(10);
 
@@ -46,17 +47,17 @@ export class SaveScene extends Phaser.Scene {
     const cardY = height * 0.45;
 
     this.createActionCard(startX, cardY, cardW, cardH,
-      'EXPORTAR', 'Baixe seu save como\narquivo .txt ou copie\no código para transferir',
+      t('save.export'), t('save.export.desc'),
       0x225522, 0x338833, '#66cc66',
       () => this.showExportOverlay());
 
     this.createActionCard(startX + cardW + cardGap, cardY, cardW, cardH,
-      'IMPORTAR', 'Carregue um arquivo .txt\nou cole um código para\nrestaurar seu progresso',
+      t('save.import'), t('save.import.desc'),
       0x222255, 0x333388, '#6688cc',
       () => this.showImportOverlay());
 
     this.createActionCard(startX + 2 * (cardW + cardGap), cardY, cardW, cardH,
-      'APAGAR', 'Apague TODOS os dados\nde jogo permanentemente.\nUse com cuidado!',
+      t('save.delete'), t('save.delete.desc'),
       0x442222, 0x663333, '#cc6666',
       () => this.showDeleteOverlay());
 
@@ -77,7 +78,7 @@ export class SaveScene extends Phaser.Scene {
     };
     drawBtn(false);
 
-    const btnText = this.add.text(width / 2, btnY, '<- VOLTAR', {
+    const btnText = this.add.text(width / 2, btnY, t('ui.back'), {
       fontSize: fontSize(14), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(11);
@@ -246,9 +247,9 @@ export class SaveScene extends Phaser.Scene {
 
   // ── Export Overlay ──────────────────────────────────────────────
   private showExportOverlay(): void {
-    const { container, cx, contentY, panelW } = this.createOverlayBase('EXPORTAR DADOS');
+    const { container, cx, contentY, panelW } = this.createOverlayBase(t('save.export.title'));
 
-    container.add(this.add.text(cx, contentY, 'Baixe seu save como arquivo .txt\nou copie o código para colar em outro dispositivo.', {
+    container.add(this.add.text(cx, contentY, t('save.export.instructions'), {
       fontSize: fontSize(9), color: '#aaaaaa', fontFamily: 'monospace',
       align: 'center', lineSpacing: scaled(4),
     }).setOrigin(0.5, 0).setDepth(52));
@@ -277,31 +278,31 @@ export class SaveScene extends Phaser.Scene {
     const btnsY = codeY + scaled(55);
 
     this.createOverlayBtn(container, cx - btnW / 2 - btnGap / 2, btnsY, btnW, btnH,
-      'BAIXAR .TXT', 0x225522, 0x338833, '#88ff88', () => {
+      t('save.export.download'), 0x225522, 0x338833, '#88ff88', () => {
         downloadSaveFile();
-        this.showFeedback(container, cx, btnsY + scaled(35), 'Arquivo baixado!', '#88ff88');
+        this.showFeedback(container, cx, btnsY + scaled(35), t('save.export.downloaded'), '#88ff88');
       });
 
     this.createOverlayBtn(container, cx + btnW / 2 + btnGap / 2, btnsY, btnW, btnH,
-      'COPIAR CÓDIGO', 0x222255, 0x333388, '#8888ff', () => {
+      t('save.export.copy'), 0x222255, 0x333388, '#8888ff', () => {
         navigator.clipboard.writeText(code).then(() => {
-          this.showFeedback(container, cx, btnsY + scaled(35), 'Código copiado!', '#8888ff');
+          this.showFeedback(container, cx, btnsY + scaled(35), t('save.export.copied'), '#8888ff');
         }).catch(() => {
-          this.showFeedback(container, cx, btnsY + scaled(35), 'Erro ao copiar', '#ff4444');
+          this.showFeedback(container, cx, btnsY + scaled(35), t('save.export.copyError'), '#ff4444');
         });
       });
   }
 
   // ── Import Overlay ──────────────────────────────────────────────
   private showImportOverlay(): void {
-    const { container, cx, contentY, panelW } = this.createOverlayBase('IMPORTAR DADOS');
+    const { container, cx, contentY, panelW } = this.createOverlayBase(t('save.import.title'));
 
-    container.add(this.add.text(cx, contentY, 'Envie um arquivo .txt ou cole o código\npara restaurar seu save.', {
+    container.add(this.add.text(cx, contentY, t('save.import.instructions'), {
       fontSize: fontSize(9), color: '#aaaaaa', fontFamily: 'monospace',
       align: 'center', lineSpacing: scaled(4),
     }).setOrigin(0.5, 0).setDepth(52));
 
-    container.add(this.add.text(cx, contentY + scaled(35), 'ISTO SUBSTITUIRÁ SEUS DADOS ATUAIS!', {
+    container.add(this.add.text(cx, contentY + scaled(35), t('save.import.warning'), {
       fontSize: fontSize(9), color: '#ff6644', fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5, 0).setDepth(52));
 
@@ -316,7 +317,7 @@ export class SaveScene extends Phaser.Scene {
     codeGfx.strokeRoundedRect(cx - codeW / 2, codeY - codeH / 2, codeW, codeH, scaled(4));
     container.add(codeGfx);
 
-    const codePlaceholder = this.add.text(cx, codeY, 'Clique em COLAR CÓDIGO para importar...', {
+    const codePlaceholder = this.add.text(cx, codeY, t('save.import.placeholder'), {
       fontSize: fontSize(7), color: '#555577', fontFamily: 'monospace',
     }).setOrigin(0.5).setDepth(53);
     container.add(codePlaceholder);
@@ -328,49 +329,49 @@ export class SaveScene extends Phaser.Scene {
     const btnsY = codeY + scaled(45);
 
     this.createOverlayBtn(container, cx - btnW / 2 - btnGap / 2, btnsY, btnW, btnH,
-      'CARREGAR .TXT', 0x225522, 0x338833, '#88ff88', () => {
+      t('save.import.loadFile'), 0x225522, 0x338833, '#88ff88', () => {
         importSaveFile().then((success) => {
           if (success) {
-            this.showFeedback(container, cx, btnsY + scaled(35), 'Dados importados! Recarregando...', '#88ff88');
+            this.showFeedback(container, cx, btnsY + scaled(35), t('save.import.success'), '#88ff88');
             this.time.delayedCall(1200, () => this.scene.start('SaveScene'));
           } else {
-            this.showFeedback(container, cx, btnsY + scaled(35), 'Arquivo inválido!', '#ff4444');
+            this.showFeedback(container, cx, btnsY + scaled(35), t('save.import.invalid'), '#ff4444');
           }
         });
       });
 
     this.createOverlayBtn(container, cx + btnW / 2 + btnGap / 2, btnsY, btnW, btnH,
-      'COLAR CÓDIGO', 0x222255, 0x333388, '#8888ff', () => {
+      t('save.import.pasteCode'), 0x222255, 0x333388, '#8888ff', () => {
         navigator.clipboard.readText().then((text) => {
           if (!text.trim()) {
-            this.showFeedback(container, cx, btnsY + scaled(35), 'Clipboard vazio!', '#ff4444');
+            this.showFeedback(container, cx, btnsY + scaled(35), t('save.import.clipboardEmpty'), '#ff4444');
             return;
           }
           const success = importSaveCode(text);
           if (success) {
             codePlaceholder.setText(text.substring(0, 40) + (text.length > 40 ? '...' : ''));
             codePlaceholder.setColor('#88ff88');
-            this.showFeedback(container, cx, btnsY + scaled(35), 'Dados importados! Recarregando...', '#88ff88');
+            this.showFeedback(container, cx, btnsY + scaled(35), t('save.import.success'), '#88ff88');
             this.time.delayedCall(1200, () => this.scene.start('SaveScene'));
           } else {
-            this.showFeedback(container, cx, btnsY + scaled(35), 'Código inválido!', '#ff4444');
+            this.showFeedback(container, cx, btnsY + scaled(35), t('save.import.invalidCode'), '#ff4444');
           }
         }).catch(() => {
-          this.showFeedback(container, cx, btnsY + scaled(35), 'Erro ao ler clipboard', '#ff4444');
+          this.showFeedback(container, cx, btnsY + scaled(35), t('save.import.clipboardError'), '#ff4444');
         });
       });
   }
 
   // ── Delete Overlay ──────────────────────────────────────────────
   private showDeleteOverlay(): void {
-    const { container, cx, contentY } = this.createOverlayBase('APAGAR DADOS');
+    const { container, cx, contentY } = this.createOverlayBase(t('save.delete.title'));
 
-    container.add(this.add.text(cx, contentY, 'Tem certeza que deseja APAGAR\nTODOS os seus dados?\n\nIsto inclui: coins, upgrades,\npokédex, recordes e estatísticas.', {
+    container.add(this.add.text(cx, contentY, t('save.delete.confirm'), {
       fontSize: fontSize(10), color: '#aaaaaa', fontFamily: 'monospace',
       align: 'center', lineSpacing: scaled(4),
     }).setOrigin(0.5, 0).setDepth(52));
 
-    container.add(this.add.text(cx, contentY + scaled(75), 'ESTA AÇÃO NÃO PODE SER DESFEITA!', {
+    container.add(this.add.text(cx, contentY + scaled(75), t('save.delete.finalWarning'), {
       fontSize: fontSize(10), color: '#ff4444', fontFamily: 'monospace', fontStyle: 'bold',
     }).setOrigin(0.5, 0).setDepth(52));
 
@@ -380,14 +381,14 @@ export class SaveScene extends Phaser.Scene {
     const btnsY = contentY + scaled(120);
 
     this.createOverlayBtn(container, cx - btnW / 2 - btnGap / 2, btnsY, btnW, btnH,
-      'CANCELAR', 0x333355, 0x444466, '#aaaacc', () => {
+      t('save.delete.cancelBtn'), 0x333355, 0x444466, '#aaaacc', () => {
         this.closeOverlay();
       });
 
     this.createOverlayBtn(container, cx + btnW / 2 + btnGap / 2, btnsY, btnW, btnH,
-      'CONFIRMAR', 0x662222, 0x883333, '#ff6666', () => {
+      t('save.delete.confirmBtn'), 0x662222, 0x883333, '#ff6666', () => {
         resetSave();
-        this.showFeedback(container, cx, btnsY + scaled(35), 'Dados apagados! Recarregando...', '#ff8888');
+        this.showFeedback(container, cx, btnsY + scaled(35), t('save.delete.success'), '#ff8888');
         this.time.delayedCall(1200, () => this.scene.start('SaveScene'));
       });
   }

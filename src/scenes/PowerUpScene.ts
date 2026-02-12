@@ -4,6 +4,7 @@ import { getCoins, getPowerUpLevel, buyPowerUp } from '../systems/SaveSystem';
 import { POWER_UPS, getNextCost } from '../data/meta-progression';
 import type { PowerUpDef } from '../data/meta-progression';
 import { fontSize, scaled } from '../utils/ui-scale';
+import { t } from '../i18n';
 
 export class PowerUpScene extends Phaser.Scene {
   private uiContainer: Phaser.GameObjects.Container | null = null;
@@ -27,7 +28,7 @@ export class PowerUpScene extends Phaser.Scene {
     for (let y = 0; y < height; y += gridStep) bg.lineBetween(0, y, width, y);
 
     // ── Header ──────────────────────────────────────────────────────
-    this.add.text(width / 2, scaled(30), 'MELHORIAS PERMANENTES', {
+    this.add.text(width / 2, scaled(30), t('powerups.title'), {
       fontSize: fontSize(22),
       color: '#ffcc00',
       fontFamily: 'monospace',
@@ -36,7 +37,7 @@ export class PowerUpScene extends Phaser.Scene {
       strokeThickness: scaled(4),
     }).setOrigin(0.5).setDepth(10);
 
-    this.add.text(width / 2, scaled(55), 'Invista moedas para ficar mais forte a cada run', {
+    this.add.text(width / 2, scaled(55), t('powerups.subtitle'), {
       fontSize: fontSize(10),
       color: '#888888',
       fontFamily: 'monospace',
@@ -74,7 +75,7 @@ export class PowerUpScene extends Phaser.Scene {
     };
     drawBack(false);
 
-    const btnText = this.add.text(width / 2, btnY, '<- VOLTAR', {
+    const btnText = this.add.text(width / 2, btnY, t('ui.back'), {
       fontSize: fontSize(14),
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -187,7 +188,7 @@ export class PowerUpScene extends Phaser.Scene {
     }
 
     // ── Nome ─────────────────────────────────────────────────────────
-    const nameText = this.add.text(cx + scaled(10), cy - cardH / 2 + scaled(16), def.name, {
+    const nameText = this.add.text(cx + scaled(10), cy - cardH / 2 + scaled(16), t(`powerups.${def.id}.name`), {
       fontSize: fontSize(11),
       color: '#ffffff',
       fontFamily: 'monospace',
@@ -198,7 +199,7 @@ export class PowerUpScene extends Phaser.Scene {
     this.uiContainer.add(nameText);
 
     // ── Efeito por nivel ─────────────────────────────────────────────
-    this.uiContainer.add(this.add.text(cx + scaled(10), cy - cardH / 2 + scaled(32), def.effect, {
+    this.uiContainer.add(this.add.text(cx + scaled(10), cy - cardH / 2 + scaled(32), t(`powerups.${def.id}.effect`), {
       fontSize: fontSize(9),
       color: '#aaaaaa',
       fontFamily: 'monospace',
@@ -239,7 +240,7 @@ export class PowerUpScene extends Phaser.Scene {
     // ── Cost / Max label ─────────────────────────────────────────────
     const costY = cy + cardH / 2 - scaled(18);
     if (isMaxed) {
-      this.uiContainer.add(this.add.text(cx, costY, 'MAXIMO', {
+      this.uiContainer.add(this.add.text(cx, costY, t('powerups.maxed'), {
         fontSize: fontSize(11),
         color: '#44bb44',
         fontFamily: 'monospace',
@@ -279,7 +280,7 @@ export class PowerUpScene extends Phaser.Scene {
       drawBuy(false);
       this.uiContainer.add(buyGfx);
 
-      const buyLabel = this.add.text(buyX, costY, canAfford ? 'COMPRAR' : '---', {
+      const buyLabel = this.add.text(buyX, costY, canAfford ? t('powerups.buy') : '---', {
         fontSize: fontSize(8),
         color: canAfford ? '#ffffff' : '#555555',
         fontFamily: 'monospace',

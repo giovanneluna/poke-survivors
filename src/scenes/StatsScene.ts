@@ -5,6 +5,7 @@ import {
 } from '../systems/SaveSystem';
 import type { LifetimeStats } from '../systems/SaveSystem';
 import { fontSize, scaled } from '../utils/ui-scale';
+import { t } from '../i18n';
 
 // ── Category colors ────────────────────────────────────────────────
 const CAT_COLORS: Record<string, { bg: number; border: number; title: number }> = {
@@ -41,12 +42,12 @@ export class StatsScene extends Phaser.Scene {
     for (let y = 0; y < height; y += gridStep) bg.lineBetween(0, y, width, y);
 
     // ── Header ─────────────────────────────────────────────────────
-    this.add.text(width / 2, scaled(28), 'ESTATÍSTICAS', {
+    this.add.text(width / 2, scaled(28), t('statsScene.title'), {
       fontSize: fontSize(22), color: '#ffcc00', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0.5).setDepth(10);
 
-    this.add.text(width / 2, scaled(52), 'Dados acumulados de todas as runs', {
+    this.add.text(width / 2, scaled(52), t('statsScene.subtitle'), {
       fontSize: fontSize(10), color: '#888888', fontFamily: 'monospace',
     }).setOrigin(0.5).setDepth(10);
 
@@ -58,10 +59,10 @@ export class StatsScene extends Phaser.Scene {
 
     // ── Layout: 2 columns × 2 rows ───────────────────────────────
     const categories = [
-      { key: 'combat',  title: 'COMBATE',     entries: combat },
-      { key: 'explore', title: 'EXPLORAÇÃO',  entries: explore },
-      { key: 'economy', title: 'ECONOMIA',    entries: economy },
-      { key: 'records', title: 'RECORDES',    entries: records },
+      { key: 'combat',  title: t('statsScene.combat'),   entries: combat },
+      { key: 'explore', title: t('statsScene.explore'),  entries: explore },
+      { key: 'economy', title: t('statsScene.economy'),  entries: economy },
+      { key: 'records', title: t('statsScene.records'),  entries: records },
     ];
 
     const cardW = Math.min(scaled(280), (width - scaled(50)) / 2);
@@ -107,7 +108,7 @@ export class StatsScene extends Phaser.Scene {
     };
     drawBtn(false);
 
-    const btnText = this.add.text(width / 2, btnY, '<- VOLTAR', {
+    const btnText = this.add.text(width / 2, btnY, t('ui.back'), {
       fontSize: fontSize(14), color: '#ffffff', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(11);
@@ -211,7 +212,7 @@ export class StatsScene extends Phaser.Scene {
     const barOffY = scaled(14);
     const barR = scaled(4);
 
-    container.add(this.add.text(sceneWidth / 2, y, 'STARTERS USADOS', {
+    container.add(this.add.text(sceneWidth / 2, y, t('statsScene.startersUsed'), {
       fontSize: fontSize(9), color: '#888888', fontFamily: 'monospace', fontStyle: 'bold',
       stroke: '#000000', strokeThickness: 1,
     }).setOrigin(0.5).setDepth(6));
@@ -255,14 +256,14 @@ export class StatsScene extends Phaser.Scene {
 
   private buildCombatStats(s: Readonly<LifetimeStats>): StatEntry[] {
     const entries: StatEntry[] = [
-      { label: 'Inimigos Derrotados', value: this.fmtNumber(s.totalKills) },
-      { label: 'Bosses Derrotados', value: this.fmtNumber(s.bossesKilled) },
-      { label: 'Dano Total', value: this.fmtNumber(s.totalDamageDealt) },
-      { label: 'Melhor Combo', value: `${s.bestCombo}x` },
+      { label: t('statsScene.totalKills'), value: this.fmtNumber(s.totalKills) },
+      { label: t('statsScene.bossesKilled'), value: this.fmtNumber(s.bossesKilled) },
+      { label: t('statsScene.totalDamage'), value: this.fmtNumber(s.totalDamageDealt) },
+      { label: t('statsScene.bestCombo'), value: `${s.bestCombo}x` },
     ];
     if (s.favoriteAttack.name) {
       entries.push({
-        label: 'Ataque Favorito',
+        label: t('statsScene.favoriteAttack'),
         value: this.prettifyAttackName(s.favoriteAttack.name),
       });
     }
@@ -272,21 +273,21 @@ export class StatsScene extends Phaser.Scene {
   private buildExploreStats(s: Readonly<LifetimeStats>): StatEntry[] {
     const km = (s.distanceTraveled / 1000).toFixed(1);
     return [
-      { label: 'Partidas Jogadas', value: this.fmtNumber(s.totalRuns) },
-      { label: 'Mortes', value: this.fmtNumber(s.totalDeaths) },
-      { label: 'Tempo Total', value: this.fmtDuration(s.totalTimePlayed) },
-      { label: 'Distância', value: `${km} km` },
-      { label: 'Maior Evolução', value: s.highestEvolution || '---' },
+      { label: t('statsScene.totalRuns'), value: this.fmtNumber(s.totalRuns) },
+      { label: t('statsScene.totalDeaths'), value: this.fmtNumber(s.totalDeaths) },
+      { label: t('statsScene.totalTime'), value: this.fmtDuration(s.totalTimePlayed) },
+      { label: t('statsScene.distance'), value: `${km} km` },
+      { label: t('statsScene.highestEvolution'), value: s.highestEvolution || '---' },
     ];
   }
 
   private buildEconomyStats(s: Readonly<LifetimeStats>, currentCoins: number): StatEntry[] {
     return [
-      { label: 'Coins Atuais', value: `₽ ${this.fmtNumber(currentCoins)}` },
-      { label: 'Coins Ganhos (Total)', value: `₽ ${this.fmtNumber(s.totalCoinsEarned)}` },
-      { label: 'Coins Gastos', value: `₽ ${this.fmtNumber(s.totalCoinsSpent)}` },
-      { label: 'Berries Coletadas', value: this.fmtNumber(s.berriesCollected) },
-      { label: 'XP Coletada', value: this.fmtNumber(s.xpCollected) },
+      { label: t('statsScene.currentCoins'), value: `₽ ${this.fmtNumber(currentCoins)}` },
+      { label: t('statsScene.totalCoinsEarned'), value: `₽ ${this.fmtNumber(s.totalCoinsEarned)}` },
+      { label: t('statsScene.totalCoinsSpent'), value: `₽ ${this.fmtNumber(s.totalCoinsSpent)}` },
+      { label: t('statsScene.berriesCollected'), value: this.fmtNumber(s.berriesCollected) },
+      { label: t('statsScene.xpCollected'), value: this.fmtNumber(s.xpCollected) },
     ];
   }
 
@@ -295,10 +296,10 @@ export class StatsScene extends Phaser.Scene {
     records: Readonly<{ bestTime: number; bestKills: number; bestLevel: number }>,
   ): StatEntry[] {
     return [
-      { label: 'Melhor Tempo', value: this.fmtDuration(records.bestTime) },
-      { label: 'Mais Kills', value: this.fmtNumber(records.bestKills) },
-      { label: 'Maior Level', value: `Lv. ${records.bestLevel}` },
-      { label: 'Melhor Combo', value: `${s.bestCombo}x` },
+      { label: t('statsScene.bestTime'), value: this.fmtDuration(records.bestTime) },
+      { label: t('statsScene.bestKills'), value: this.fmtNumber(records.bestKills) },
+      { label: t('statsScene.bestLevel'), value: `Lv. ${records.bestLevel}` },
+      { label: t('statsScene.bestComboRecord'), value: `${s.bestCombo}x` },
     ];
   }
 
