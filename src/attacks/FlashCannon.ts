@@ -33,11 +33,8 @@ export class FlashCannon implements Attack {
     this.damage = ATTACKS.flashCannon.baseDamage;
     this.cooldown = ATTACKS.flashCannon.baseCooldown;
 
-    // Gerar textura procedural do cannon blast (circulo branco/prata)
-    this.generateTexture();
-
     this.bullets = scene.physics.add.group({
-      defaultKey: 'atk-flash-cannon',
+      defaultKey: 'atk-steel-range',
       maxSize: 20,
     });
 
@@ -46,23 +43,6 @@ export class FlashCannon implements Attack {
       loop: true,
       callback: () => this.fire(),
     });
-  }
-
-  private generateTexture(): void {
-    if (this.scene.textures.exists('atk-flash-cannon')) return;
-
-    const gfx = this.scene.add.graphics();
-    // Brilho externo
-    gfx.fillStyle(0xffffff, 0.3);
-    gfx.fillCircle(12, 12, 12);
-    // Nucleo prata
-    gfx.fillStyle(0xdddddd, 0.9);
-    gfx.fillCircle(12, 12, 8);
-    // Centro branco brilhante
-    gfx.fillStyle(0xffffff, 1);
-    gfx.fillCircle(12, 12, 4);
-    gfx.generateTexture('atk-flash-cannon', 24, 24);
-    gfx.destroy();
   }
 
   private fire(): void {
@@ -102,7 +82,7 @@ export class FlashCannon implements Attack {
       const bullet = this.bullets.get(
         this.player.x,
         this.player.y,
-        'atk-flash-cannon'
+        'atk-steel-range'
       ) as Phaser.Physics.Arcade.Sprite | null;
 
       if (!bullet) continue;
@@ -112,8 +92,10 @@ export class FlashCannon implements Attack {
       bullet.setData('pierceCount', 0);
       bullet.setData('maxPierce', this.maxPierce);
       bullet.setData('piercing', true);
+      bullet.setTexture('atk-steel-range');
       bullet.setActive(true).setVisible(true).setScale(1.2);
       bullet.setDepth(8);
+      bullet.play('anim-steel-range');
 
       const body = bullet.body as Phaser.Physics.Arcade.Body;
       body.enable = true;

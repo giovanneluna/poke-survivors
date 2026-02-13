@@ -1,0 +1,48 @@
+import type { BossConfig } from '../../types';
+import { SPRITES } from '../sprites';
+
+export const MUK_BOSS: BossConfig = {
+  key: 'muk',
+  name: 'Muk',
+  sprite: SPRITES.muk,
+  hp: 5500,
+  speed: 30,
+  damage: 30,
+  xpValue: 250,
+  scale: 1.8,
+  isBoss: true,
+  resistance: 0.3,
+  hpRegenPerSec: 30,
+  archetype: 'tank',
+  bossAttacks: [{
+    name: 'Sludge Wave',
+    pattern: 'aoe-tremor',
+    damage: 30,
+    cooldownMs: 5000,
+    aoeRadius: 160,
+    spriteKey: 'atk-sludge-wave',
+    animKey: 'anim-sludge-wave',
+    aoeColor: 0x9933cc,
+  }, {
+    name: 'Toxic',
+    pattern: 'zone',
+    damage: 10,
+    cooldownMs: 8000,
+    aoeRadius: 140,
+    aoeColor: 0x8822aa,
+    zoneDuration: 4000,
+    zoneTickRate: 500,
+    zoneEffect: 'poison',
+    zoneEffectValue: 5,
+  }, {
+    name: 'Acid Armor',
+    pattern: 'buff',
+    damage: 0,
+    cooldownMs: 12000,
+    buffType: 'resist',
+    buffValue: 0.5,
+    buffDuration: 5000,
+    tintColor: 0x6622aa,
+    aoeColor: 0x9933cc,
+  }],
+};

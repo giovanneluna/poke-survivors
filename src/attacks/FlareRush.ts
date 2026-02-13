@@ -74,7 +74,7 @@ export class FlareRush implements Attack {
   }
 
   private dash(): void {
-    const dir = this.player.getAimDirection();
+    const dir = this.player.getAttackDirection();
     const angle = Math.atan2(dir.y, dir.x);
     const cardinal = angleToCardinal(angle);
 

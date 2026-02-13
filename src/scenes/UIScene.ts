@@ -43,6 +43,7 @@ interface GameOverData {
   readonly bestCombo?: number;
   readonly starterKey?: string;
   readonly formName?: string;
+  readonly unlockedSquirtle?: boolean;
 }
 
 export class UIScene extends Phaser.Scene {
@@ -1961,6 +1962,33 @@ export class UIScene extends Phaser.Scene {
       },
     });
     animDelay += 300;
+
+    // ── Squirtle Unlock Notification ──────────────────────────────
+    if (data.unlockedSquirtle) {
+      yPos += scaled(45);
+      const unlockBg = this.add.rectangle(width / 2, yPos, scaled(260), scaled(40), 0x2244aa, 0.7)
+        .setStrokeStyle(scaled(2), 0xffd700).setAlpha(0);
+      this.victoryContainer.add(unlockBg);
+
+      const unlockLabel = this.add.text(width / 2, yPos - scaled(8), 'SQUIRTLE DESBLOQUEADO!', {
+        fontSize: fontSize(13), color: '#ffd700', fontFamily: 'monospace', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: scaled(3),
+      }).setOrigin(0.5).setAlpha(0);
+      this.victoryContainer.add(unlockLabel);
+
+      const unlockSub = this.add.text(width / 2, yPos + scaled(10), 'FASE 2 LIBERADA!', {
+        fontSize: fontSize(9), color: '#44aaff', fontFamily: 'monospace',
+        stroke: '#000000', strokeThickness: scaled(2),
+      }).setOrigin(0.5).setAlpha(0);
+      this.victoryContainer.add(unlockSub);
+
+      this.tweens.add({
+        targets: [unlockBg, unlockLabel, unlockSub],
+        alpha: 1, duration: 500, delay: animDelay,
+        ease: 'Back.Out',
+      });
+      animDelay += 400;
+    }
 
     // ── Victory message ────────────────────────────────────────────
     yPos += scaled(50);

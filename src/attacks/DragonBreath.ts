@@ -43,7 +43,7 @@ export class DragonBreath implements Attack {
   }
 
   private breathe(): void {
-    const dir = this.player.getAimDirection();
+    const dir = this.player.getAttackDirection();
     const dirAngleRad = Math.atan2(dir.y, dir.x);
     const dirAngleDeg = Phaser.Math.RadToDeg(dirAngleRad);
 

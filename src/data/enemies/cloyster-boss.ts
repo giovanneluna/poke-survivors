@@ -1,0 +1,48 @@
+import type { BossConfig } from '../../types';
+import { SPRITES } from '../sprites';
+
+export const CLOYSTER_BOSS: BossConfig = {
+  key: 'cloyster',
+  name: 'Cloyster',
+  sprite: SPRITES.cloyster,
+  hp: 6000,
+  speed: 35,
+  damage: 35,
+  xpValue: 250,
+  scale: 1.7,
+  isBoss: true,
+  resistance: 0.35,
+  hpRegenPerSec: 10,
+  archetype: 'tank',
+  categoryResistance: { orbital: 0.4 },
+  bossAttacks: [{
+    name: 'Ice Shard',
+    pattern: 'fan',
+    damage: 25,
+    cooldownMs: 3000,
+    projectileCount: 5,
+    spriteKey: 'atk-ice-range',
+    animKey: 'anim-ice-range',
+    tintColor: 0x44ccff,
+  }, {
+    name: 'Shell Smash',
+    pattern: 'buff',
+    damage: 0,
+    cooldownMs: 15000,
+    buffType: 'speed',
+    buffValue: 1.5,
+    buffDuration: 5000,
+    tintColor: 0xff4444,
+    aoeColor: 0xff6644,
+  }, {
+    name: 'Icicle Spear',
+    pattern: 'aoe-land',
+    damage: 40,
+    cooldownMs: 7000,
+    aoeRadius: 180,
+    spriteKey: 'atk-ice-hit',
+    animKey: 'anim-ice-hit',
+    spriteScale: 3,
+    aoeColor: 0x88ddff,
+  }],
+};

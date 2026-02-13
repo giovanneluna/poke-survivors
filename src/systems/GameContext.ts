@@ -18,4 +18,6 @@ export interface GameContext {
   readonly tileThemeId: string;
   /** Map ID to load from JSON. null = procedural generation. */
   readonly mapId: string | null;
+  /** Which stage to play (e.g. 'phase1', 'phase2'). Defaults to 'phase1'. */
+  readonly stageId: string;
 }

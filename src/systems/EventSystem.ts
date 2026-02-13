@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { GameContext } from './GameContext';
-import { ENEMIES, WAVES, GAME } from '../config';
+import { ENEMIES, STAGES, GAME } from '../config';
 import type { EnemyConfig } from '../types';
 import { Enemy } from '../entities/Enemy';
 import { getSpatialGrid } from './SpatialHashGrid';
@@ -9,6 +9,8 @@ import { Destructible } from '../entities/Destructible';
 import { Pickup } from '../entities/Pickup';
 import { DESTRUCTIBLES } from '../config';
 import { startWeather, stopWeather } from './WeatherOverlay';
+import { getCompanionSystem } from './CompanionSystem';
+import { shouldShowVfx } from './GraphicsSettings';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -52,6 +54,24 @@ interface ActiveSwarm {
   frameCounter: number;
 }
 
+interface ActiveThunderstorm {
+  readonly createdAt: number;
+  readonly duration: number;
+  nextStrikeAt: number;
+}
+
+interface ActiveTide {
+  readonly createdAt: number;
+  readonly duration: number;
+  fx?: Phaser.FX.ColorMatrix;
+}
+
+interface ActiveSafariZone {
+  readonly createdAt: number;
+  readonly duration: number;
+  indicator?: Phaser.GameObjects.Arc;
+}
+
 // ── EventSystem ────────────────────────────────────────────────────────
 
 class EventSystemImpl {
@@ -62,12 +82,16 @@ class EventSystemImpl {
   private readonly activeHealingZones: ActiveHealingZone[] = [];
   private activeEclipse: ActiveEclipse | null = null;
   private activeSwarm: ActiveSwarm | null = null;
+  private activeThunderstorm: ActiveThunderstorm | null = null;
+  private activeTide: ActiveTide | null = null;
+  private activeSafariZone: ActiveSafariZone | null = null;
   private currentWaveIndex = 0;
   private lastGameTime = 0;
 
   /** Returns true if any visual event is active (prevents overlap) */
   private isEventActive(): boolean {
-    return this.activeEclipse != null || this.activeSwarm != null;
+    return this.activeEclipse != null || this.activeSwarm != null
+      || this.activeThunderstorm != null || this.activeTide != null;
   }
 
   // ── Constants ──
@@ -80,12 +104,25 @@ class EventSystemImpl {
   private static readonly SWARM_PER_FRAME = 2;
   private static readonly SWARM_FRAMES = 20;
 
+  // Phase 2 constants
+  private static readonly SAFARI_ZONE_DURATION_MS = 30_000;
+  private static readonly THUNDERSTORM_DURATION_MS = 25_000;
+  private static readonly THUNDERSTORM_STRIKE_INTERVAL_MS = 2000;
+  private static readonly THUNDERSTORM_STRIKE_RADIUS = 60;
+  private static readonly THUNDERSTORM_STRIKE_DAMAGE = 15;
+  private static readonly TIDE_DURATION_MS = 30_000;
+  private static readonly TEAM_ROCKET_MEOWTH_COUNT = 3;
+  private static readonly BERRY_GARDEN_COUNT = 8;
+
   init(ctx: GameContext): void {
     this.ctx = ctx;
     this.events.length = 0;
     this.activeHealingZones.length = 0;
     this.activeEclipse = null;
     this.activeSwarm = null;
+    this.activeThunderstorm = null;
+    this.activeTide = null;
+    this.activeSafariZone = null;
     this.currentWaveIndex = 0;
     this.registerEvents();
   }
@@ -105,18 +142,7 @@ class EventSystemImpl {
       execute: (ctx, gameTime) => this.executePokemonCenter(ctx, gameTime),
     });
 
-    // 2. Professor Oak's Lab — timed, one-shot at 4 min
-    this.events.push({
-      id: 'professorOak',
-      name: "Professor Oak's Lab",
-      trigger: 'timed',
-      triggerTimeMs: 240_000,
-      fired: false,
-      lastFiredAt: -Infinity,
-      execute: (ctx, _gameTime) => this.executeProfessorOak(ctx),
-    });
-
-    // 3. Swarm — wave-triggered, 5% chance, min 2 min, cooldown 60s
+    // 2. Swarm — wave-triggered, 5% chance, min 2 min, cooldown 60s (shared, all stages)
     this.events.push({
       id: 'swarm',
       name: 'Swarm',
@@ -130,29 +156,7 @@ class EventSystemImpl {
       execute: (ctx, gameTime) => this.executeSwarm(ctx, gameTime),
     });
 
-    // 4. Eclipse — timed, one-shot at 6 min
-    this.events.push({
-      id: 'eclipse',
-      name: 'Eclipse',
-      trigger: 'timed',
-      triggerTimeMs: 360_000,
-      fired: false,
-      lastFiredAt: -Infinity,
-      execute: (ctx, gameTime) => this.executeEclipse(ctx, gameTime),
-    });
-
-    // 5. Legendary Sighting — timed, one-shot at 8 min
-    this.events.push({
-      id: 'legendarySighting',
-      name: 'Legendary Sighting',
-      trigger: 'timed',
-      triggerTimeMs: 480_000,
-      fired: false,
-      lastFiredAt: -Infinity,
-      execute: (ctx, _gameTime) => this.executeLegendarySighting(ctx),
-    });
-
-    // 6. Treasure Room — wave-triggered, 5% chance, min 3 min, cooldown 120s
+    // 3. Treasure Room — wave-triggered, 5% chance, min 3 min, cooldown 120s (shared)
     this.events.push({
       id: 'treasureRoom',
       name: 'Treasure Room',
@@ -165,6 +169,118 @@ class EventSystemImpl {
       lastFiredAt: -Infinity,
       execute: (ctx, gameTime) => this.executeTreasureRoom(ctx, gameTime),
     });
+
+    // ── Phase 1 only events ──────────────────────────────────────────
+    if (this.ctx.stageId !== 'phase2') {
+      // 4. Professor Oak's Lab — timed, one-shot at 4 min
+      this.events.push({
+        id: 'professorOak',
+        name: "Professor Oak's Lab",
+        trigger: 'timed',
+        triggerTimeMs: 240_000,
+        fired: false,
+        lastFiredAt: -Infinity,
+        execute: (ctx, _gameTime) => this.executeProfessorOak(ctx),
+      });
+
+      // 5. Eclipse — timed, one-shot at 6 min
+      this.events.push({
+        id: 'eclipse',
+        name: 'Eclipse',
+        trigger: 'timed',
+        triggerTimeMs: 360_000,
+        fired: false,
+        lastFiredAt: -Infinity,
+        execute: (ctx, gameTime) => this.executeEclipse(ctx, gameTime),
+      });
+
+      // 6. Legendary Sighting — timed, one-shot at 8 min
+      this.events.push({
+        id: 'legendarySighting',
+        name: 'Legendary Sighting',
+        trigger: 'timed',
+        triggerTimeMs: 480_000,
+        fired: false,
+        lastFiredAt: -Infinity,
+        execute: (ctx, _gameTime) => this.executeLegendarySighting(ctx),
+      });
+    }
+
+    // ── Phase 2 only events ──────────────────────────────────────────
+    if (this.ctx.stageId === 'phase2') {
+      // 7. Safari Zone — timed, one-shot at 5 min
+      this.events.push({
+        id: 'safariZone',
+        name: 'Safari Zone',
+        trigger: 'timed',
+        triggerTimeMs: 300_000,
+        fired: false,
+        lastFiredAt: -Infinity,
+        execute: (ctx, gameTime) => this.executeSafariZone(ctx, gameTime),
+      });
+
+      // 8. Tempestade — timed, one-shot at 7 min
+      this.events.push({
+        id: 'tempestade',
+        name: 'Tempestade!',
+        trigger: 'timed',
+        triggerTimeMs: 420_000,
+        fired: false,
+        lastFiredAt: -Infinity,
+        execute: (ctx, gameTime) => this.executeThunderstorm(ctx, gameTime),
+      });
+
+      // 9. Team Rocket — wave-triggered, 6% chance, min 2 min, cooldown 90s
+      this.events.push({
+        id: 'teamRocket',
+        name: 'Team Rocket',
+        trigger: 'wave',
+        triggerTimeMs: 0,
+        chance: 0.06,
+        minTimeMs: 120_000,
+        cooldownMs: 90_000,
+        fired: false,
+        lastFiredAt: -Infinity,
+        execute: (ctx, gameTime) => this.executeTeamRocket(ctx, gameTime),
+      });
+
+      // 10. Day Care — timed, repeating every 4 min (offset from PokémonCenter)
+      this.events.push({
+        id: 'dayCare',
+        name: 'Day Care',
+        trigger: 'timed',
+        triggerTimeMs: 240_000,
+        repeat: 240_000,
+        fired: false,
+        lastFiredAt: -Infinity,
+        execute: (ctx, gameTime) => this.executeDayCare(ctx, gameTime),
+      });
+
+      // 11. Maré Alta — timed, one-shot at 10 min
+      this.events.push({
+        id: 'mareAlta',
+        name: 'Maré Alta!',
+        trigger: 'timed',
+        triggerTimeMs: 600_000,
+        fired: false,
+        lastFiredAt: -Infinity,
+        execute: (ctx, gameTime) => this.executeHighTide(ctx, gameTime),
+      });
+
+      // 12. Berry Garden — wave-triggered, 5% chance, min 3 min, cooldown 120s
+      this.events.push({
+        id: 'berryGarden',
+        name: 'Berry Garden',
+        trigger: 'wave',
+        triggerTimeMs: 0,
+        chance: 0.05,
+        minTimeMs: 180_000,
+        cooldownMs: 120_000,
+        fired: false,
+        lastFiredAt: -Infinity,
+        execute: (ctx, gameTime) => this.executeBerryGarden(ctx, gameTime),
+      });
+    }
   }
 
   // ── Update (chamado todo frame) ──────────────────────────────────────
@@ -202,6 +318,11 @@ class EventSystemImpl {
 
     // Update active swarm spawning
     this.updateSwarm();
+
+    // Update Phase 2 active effects
+    this.updateThunderstorm(gameTime);
+    this.updateHighTide(gameTime);
+    this.updateSafariZone(gameTime);
   }
 
   // ── Wave Change (chamado pelo SpawnSystem/GameScene) ─────────────────
@@ -321,7 +442,9 @@ class EventSystemImpl {
   private executeSwarm(ctx: GameContext, _gameTime: number): void {
     if (this.activeSwarm) return; // Already swarming
 
-    const wave = WAVES[Math.min(this.currentWaveIndex, WAVES.length - 1)];
+    const stage = STAGES[this.ctx.stageId] ?? STAGES['phase1'];
+    const waves = stage.waves;
+    const wave = waves[Math.min(this.currentWaveIndex, waves.length - 1)];
     if (wave.enemies.length === 0) return;
 
     // Pick random enemy type from current wave
@@ -543,6 +666,268 @@ class EventSystemImpl {
     scene.events.emit('event-banner', { name: 'Treasure Room!', color: '#ffdd44' });
   }
 
+  // ── Phase 2 Events ─────────────────────────────────────────────────
+
+  private executeSafariZone(ctx: GameContext, gameTime: number): void {
+    const scene = ctx.scene;
+    const player = ctx.player;
+    SoundManager.playEventWarning();
+
+    this.activeSafariZone = {
+      createdAt: gameTime,
+      duration: EventSystemImpl.SAFARI_ZONE_DURATION_MS,
+    };
+
+    // Spawn 6 rare Pokemon in a ring around the player, each worth 3x XP
+    const rarePool = ['ponyta', 'vulpix', 'growlithe', 'staryu', 'pikachu', 'jigglypuff'] as const;
+    const grid = getSpatialGrid();
+    const count = 6;
+
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + Phaser.Math.FloatBetween(-0.3, 0.3);
+      const dist = Phaser.Math.Between(150, 250);
+      const x = Phaser.Math.Clamp(player.x + Math.cos(angle) * dist, 100, GAME.worldWidth - 100);
+      const y = Phaser.Math.Clamp(player.y + Math.sin(angle) * dist, 100, GAME.worldHeight - 100);
+
+      const key = rarePool[i % rarePool.length];
+      const config = ENEMIES[key];
+      if (!config) continue;
+
+      // Triple XP for Safari Zone catches
+      const boostedConfig = { ...config, xpValue: config.xpValue * 3 };
+      const enemy = new Enemy(scene, x, y, boostedConfig);
+      ctx.enemyGroup.add(enemy);
+      grid.insert(enemy);
+    }
+
+    // Visual indicator: green zone circle
+    if (shouldShowVfx()) {
+      const indicator = scene.add.circle(player.x, player.y, 260, 0x44cc44, 0.08);
+      indicator.setDepth(1);
+      scene.tweens.add({
+        targets: indicator,
+        scaleX: 1.1, scaleY: 1.1, alpha: 0,
+        duration: EventSystemImpl.SAFARI_ZONE_DURATION_MS,
+        ease: 'Sine.easeIn',
+        onComplete: () => indicator.destroy(),
+      });
+      this.activeSafariZone!.indicator = indicator;
+    }
+
+    scene.events.emit('event-banner', { name: 'Safari Zone!', color: '#44cc44' });
+  }
+
+  private executeThunderstorm(ctx: GameContext, gameTime: number): void {
+    if (this.activeThunderstorm) return;
+
+    const scene = ctx.scene;
+    SoundManager.playEventWarning();
+
+    startWeather(scene, 'rain');
+
+    this.activeThunderstorm = {
+      createdAt: gameTime,
+      duration: EventSystemImpl.THUNDERSTORM_DURATION_MS,
+      nextStrikeAt: gameTime + 1000,
+    };
+
+    scene.events.emit('event-banner', { name: 'Tempestade!', color: '#ffff44' });
+  }
+
+  private executeTeamRocket(ctx: GameContext, _gameTime: number): void {
+    const scene = ctx.scene;
+    const player = ctx.player;
+    SoundManager.playEventWarning();
+
+    const meowthConfig = ENEMIES['meowth'];
+    if (!meowthConfig) return;
+
+    const grid = getSpatialGrid();
+
+    for (let i = 0; i < EventSystemImpl.TEAM_ROCKET_MEOWTH_COUNT; i++) {
+      const angle = (i / EventSystemImpl.TEAM_ROCKET_MEOWTH_COUNT) * Math.PI * 2;
+      const dist = Phaser.Math.Between(200, 350);
+      const x = Phaser.Math.Clamp(player.x + Math.cos(angle) * dist, 100, GAME.worldWidth - 100);
+      const y = Phaser.Math.Clamp(player.y + Math.sin(angle) * dist, 100, GAME.worldHeight - 100);
+
+      // Elite Meowth: 3× HP, 2× XP, purple tint (Team Rocket vibe)
+      const boostedConfig = { ...meowthConfig, hp: meowthConfig.hp * 3, xpValue: meowthConfig.xpValue * 2 };
+      const enemy = new Enemy(scene, x, y, boostedConfig);
+      enemy.setTint(0x9944cc);
+
+      ctx.enemyGroup.add(enemy);
+      grid.insert(enemy);
+
+      // Spawn coin bait near each Meowth (Pay Day!)
+      const coinX = x + Phaser.Math.Between(-20, 20);
+      const coinY = y + Phaser.Math.Between(-20, 20);
+      const coin = new Pickup(scene, coinX, coinY, 'coinSmall', 'coin-small');
+      coin.setScale(0.8).setDepth(4);
+      coin.setData('coinValue', 5);
+      coin.setData('isCoin', true);
+      ctx.pickups.add(coin);
+    }
+
+    scene.events.emit('event-banner', { name: 'Team Rocket!', color: '#9944cc' });
+  }
+
+  private executeDayCare(ctx: GameContext, _gameTime: number): void {
+    const scene = ctx.scene;
+    const player = ctx.player;
+    SoundManager.playEventWarning();
+
+    // Full heal
+    player.heal(9999);
+
+    // Green flash
+    player.setTint(0x44ff44);
+    scene.time.delayedCall(300, () => {
+      if (player.active) player.clearTint();
+    });
+
+    // Buff companions: +50% damage for 30s
+    const companionSystem = getCompanionSystem();
+    if (companionSystem) {
+      scene.events.emit('companion-buff', { damageMult: 1.5, durationMs: 30_000 });
+    }
+
+    scene.events.emit('event-banner', { name: 'Day Care!', color: '#ff88cc' });
+  }
+
+  private executeHighTide(ctx: GameContext, gameTime: number): void {
+    if (this.activeTide) return;
+
+    const scene = ctx.scene;
+    SoundManager.playEventWarning();
+
+    startWeather(scene, 'rain');
+
+    this.activeTide = {
+      createdAt: gameTime,
+      duration: EventSystemImpl.TIDE_DURATION_MS,
+    };
+
+    // Tint camera slightly blue
+    const cam = scene.cameras.main;
+    const fx = cam.postFX.addColorMatrix();
+    fx.brightness(0.85);
+
+    // Store fx ref for cleanup
+    this.activeTide.fx = fx;
+
+    scene.events.emit('event-banner', { name: 'Mare Alta!', color: '#4488ff' });
+  }
+
+  private executeBerryGarden(ctx: GameContext, _gameTime: number): void {
+    const scene = ctx.scene;
+    const player = ctx.player;
+    SoundManager.playEventWarning();
+
+    const bushConfig = DESTRUCTIBLES.berryBush;
+    const count = EventSystemImpl.BERRY_GARDEN_COUNT;
+
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      const dist = Phaser.Math.Between(80, 180);
+      const x = Phaser.Math.Clamp(player.x + Math.cos(angle) * dist, 100, GAME.worldWidth - 100);
+      const y = Phaser.Math.Clamp(player.y + Math.sin(angle) * dist, 100, GAME.worldHeight - 100);
+
+      const bush = new Destructible(scene, x, y, bushConfig);
+      ctx.destructibles.add(bush);
+    }
+
+    scene.events.emit('event-banner', { name: 'Berry Garden!', color: '#88dd44' });
+  }
+
+  // ── Phase 2 Active Effect Updates ──────────────────────────────────
+
+  private updateThunderstorm(gameTime: number): void {
+    if (!this.activeThunderstorm) return;
+
+    const storm = this.activeThunderstorm;
+    const elapsed = gameTime - storm.createdAt;
+
+    // Expired
+    if (elapsed >= storm.duration) {
+      this.activeThunderstorm = null;
+      stopWeather();
+      return;
+    }
+
+    // Lightning strike
+    if (gameTime >= storm.nextStrikeAt) {
+      storm.nextStrikeAt = gameTime + EventSystemImpl.THUNDERSTORM_STRIKE_INTERVAL_MS;
+      this.spawnLightningStrike(gameTime);
+    }
+  }
+
+  private spawnLightningStrike(gameTime: number): void {
+    const scene = this.ctx.scene;
+    const player = this.ctx.player;
+
+    // Random position near player
+    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    const dist = Phaser.Math.Between(50, 300);
+    const x = player.x + Math.cos(angle) * dist;
+    const y = player.y + Math.sin(angle) * dist;
+
+    // Visual: yellow circle flash
+    if (shouldShowVfx()) {
+      const flash = scene.add.circle(x, y, EventSystemImpl.THUNDERSTORM_STRIKE_RADIUS, 0xffff44, 0.6);
+      flash.setDepth(10);
+      scene.tweens.add({
+        targets: flash,
+        alpha: 0, scaleX: 1.5, scaleY: 1.5,
+        duration: 400,
+        ease: 'Sine.easeOut',
+        onComplete: () => flash.destroy(),
+      });
+    }
+
+    // Damage enemies in radius using SpatialHashGrid
+    const grid = getSpatialGrid();
+    const radius = EventSystemImpl.THUNDERSTORM_STRIKE_RADIUS;
+    const nearby = grid.queryRadius(x, y, radius);
+    for (const obj of nearby) {
+      if (obj instanceof Enemy && obj.active) {
+        obj.takeDamage(EventSystemImpl.THUNDERSTORM_STRIKE_DAMAGE);
+      }
+    }
+
+    // Small chance to also stun player if too close
+    const playerDist = Phaser.Math.Distance.Between(player.x, player.y, x, y);
+    if (playerDist < radius * 0.5) {
+      player.applyStun(500, gameTime);
+    }
+  }
+
+  private updateHighTide(gameTime: number): void {
+    if (!this.activeTide) return;
+
+    const elapsed = gameTime - this.activeTide.createdAt;
+
+    if (elapsed >= this.activeTide.duration) {
+      // Cleanup
+      if (this.activeTide.fx) this.activeTide.fx.reset();
+      this.activeTide = null;
+      stopWeather();
+      return;
+    }
+  }
+
+  private updateSafariZone(gameTime: number): void {
+    if (!this.activeSafariZone) return;
+
+    const elapsed = gameTime - this.activeSafariZone.createdAt;
+    if (elapsed >= this.activeSafariZone.duration) {
+      if (this.activeSafariZone.indicator) {
+        this.ctx.scene.tweens.killTweensOf(this.activeSafariZone.indicator);
+        this.activeSafariZone.indicator.destroy();
+      }
+      this.activeSafariZone = null;
+    }
+  }
+
   // ── Active Effect Updates ────────────────────────────────────────────
 
   private updateHealingZones(gameTime: number): void {
@@ -687,7 +1072,10 @@ class EventSystemImpl {
   // ── Cleanup ──────────────────────────────────────────────────────────
 
   destroy(): void {
+    const scene = this.ctx.scene;
+
     for (const zone of this.activeHealingZones) {
+      scene.tweens.killTweensOf([zone.circle, zone.cross]);
       zone.circle.destroy();
       zone.cross.destroy();
     }
@@ -700,6 +1088,26 @@ class EventSystemImpl {
     }
 
     this.activeSwarm = null;
+
+    if (this.activeThunderstorm) {
+      this.activeThunderstorm = null;
+      stopWeather();
+    }
+
+    if (this.activeTide) {
+      if (this.activeTide.fx) this.activeTide.fx.reset();
+      this.activeTide = null;
+      stopWeather();
+    }
+
+    if (this.activeSafariZone) {
+      if (this.activeSafariZone.indicator) {
+        scene.tweens.killTweensOf(this.activeSafariZone.indicator);
+        this.activeSafariZone.indicator.destroy();
+      }
+      this.activeSafariZone = null;
+    }
+
     this.events.length = 0;
   }
 }

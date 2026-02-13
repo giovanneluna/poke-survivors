@@ -92,9 +92,17 @@ export type EnemyType =
   | 'alakazam' | 'alakazam-boss' | 'electrode' | 'crobat'
   // Phase 4 — Novos
   | 'weezing' | 'magneton' | 'tentacruel' | 'rhydon' | 'scyther' | 'mr-mime' | 'hitmonlee' | 'electabuzz'
-  // Bosses
+  // Bosses (Stage 1)
   | 'beedrill' | 'vileplume' | 'primeape' | 'gengar'
-  | 'fearow' | 'pidgeot' | 'machamp' | 'golem';
+  | 'fearow' | 'pidgeot' | 'machamp' | 'golem'
+  // Stage 2 — Kanto Coast: commons
+  | 'pikachu' | 'sandshrew' | 'vulpix' | 'diglett' | 'meowth' | 'psyduck'
+  | 'growlithe' | 'poliwag' | 'bellsprout' | 'ponyta' | 'slowpoke' | 'farfetchd'
+  | 'doduo' | 'seel' | 'grimer-p2' | 'shellder' | 'krabby' | 'exeggcute'
+  | 'horsea' | 'goldeen' | 'staryu' | 'jigglypuff'
+  // Stage 2 — Kanto Coast: bosses
+  | 'arcanine' | 'ninetales' | 'victreebel' | 'golduck' | 'cloyster' | 'muk'
+  | 'rapidash' | 'starmie' | 'slowbro' | 'poliwrath' | 'lapras';
 export type Direction = 'down' | 'downRight' | 'right' | 'upRight' | 'up' | 'upLeft' | 'left' | 'downLeft';
 
 // ── Comportamentos de Inimigos ──────────────────────────────────
@@ -313,6 +321,14 @@ export interface BossSpawnConfig {
 }
 
 export interface PhaseConfig {
+  readonly waves: readonly WaveConfig[];
+  readonly bosses: readonly BossSpawnConfig[];
+}
+
+/** A full playable stage (52 min run). Wraps all sub-phase waves + bosses. */
+export interface StageConfig {
+  readonly id: string;
+  readonly name: string;
   readonly waves: readonly WaveConfig[];
   readonly bosses: readonly BossSpawnConfig[];
 }

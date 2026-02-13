@@ -1,0 +1,45 @@
+import type { BossConfig } from '../../types';
+import { SPRITES } from '../sprites';
+
+export const NINETALES_BOSS: BossConfig = {
+  key: 'ninetales',
+  name: 'Ninetales',
+  sprite: SPRITES.ninetales,
+  hp: 3000,
+  speed: 55,
+  damage: 25,
+  xpValue: 200,
+  scale: 1.5,
+  isBoss: true,
+  resistance: 0.2,
+  hpRegenPerSec: 20,
+  archetype: 'caster',
+  bossAttacks: [{
+    name: 'Inferno',
+    pattern: 'fan',
+    damage: 30,
+    cooldownMs: 4000,
+    projectileCount: 5,
+    spriteKey: 'atk-fire-range',
+    animKey: 'anim-fire-range',
+    tintColor: 0xff6600,
+  }, {
+    name: 'Confuse Ray',
+    pattern: 'zone',
+    damage: 0,
+    cooldownMs: 10000,
+    aoeRadius: 120,
+    aoeColor: 0xffaa44,
+    zoneDuration: 3000,
+    zoneTickRate: 500,
+    zoneEffect: 'slow',
+    zoneEffectValue: 0.7,
+  }, {
+    name: 'Fire Spin',
+    pattern: 'aoe-tremor',
+    damage: 20,
+    cooldownMs: 6000,
+    aoeRadius: 100,
+    aoeColor: 0xff4400,
+  }],
+};

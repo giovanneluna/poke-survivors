@@ -1,0 +1,45 @@
+import type { BossConfig } from '../../types';
+import { SPRITES } from '../sprites';
+
+export const SLOWBRO_BOSS: BossConfig = {
+  key: 'slowbro',
+  name: 'Slowbro',
+  sprite: SPRITES.slowbro,
+  hp: 6500,
+  speed: 25,
+  damage: 30,
+  xpValue: 300,
+  scale: 1.7,
+  isBoss: true,
+  resistance: 0.3,
+  hpRegenPerSec: 30,
+  archetype: 'tank',
+  categoryResistance: { orbital: 0.3 },
+  bossAttacks: [{
+    name: 'Psychic',
+    pattern: 'aoe-tremor',
+    damage: 35,
+    cooldownMs: 6000,
+    aoeRadius: 150,
+    aoeColor: 0xff44aa,
+  }, {
+    name: 'Slack Off',
+    pattern: 'buff',
+    damage: 0,
+    cooldownMs: 18000,
+    buffType: 'heal',
+    buffValue: 0.3,
+    buffDuration: 3000,
+    tintColor: 0x4488ff,
+    aoeColor: 0x4488ff,
+  }, {
+    name: 'Water Pulse',
+    pattern: 'fan',
+    damage: 25,
+    cooldownMs: 4000,
+    projectileCount: 3,
+    spriteKey: 'atk-water-range',
+    animKey: 'anim-water-range',
+    tintColor: 0x3388ff,
+  }],
+};

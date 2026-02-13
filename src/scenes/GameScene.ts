@@ -38,6 +38,7 @@ import {
   accumulateRunStats,
   saveLastRun,
   getPowerUpLevel,
+  unlockStarter,
 } from "../systems/SaveSystem"
 import { Boss } from "../entities/Boss"
 
@@ -62,6 +63,7 @@ export class GameScene extends Phaser.Scene {
   private difficulty: Difficulty = "hard"
   private tileThemeId = "emerald"
   private mapId: string | null = null
+  private stageId = "phase1"
   private starterConfig!: StarterConfig
   private devConfig?: DevConfig
 
@@ -84,12 +86,14 @@ export class GameScene extends Phaser.Scene {
     difficulty?: Difficulty
     tileThemeId?: string
     mapId?: string | null
+    stageId?: string
   }): void {
     this.debugMode = data?.debugMode ?? false
     this.devConfig = data?.devConfig
     this.difficulty = data?.difficulty ?? "hard"
     this.tileThemeId = data?.tileThemeId ?? "emerald"
     this.mapId = data?.mapId ?? null
+    this.stageId = data?.stageId ?? "phase1"
     this.starterKey =
       this.devConfig?.starterKey ?? data?.starterKey ?? "charmander"
   }
@@ -169,6 +173,7 @@ export class GameScene extends Phaser.Scene {
       difficulty: this.difficulty,
       tileThemeId: this.tileThemeId,
       mapId: this.mapId,
+      stageId: this.stageId,
     }
 
     // ── Persistent systems ───────────────────────────────────────────
@@ -540,6 +545,9 @@ export class GameScene extends Phaser.Scene {
       addCoins(coinsEarned)
       this.pickupSystem.resetRunCoins()
 
+      // Unlock Squirtle ao completar a primeira fase
+      const newlyUnlocked = unlockStarter('squirtle')
+
       const bestCombo = getComboSystem().getBestCombo()
       const formName =
         (this.starterConfig.forms ?? []).find(
@@ -555,6 +563,7 @@ export class GameScene extends Phaser.Scene {
         bestCombo,
         starterKey: this.starterKey,
         formName,
+        unlockedSquirtle: newlyUnlocked,
       })
     })
 

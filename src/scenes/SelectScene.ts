@@ -3,12 +3,18 @@ import { STARTERS, DIFFICULTY } from '../config';
 import type { StarterConfig } from '../config';
 import type { DevConfig, Difficulty, PokemonForm } from '../types';
 import { SoundManager } from '../audio/SoundManager';
-import { getCoins, getLastRun, initSaveSystem } from '../systems/SaveSystem';
+import { getCoins, getLastRun, initSaveSystem, isStarterUnlocked, isPhase2Unlocked } from '../systems/SaveSystem';
 import { fontSize, scaled } from '../utils/ui-scale';
 import { t } from '../i18n';
+/** Check if a starter is effectively unlocked (config default OR save data). */
+function isEffectivelyUnlocked(starter: StarterConfig): boolean {
+  return starter.unlocked || isStarterUnlocked(starter.key);
+}
+
 export class SelectScene extends Phaser.Scene {
   private selectedIndex = 0;
   private selectedThemeId = 'emerald';
+  private selectedStageId = 'phase1';
   private cards: Phaser.GameObjects.Container[] = [];
   private cardGraphics: Phaser.GameObjects.Graphics[] = [];
   private phaseOverlay: Phaser.GameObjects.Container | null = null;
@@ -24,6 +30,7 @@ export class SelectScene extends Phaser.Scene {
   create(): void {
     this.selectedIndex = 0;
     this.selectedThemeId = 'emerald';
+    this.selectedStageId = 'phase1';
     this.cards = [];
     this.cardGraphics = [];
     this.phaseOverlay = null;
@@ -119,7 +126,7 @@ export class SelectScene extends Phaser.Scene {
     });
     btnHitbox.on('pointerdown', () => {
       const selected = STARTERS[this.selectedIndex];
-      if (!selected.unlocked) return;
+      if (!isEffectivelyUnlocked(selected)) return;
       SoundManager.playClick();
 
       const host = window.location.hostname;
@@ -323,16 +330,35 @@ export class SelectScene extends Phaser.Scene {
     const host = window.location.hostname;
     const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
 
+    const phase2Unlocked = isPhase2Unlocked();
+    const cardCount = isLocal ? 3 : 2;
     const cardY = height / 2 + scaled(10);
-    const card1X = isLocal ? width / 2 - scaled(130) : width / 2;
-    this.createPhaseCard(card1X, cardY, t('phase.1.title'), t('phase.1.subtitle'), 0xff4400, 0xff6622,
+    const spacing = scaled(220);
+    const totalW = (cardCount - 1) * spacing;
+    const startX = width / 2 - totalW / 2;
+
+    // Phase 1 card
+    this.createPhaseCard(startX, cardY, t('phase.1.title'), t('phase.1.subtitle'), 0xff4400, 0xff6622,
       t('phase.1.desc'), () => {
+        this.selectedStageId = 'phase1';
         this.showDifficultySelection();
       });
 
+    // Phase 2 card
+    const card2X = startX + spacing;
+    if (phase2Unlocked) {
+      this.createPhaseCard(card2X, cardY, 'FASE 2', 'Kanto Coast', 0x2288ff, 0x44aaff,
+        'Novos Pokémon\nNovos Bosses\nNovos Eventos', () => {
+          this.selectedStageId = 'phase2';
+          this.showDifficultySelection();
+        });
+    } else {
+      this.createLockedPhaseCard(card2X, cardY, 'FASE 2', 'Complete a Fase 1\npara desbloquear');
+    }
+
     if (isLocal) {
-      const card2X = width / 2 + scaled(130);
-      this.createPhaseCard(card2X, cardY, t('phase.dev.title'), t('phase.dev.subtitle'), 0x44aaff, 0x66ccff,
+      const card3X = startX + spacing * 2;
+      this.createPhaseCard(card3X, cardY, t('phase.dev.title'), t('phase.dev.subtitle'), 0x44aaff, 0x66ccff,
         t('phase.dev.desc'), () => {
           this.showDevConfigOverlay();
         });
@@ -417,6 +443,36 @@ export class SelectScene extends Phaser.Scene {
       onClick();
     });
     this.phaseOverlay.add(hitbox);
+  }
+
+  private createLockedPhaseCard(cx: number, cy: number, title: string, description: string): void {
+    if (!this.phaseOverlay) return;
+
+    const cardW = scaled(200);
+    const cardH = scaled(180);
+
+    const gfx = this.add.graphics();
+    gfx.fillStyle(0x000000, 0.5);
+    gfx.fillRoundedRect(cx - cardW / 2 + 3, cy - cardH / 2 + 3, cardW, cardH, 12);
+    gfx.fillStyle(0x0a0a18, 0.95);
+    gfx.fillRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
+    gfx.lineStyle(2, 0x333333, 0.5);
+    gfx.strokeRoundedRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 12);
+    this.phaseOverlay.add(gfx);
+
+    this.phaseOverlay.add(this.add.text(cx, cy - scaled(30), title, {
+      fontSize: fontSize(14), color: '#444444', fontFamily: 'monospace', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(0.5));
+
+    this.phaseOverlay.add(this.add.text(cx, cy - scaled(10), '🔒', {
+      fontSize: fontSize(24),
+    }).setOrigin(0.5));
+
+    this.phaseOverlay.add(this.add.text(cx, cy + scaled(25), description, {
+      fontSize: fontSize(9), color: '#555555', fontFamily: 'monospace',
+      align: 'center', lineSpacing: scaled(4),
+    }).setOrigin(0.5));
   }
 
   private hidePhaseSelection(): void {
@@ -555,9 +611,10 @@ export class SelectScene extends Phaser.Scene {
   private startGame(debugMode: boolean, devConfig?: DevConfig, difficulty: Difficulty = 'hard'): void {
     const starterKey = devConfig?.starterKey ?? STARTERS[this.selectedIndex].key;
     const tileThemeId = this.selectedThemeId;
+    const stageId = this.selectedStageId;
     this.cameras.main.fade(500, 0, 0, 0, false, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
       if (progress >= 1) {
-        this.scene.start('GameScene', { debugMode, starterKey, devConfig, difficulty, tileThemeId });
+        this.scene.start('GameScene', { debugMode, starterKey, devConfig, difficulty, tileThemeId, stageId });
       }
     });
   }
@@ -805,15 +862,17 @@ export class SelectScene extends Phaser.Scene {
     const container = this.add.container(0, 0).setDepth(5);
     const cardGfx = this.add.graphics();
 
+    const unlocked = isEffectivelyUnlocked(starter);
+
     // Desenha card base
-    this.drawCard(cardGfx, cx, cy, cardWidth, cardHeight, starter.unlocked, index === this.selectedIndex);
+    this.drawCard(cardGfx, cx, cy, cardWidth, cardHeight, unlocked, index === this.selectedIndex);
     container.add(cardGfx);
 
     // ── Sprite do Pokémon ────────────────────────────────────────────
     const sprite = this.add.sprite(cx, cy - scaled(45), starter.sprite.key);
     sprite.setScale(2.5);
 
-    if (!starter.unlocked) {
+    if (!unlocked) {
       sprite.setFrame(0);
       sprite.setTint(0x000000);
     } else {
@@ -830,11 +889,11 @@ export class SelectScene extends Phaser.Scene {
     container.add(sprite);
 
     // Sombra
-    const shadow = this.add.image(cx, cy - scaled(15), 'shadow').setScale(2.5).setAlpha(starter.unlocked ? 0.3 : 0.1);
+    const shadow = this.add.image(cx, cy - scaled(15), 'shadow').setScale(2.5).setAlpha(unlocked ? 0.3 : 0.1);
     container.add(shadow);
 
     // ── Nome ─────────────────────────────────────────────────────────
-    const nameColor = starter.unlocked ? '#ffffff' : '#444444';
+    const nameColor = unlocked ? '#ffffff' : '#444444';
     const nameText = this.add.text(cx, cy + scaled(15), starter.name.toUpperCase(), {
       fontSize: fontSize(13),
       color: nameColor,
@@ -859,20 +918,20 @@ export class SelectScene extends Phaser.Scene {
     const typeBadge = this.add.graphics();
     const badgeW = scaled(60);
     const badgeH = scaled(18);
-    typeBadge.fillStyle(starter.unlocked ? typeColor : 0x333333, 0.8);
+    typeBadge.fillStyle(unlocked ? typeColor : 0x333333, 0.8);
     typeBadge.fillRoundedRect(cx - badgeW / 2, cy + scaled(28), badgeW, badgeH, 5);
     container.add(typeBadge);
 
     const typeText = this.add.text(cx, cy + scaled(37), t(TYPE_KEY_MAP[starter.type] ?? 'type.normal').toUpperCase(), {
       fontSize: fontSize(9),
-      color: starter.unlocked ? '#ffffff' : '#555555',
+      color: unlocked ? '#ffffff' : '#555555',
       fontFamily: 'monospace',
       fontStyle: 'bold',
     }).setOrigin(0.5);
     container.add(typeText);
 
     // ── Descrição ────────────────────────────────────────────────────
-    if (starter.unlocked) {
+    if (unlocked) {
       const desc = this.add.text(cx, cy + scaled(55), t(`starter.${starter.key}.desc`), {
         fontSize: fontSize(8),
         color: '#aaaaaa',
@@ -898,7 +957,7 @@ export class SelectScene extends Phaser.Scene {
     }
 
     // ── Overlay de lock ──────────────────────────────────────────────
-    if (!starter.unlocked) {
+    if (!unlocked) {
       const lockText = this.add.text(cx, cy + scaled(60), '🔒', {
         fontSize: fontSize(22),
       }).setOrigin(0.5);
@@ -915,10 +974,10 @@ export class SelectScene extends Phaser.Scene {
 
     // ── Hitbox para seleção ──────────────────────────────────────────
     const hitbox = this.add.rectangle(cx, cy, cardWidth, cardHeight, 0xffffff, 0)
-      .setInteractive({ useHandCursor: starter.unlocked }).setDepth(6);
+      .setInteractive({ useHandCursor: unlocked }).setDepth(6);
 
     hitbox.on('pointerdown', () => {
-      if (starter.unlocked) {
+      if (unlocked) {
         SoundManager.playClick();
         this.selectCard(index);
       } else {
@@ -933,14 +992,14 @@ export class SelectScene extends Phaser.Scene {
     });
 
     hitbox.on('pointerover', () => {
-      if (starter.unlocked) SoundManager.playHover();
-      if (starter.unlocked && index !== this.selectedIndex) {
+      if (unlocked) SoundManager.playHover();
+      if (unlocked && index !== this.selectedIndex) {
         this.drawCard(cardGfx, cx, cy, cardWidth, cardHeight, true, false, true);
       }
     });
 
     hitbox.on('pointerout', () => {
-      if (starter.unlocked) {
+      if (unlocked) {
         this.drawCard(cardGfx, cx, cy, cardWidth, cardHeight, true, index === this.selectedIndex);
       }
     });
@@ -972,7 +1031,7 @@ export class SelectScene extends Phaser.Scene {
     const prevIndex = this.selectedIndex;
     this.selectedIndex = index;
 
-    if (prevIndex !== index && STARTERS[prevIndex].unlocked) {
+    if (prevIndex !== index && isEffectivelyUnlocked(STARTERS[prevIndex])) {
       const prev = this.getCardPos(prevIndex);
       this.drawCard(this.cardGraphics[prevIndex], prev.cx, prev.cy, prev.w, prev.h, true, false);
     }

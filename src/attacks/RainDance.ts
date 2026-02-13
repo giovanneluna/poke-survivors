@@ -4,7 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
-import { safeExplode } from '../utils/particles';
+
 
 /**
  * Rain Dance: chuva continua de dano em area centrada no player.
@@ -103,15 +103,11 @@ export class RainDance implements Attack {
           const sx = cx + Math.cos(angle) * dist;
           const sy = cy + Math.sin(angle) * dist;
 
-          // Mini splash
-          safeExplode(this.scene, sx, sy, 'water-particle', {
-            speed: { min: 20, max: 50 },
-            angle: { min: 200, max: 340 },
-            lifespan: 200,
-            quantity: 3,
-            scale: { start: 0.8, end: 0 },
-            tint: [0x3388ff, 0x66ccff],
-          });
+          // Animated water splash sprite
+          const splash = this.scene.add.sprite(sx, sy, 'atk-water-hit');
+          splash.setDepth(8).setScale(0.7).setAlpha(0.8);
+          splash.play('anim-water-hit');
+          splash.once('animationcomplete', () => splash.destroy());
         }
 
         // Dano em todos os inimigos na zona

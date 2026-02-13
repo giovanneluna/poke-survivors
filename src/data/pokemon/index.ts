@@ -11,7 +11,7 @@ export type { StarterConfig } from './charmander-line';
 
 export const STARTERS: readonly StarterConfig[] = [
   { key: 'charmander',  name: 'Charmander',  sprite: SPRITES.charmander,  type: 'Fogo',     description: 'O lagarto de fogo. Ataques poderosos de chamas!',  unlocked: true,  forms: CHARMANDER_FORMS },
-  { key: 'squirtle',    name: 'Squirtle',    sprite: SPRITES.squirtle,    type: 'Água',     description: 'A tartaruga aquática. Jatos de água precisos!',    unlocked: true,  forms: SQUIRTLE_FORMS },
+  { key: 'squirtle',    name: 'Squirtle',    sprite: SPRITES.squirtle,    type: 'Água',     description: 'A tartaruga aquática. Jatos de água precisos!',    unlocked: false, forms: SQUIRTLE_FORMS },
   { key: 'bulbasaur',   name: 'Bulbasaur',   sprite: SPRITES.bulbasaur,   type: 'Planta',   description: 'O dinossauro planta. Esporos e vinhas!',           unlocked: true,  forms: BULBASAUR_FORMS },
   { key: 'jigglypuff',  name: 'Jigglypuff',  sprite: SPRITES.jigglypuff,  type: 'Fada',     description: 'A cantora encantadora. Melodias hipnotizantes!',   unlocked: false },
   { key: 'gastly',      name: 'Gastly',       sprite: SPRITES.gastly,      type: 'Fantasma', description: 'O fantasma gasoso. Maldições e sombras!',          unlocked: false },

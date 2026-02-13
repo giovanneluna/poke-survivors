@@ -50,7 +50,7 @@ export class WaterSpout implements Attack {
   }
 
   private fire(): void {
-    const dir = this.player.getAimDirection();
+    const dir = this.player.getAttackDirection();
     const baseAngle = Math.atan2(dir.y, dir.x);
 
     // Dispara N cannon blasts com leve spread entre eles

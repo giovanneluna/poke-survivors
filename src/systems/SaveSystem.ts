@@ -2,7 +2,7 @@
 // Module singleton pattern: module-level state + exported functions.
 
 const STORAGE_KEY = 'poke-survivors-save';
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 const POKEDEX_TOTAL = 47;
 
 // ── Types ────────────────────────────────────────────────────────────────
@@ -60,6 +60,7 @@ export interface SaveData {
     quality: 'normal' | 'low';
     vfxIntensity: number; // 0–100
   };
+  unlockedStarters: Record<string, boolean>;
 }
 
 // ── Module state ─────────────────────────────────────────────────────────
@@ -88,6 +89,16 @@ function createFreshStats(): LifetimeStats {
   };
 }
 
+/** Default unlocked starters for NEW saves — only Charmander. */
+const DEFAULT_UNLOCKED_STARTERS: Record<string, boolean> = { charmander: true };
+
+/** Legacy unlocked starters for v1 saves — preserve existing access. */
+const LEGACY_UNLOCKED_STARTERS: Record<string, boolean> = {
+  charmander: true,
+  squirtle: true,
+  bulbasaur: true,
+};
+
 function createFreshSave(): SaveData {
   return {
     version: CURRENT_VERSION,
@@ -105,6 +116,7 @@ function createFreshSave(): SaveData {
       quality: 'normal',
       vfxIntensity: 100,
     },
+    unlockedStarters: { ...DEFAULT_UNLOCKED_STARTERS },
   };
 }
 
@@ -149,6 +161,14 @@ export function initSaveSystem(): void {
         data.settings ??= { muted: false, quality: 'normal', vfxIntensity: 100 };
         data.settings.quality ??= 'normal';
         data.settings.vfxIntensity ??= 100;
+
+        // v1 → v2 migration: add unlockedStarters (preserve existing access)
+        if (!data.unlockedStarters) {
+          data.unlockedStarters = data.version < 2
+            ? { ...LEGACY_UNLOCKED_STARTERS }
+            : { ...DEFAULT_UNLOCKED_STARTERS };
+        }
+        data.version = CURRENT_VERSION;
         return;
       }
     }
@@ -163,6 +183,27 @@ export function initSaveSystem(): void {
 export function getSaveData(): Readonly<SaveData> {
   const d = ensureLoaded();
   return JSON.parse(JSON.stringify(d)) as SaveData;
+}
+
+// ── Starter Unlocks ──────────────────────────────────────────────────────
+
+/** Check if a starter is unlocked in the save data. */
+export function isStarterUnlocked(key: string): boolean {
+  return ensureLoaded().unlockedStarters[key] === true;
+}
+
+/** Unlock a starter permanently. Returns true if it was newly unlocked. */
+export function unlockStarter(key: string): boolean {
+  const d = ensureLoaded();
+  if (d.unlockedStarters[key]) return false;
+  d.unlockedStarters[key] = true;
+  persist();
+  return true;
+}
+
+/** Check if Phase 2 is unlocked (= Squirtle is unlocked = Phase 1 completed). */
+export function isPhase2Unlocked(): boolean {
+  return isStarterUnlocked('squirtle');
 }
 
 // ── Coins ────────────────────────────────────────────────────────────────
@@ -395,6 +436,12 @@ export function importSaveCode(code: string): boolean {
     data.settings ??= { muted: false, quality: 'normal', vfxIntensity: 100 };
     data.settings.quality ??= 'normal';
     data.settings.vfxIntensity ??= 100;
+    if (!data.unlockedStarters) {
+      data.unlockedStarters = data.version < 2
+        ? { ...LEGACY_UNLOCKED_STARTERS }
+        : { ...DEFAULT_UNLOCKED_STARTERS };
+    }
+    data.version = CURRENT_VERSION;
     persist();
     return true;
   } catch {

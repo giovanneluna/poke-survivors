@@ -1,0 +1,45 @@
+import type { BossConfig } from '../../types';
+import { SPRITES } from '../sprites';
+
+export const VICTREEBEL_BOSS: BossConfig = {
+  key: 'victreebel',
+  name: 'Victreebel',
+  sprite: SPRITES.victreebel,
+  hp: 4000,
+  speed: 40,
+  damage: 28,
+  xpValue: 200,
+  scale: 1.6,
+  isBoss: true,
+  resistance: 0.25,
+  hpRegenPerSec: 25,
+  archetype: 'tank',
+  bossAttacks: [{
+    name: 'Vine Whip',
+    pattern: 'charge',
+    damage: 30,
+    cooldownMs: 3500,
+    range: 150,
+    tintColor: 0x22aa22,
+  }, {
+    name: 'Acid Spray',
+    pattern: 'fan',
+    damage: 25,
+    cooldownMs: 5000,
+    projectileCount: 4,
+    spriteKey: 'atk-acid-spray',
+    animKey: 'anim-acid-spray',
+    tintColor: 0x9922cc,
+  }, {
+    name: 'Stun Spore',
+    pattern: 'zone',
+    damage: 0,
+    cooldownMs: 8000,
+    aoeRadius: 130,
+    aoeColor: 0xaacc44,
+    zoneDuration: 2500,
+    zoneTickRate: 400,
+    zoneEffect: 'slow',
+    zoneEffectValue: 0.8,
+  }],
+};

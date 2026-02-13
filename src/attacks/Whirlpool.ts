@@ -4,7 +4,7 @@ import { ATTACKS } from '../config';
 import type { Player } from '../entities/Player';
 import { setDamageSource } from '../systems/DamageTracker';
 import { getSpatialGrid } from '../systems/SpatialHashGrid';
-import { shouldShowVfx } from '../systems/GraphicsSettings';
+
 
 /**
  * Whirlpool: vórtice de agua que prende e puxa inimigos.
@@ -52,47 +52,34 @@ export class Whirlpool implements Attack {
     const tx = nearest.x;
     const ty = nearest.y;
 
-    // Visual procedural: circulo de agua rotante
-    const vortex = this.scene.add.circle(tx, ty, this.radius, 0x3388ff, 0.3);
-    vortex.setDepth(7);
-    vortex.setStrokeStyle(2, 0x44aaff, 0.6);
+    // Visual: animated whirlpool sprite
+    const vortexScale = this.radius / 48; // atk-whirlpool-tibia is 96×96, radius is ~70
+    const vortex = this.scene.add.sprite(tx, ty, 'atk-whirlpool-tibia');
+    vortex.setDepth(7).setScale(vortexScale).setAlpha(0.85);
+    vortex.play('anim-whirlpool-tibia');
 
-    // Anel interno rotante
-    const innerRing = this.scene.add.circle(tx, ty, this.radius * 0.5, 0x44aaff, 0.2);
-    innerRing.setDepth(7);
-    innerRing.setStrokeStyle(1, 0x66ccff, 0.5);
-
-    // Rotacao e scaling do vortex
+    // Spinning + scale pulse
     this.scene.tweens.add({
       targets: vortex,
-      scale: { from: 0.4, to: 1.2 },
-      alpha: { from: 0.4, to: 0.2 },
+      angle: 720,
+      scale: { from: vortexScale * 0.5, to: vortexScale * 1.2 },
+      alpha: { from: 0.9, to: 0.4 },
       duration: this.duration,
       ease: 'Sine.easeInOut',
     });
+
+    // Inner rings overlay
+    const innerRing = this.scene.add.sprite(tx, ty, 'atk-whirlpool-rings');
+    innerRing.setDepth(8).setScale(vortexScale * 1.5).setAlpha(0.6);
+    innerRing.play('anim-whirlpool-rings');
 
     this.scene.tweens.add({
       targets: innerRing,
-      angle: 720,
-      scale: { from: 0.3, to: 1 },
-      alpha: { from: 0.3, to: 0.1 },
+      angle: -360,
+      alpha: { from: 0.6, to: 0.2 },
       duration: this.duration,
       ease: 'Sine.easeInOut',
     });
-
-    // Particulas de agua girando ao redor do centro
-    let waterEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
-    if (shouldShowVfx()) {
-      waterEmitter = this.scene.add.particles(tx, ty, 'water-particle', {
-        speed: { min: 20, max: 60 },
-        lifespan: 400,
-        quantity: 3,
-        frequency: 80,
-        scale: { start: 1.5, end: 0 },
-        tint: [0x3388ff, 0x44aaff, 0x66ccff],
-        angle: { min: 0, max: 360 },
-      });
-    }
 
     // Track de inimigos que estao dentro do vortex (para aplicar slow ao sair)
     const enemiesInside = new Set<Phaser.Physics.Arcade.Sprite>();
@@ -154,7 +141,6 @@ export class Whirlpool implements Attack {
       if (cleaned) return;
       cleaned = true;
       tickEvent.destroy();
-      waterEmitter?.destroy();
 
       // Aplica slow em todos que ainda estao dentro ao terminar
       for (const enemySprite of enemiesInside) {
