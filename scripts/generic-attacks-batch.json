@@ -1,0 +1,18 @@
+[
+  { "input": "attacks{tps}/FAIRY/hit", "output": "attacks/fairy/fairy-hit-sheet.png" },
+  { "input": "attacks{tps}/FAIRY/melee", "output": "attacks/fairy/fairy-melee-sheet.png" },
+  { "input": "attacks{tps}/FAIRY/range", "output": "attacks/fairy/fairy-range-sheet.png" },
+  { "input": "attacks{tps}/ELECTRIC/hit", "output": "attacks/electric/electric-hit-sheet.png" },
+  { "input": "attacks{tps}/ELECTRIC/melee", "output": "attacks/electric/electric-melee-sheet.png" },
+  { "input": "attacks{tps}/ELECTRIC/range", "output": "attacks/electric/electric-range-sheet.png" },
+  { "input": "attacks{tps}/ICE/hit", "output": "attacks/ice/ice-hit-sheet.png" },
+  { "input": "attacks{tps}/ICE/melee", "output": "attacks/ice/ice-melee-sheet.png" },
+  { "input": "attacks{tps}/ICE/cell", "output": "attacks/ice/ice-cell-sheet.png" },
+  { "input": "attacks{tps}/STEEL/hit", "output": "attacks/steel/steel-hit-sheet.png" },
+  { "input": "attacks{tps}/STEEL/melee", "output": "attacks/steel/steel-melee-sheet.png" },
+  { "input": "attacks{tps}/STEEL/range", "output": "attacks/steel/steel-range-sheet.png" },
+  { "input": "attacks{tps}/FIGHTING/hit", "output": "attacks/fighting/fighting-hit-sheet.png" },
+  { "input": "attacks{tps}/FIGHTING/range", "output": "attacks/fighting/fighting-range-sheet.png" },
+  { "input": "attacks{tps}/SOUND/hit", "output": "attacks/sound/sound-hit-sheet.png" },
+  { "input": "attacks{tps}/SOUND/range", "output": "attacks/sound/sound-range-sheet.png" }
+]

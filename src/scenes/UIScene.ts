@@ -1850,6 +1850,7 @@ export class UIScene extends Phaser.Scene {
 
   // ── Victory Screen — "FASE 1 COMPLETA" ──────────────────────────
   private showVictory(data: GameOverData): void {
+    SoundManager.playVictory();
     const { width, height } = this.cameras.main;
     this.victoryContainer.removeAll(true);
 

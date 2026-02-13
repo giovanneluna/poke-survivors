@@ -8,6 +8,7 @@ import { SoundManager } from '../audio/SoundManager';
 import { Destructible } from '../entities/Destructible';
 import { Pickup } from '../entities/Pickup';
 import { DESTRUCTIBLES } from '../config';
+import { startWeather, stopWeather } from './WeatherOverlay';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -360,6 +361,7 @@ class EventSystemImpl {
       duration: EventSystemImpl.ECLIPSE_DURATION_MS,
     };
 
+    startWeather(scene, 'fog');
     scene.events.emit('event-banner', { name: 'Eclipse!', color: '#6644aa' });
   }
 
@@ -597,6 +599,7 @@ class EventSystemImpl {
       // Done — reset to normal and clear
       eclipse.fx.reset();
       this.activeEclipse = null;
+      stopWeather();
       return;
     }
 
@@ -693,6 +696,7 @@ class EventSystemImpl {
     if (this.activeEclipse) {
       this.activeEclipse.fx.reset();
       this.activeEclipse = null;
+      stopWeather();
     }
 
     this.activeSwarm = null;

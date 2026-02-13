@@ -1,0 +1,17 @@
+[
+  { "input": "abilities{tps}/SUPER_FANG", "output": "attacks/normal/super-fang-sheet.png" },
+  { "input": "abilities{tps}/PRECIPICE_BLADES", "output": "attacks/ground/precipice-blades-sheet.png" },
+  { "input": "abilities{tps}/DYNAMAX_CANNON", "output": "attacks/normal/dynamax-cannon-sheet.png" },
+  { "input": "abilities{tps}/HEAVY_SLAM", "output": "attacks/fighting/heavy-slam-sheet.png" },
+  { "input": "abilities{tps}/PETAL_DANCE", "output": "attacks/grass/petal-dance-pac-sheet.png" },
+  { "input": "abilities{tps}/STUN_SPORE", "output": "attacks/grass/stun-spore-pac-sheet.png" },
+  { "input": "abilities{tps}/CLOSE_COMBAT", "output": "attacks/fighting/close-combat-pac-sheet.png" },
+  { "input": "abilities{tps}/SEISMIC_TOSS", "output": "attacks/fighting/seismic-toss-pac-sheet.png" },
+  { "input": "abilities{tps}/DREAM_EATER", "output": "attacks/ghost/dream-eater-pac-sheet.png" },
+  { "input": "abilities{tps}/NIGHT_SHADE", "output": "attacks/ghost/night-shade-pac-sheet.png" },
+  { "input": "abilities{tps}/ROCK_SLIDE", "output": "attacks/rock/rock-slide-pac-sheet.png" },
+  { "input": "abilities{tps}/EXPLOSION", "output": "attacks/normal/explosion-pac-sheet.png" },
+  { "input": "abilities{tps}/BULK_UP", "output": "attacks/fighting/bulk-up-pac-sheet.png" },
+  { "input": "abilities{tps}/FUTURE_SIGHT", "output": "attacks/psychic/future-sight-pac-sheet.png" },
+  { "input": "abilities{tps}/PSYSTRIKE", "output": "attacks/psychic/psystrike-pac-sheet.png" }
+]

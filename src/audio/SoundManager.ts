@@ -16,6 +16,7 @@ class SoundManagerImpl {
   private ctx: AudioContext | null = null;
   private muted = false;
   private masterVolume = 0.03;
+  private scene: Phaser.Scene | null = null;
 
   private getContext(): AudioContext {
     if (!this.ctx) {
@@ -25,6 +26,23 @@ class SoundManagerImpl {
       this.ctx.resume();
     }
     return this.ctx;
+  }
+
+  /** Inicializa com referência à scene para tocar .ogg via Phaser sound manager */
+  initWithScene(scene: Phaser.Scene): void {
+    this.scene = scene;
+  }
+
+  /** Tenta tocar .ogg via Phaser. Retorna true se tocou, false para fallback procedural. */
+  private tryPlayOgg(key: string, volume?: number): boolean {
+    if (this.muted || !this.scene?.sound) return false;
+    try {
+      if (this.scene.sound.get(key) || this.scene.cache.audio.exists(key)) {
+        this.scene.sound.play(key, { volume: volume ?? this.masterVolume * 10 });
+        return true;
+      }
+    } catch { /* fallback to procedural */ }
+    return false;
   }
 
   setMuted(muted: boolean): void {
@@ -93,6 +111,7 @@ class SoundManagerImpl {
   // ── Menu Sounds ────────────────────────────────────────────────────
 
   playClick(): void {
+    if (this.tryPlayOgg('sfx-click', 0.4)) return;
     this.playTones([
       { freq: 800, duration: 0.04, wave: 'square', volume: 0.6 },
       { freq: 1000, duration: 0.03, wave: 'square', volume: 0.4 },
@@ -100,12 +119,14 @@ class SoundManagerImpl {
   }
 
   playHover(): void {
+    if (this.tryPlayOgg('sfx-hover', 0.25)) return;
     this.playTones([
       { freq: 600, duration: 0.03, wave: 'sine', volume: 0.25 },
     ]);
   }
 
   playStart(): void {
+    if (this.tryPlayOgg('sfx-start', 0.5)) return;
     this.playTones([
       { freq: 523, duration: 0.1, wave: 'square', volume: 0.5 },
       { freq: 659, duration: 0.1, wave: 'square', volume: 0.5 },
@@ -181,6 +202,7 @@ class SoundManagerImpl {
   }
 
   playEvolve(): void {
+    if (this.tryPlayOgg('sfx-evolve-t2', 0.5)) return;
     this.playTones([
       { freq: 400, duration: 0.1, wave: 'sine', volume: 0.4 },
       { freq: 500, duration: 0.1, wave: 'sine', volume: 0.4 },
@@ -192,9 +214,16 @@ class SoundManagerImpl {
     ]);
   }
 
+  /** Evolução tier 3 — usa sfx-evolve-t3, fallback para procedural */
+  playEvolveT3(): void {
+    if (this.tryPlayOgg('sfx-evolve-t3', 0.5)) return;
+    this.playEvolve();
+  }
+
   // ── Game State Sounds ──────────────────────────────────────────────
 
   playGameOver(): void {
+    if (this.tryPlayOgg('sfx-gameover', 0.5)) return;
     this.playTones([
       { freq: 400, duration: 0.15, wave: 'square', volume: 0.5 },
       { freq: 350, duration: 0.15, wave: 'square', volume: 0.45 },
@@ -202,6 +231,17 @@ class SoundManagerImpl {
       { freq: 250, duration: 0.2, wave: 'square', volume: 0.35 },
       { freq: 200, duration: 0.3, wave: 'square', volume: 0.3 },
       { freq: 150, duration: 0.4, wave: 'sawtooth', volume: 0.25 },
+    ]);
+  }
+
+  playVictory(): void {
+    if (this.tryPlayOgg('sfx-victory', 0.5)) return;
+    this.playTones([
+      { freq: 523, duration: 0.1, wave: 'square', volume: 0.5 },
+      { freq: 659, duration: 0.1, wave: 'square', volume: 0.5 },
+      { freq: 784, duration: 0.12, wave: 'square', volume: 0.6 },
+      { freq: 1047, duration: 0.15, wave: 'square', volume: 0.6 },
+      { freq: 1319, duration: 0.2, wave: 'triangle', volume: 0.5 },
     ]);
   }
 

@@ -21,6 +21,9 @@ export const PRIMEAPE: BossConfig = {
     damage: 45,
     cooldownMs: 2800,
     range: 450,
+    spriteKey: 'atk-close-combat-pac',
+    animKey: 'anim-close-combat-pac',
+    spriteScale: 1.5,
   }, {
     name: 'Cross Chop',
     pattern: 'directional',
@@ -37,9 +40,9 @@ export const PRIMEAPE: BossConfig = {
     damage: 50,
     cooldownMs: 6000,
     aoeRadius: 120,
-    spriteKey: 'atk-stomp',
-    animKey: 'anim-stomp',
-    spriteScale: 5,
+    spriteKey: 'atk-seismic-toss-pac',
+    animKey: 'anim-seismic-toss-pac',
+    spriteScale: 1.5,
     tintColor: 0xcc8844,
     aoeColor: 0xcc8844,
   }, {

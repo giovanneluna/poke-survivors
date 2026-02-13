@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { EDITOR_TILES, type EditorTile, type TileSource, type TileCategory } from '../data/editor-tiles';
+import { EDITOR_TILES, TILE_SOURCES, type EditorTile, type TileSource, type TileCategory } from '../data/editor-tiles';
 import { resizeMap, MAP_MIN_SIZE, MAP_MAX_SIZE } from '../utils/map-resize';
 
 /** Size of each tile cell in pixels */
@@ -49,8 +49,11 @@ type EditorTool = 'brush' | 'bucket' | 'rectangle' | 'eraser';
 type BrushSize = 1 | 3 | 5;
 
 /** Source tabs */
-const SOURCES: readonly TileSource[] = ['emerald', 'frlg', 'pmd'] as const;
-const SOURCE_LABELS: Readonly<Record<TileSource, string>> = { emerald: 'Emerald', frlg: 'FRLG', pmd: 'PMD' };
+const SOURCES = TILE_SOURCES;
+const SOURCE_LABELS: Readonly<Record<TileSource, string>> = {
+  emerald: 'Emerald', frlg: 'FRLG', pmd: 'PMD',
+  crystal: 'Crystal', magma: 'Magma', sky: 'Sky', dark: 'Dark',
+};
 /** Category tabs */
 type PaletteCategory = TileCategory | 'all';
 const CATEGORIES: readonly PaletteCategory[] = ['all', 'ground', 'water', 'nature', 'buildings', 'decoration'] as const;

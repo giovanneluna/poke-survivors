@@ -1,0 +1,9 @@
+[
+  { "input": "status{tps}/BURN", "output": "attacks/status/burn-sheet.png" },
+  { "input": "status{tps}/POISON", "output": "attacks/status/poison-sheet.png" },
+  { "input": "status{tps}/PARALYSIS", "output": "attacks/status/paralysis-sheet.png" },
+  { "input": "status{tps}/CONFUSION", "output": "attacks/status/confusion-sheet.png" },
+  { "input": "status{tps}/FREEZE", "output": "attacks/status/freeze-sheet.png" },
+  { "input": "status{tps}/SLEEP", "output": "attacks/status/sleep-sheet.png" },
+  { "input": "status{tps}/PROTECT", "output": "attacks/status/protect-sheet.png" }
+]

@@ -776,6 +776,16 @@ export class SpawnSystem {
         const destX = playerX + Math.cos(tpAngle) * tpDist;
         const destY = playerY + Math.sin(tpAngle) * tpDist;
 
+        // Portal VFX na posição de destino
+        if (scene.anims.exists('anim-portal')) {
+          const portal = scene.add.sprite(destX, destY, 'env-portal');
+          portal.setScale(2.5).setAlpha(0.8).setDepth(6);
+          portal.play('anim-portal');
+          // Destrói após 1 ciclo completo da animação
+          const animDuration = scene.anims.get('anim-portal')?.duration ?? 800;
+          scene.time.delayedCall(animDuration, () => { if (portal.active) portal.destroy(); });
+        }
+
         scene.time.delayedCall(300, () => {
           if (!boss.active) return;
           boss.setPosition(destX, destY);

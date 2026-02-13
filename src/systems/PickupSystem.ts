@@ -5,6 +5,7 @@ import { Pickup } from '../entities/Pickup';
 import { SoundManager } from '../audio/SoundManager';
 import type { GameContext } from './GameContext';
 import { getStatsTracker } from './RunRecorder';
+import { shouldShowVfx } from './GraphicsSettings';
 
 // ── Coin tiers ──────────────────────────────────────────────────────
 const COIN_TIERS = {
@@ -204,6 +205,26 @@ export class PickupSystem {
     pickup.setData('isHeldItem', true);
     pickup.setData('heldItemType', item);
     this.ctx.pickups.add(pickup);
+
+    // Shine sparkle VFX sobre held items
+    if (shouldShowVfx() && this.ctx.scene.anims.exists('anim-shine')) {
+      const sc = this.ctx.scene;
+      const shine = sc.add.sprite(x, y - 8, 'env-shine');
+      shine.setScale(1.5).setAlpha(0.7).setDepth(pickup.depth + 1);
+      shine.play('anim-shine');
+      // Segue o pickup e destrói quando coletado
+      const update = () => {
+        if (!pickup.active || !shine.active) {
+          if (shine.active) shine.destroy();
+          sc.events.off('update', update);
+          return;
+        }
+        shine.setPosition(pickup.x, pickup.y - 8);
+      };
+      sc.events.on('update', update);
+      // Safety: limpar listener se shine destruído externamente
+      shine.once('destroy', () => { sc.events.off('update', update); });
+    }
   }
 
   // ── Pickups ───────────────────────────────────────────────────────

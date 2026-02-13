@@ -24,6 +24,7 @@ import {
   setRunRecordDamage,
 } from "../systems/DamageTracker"
 import { safeExplode } from "../utils/particles"
+import { clearAllStatusOverlays } from "../systems/StatusOverlay"
 import { initStatsTracker, getStatsTracker } from "../systems/RunRecorder"
 import { initComboSystem, getComboSystem } from "../systems/ComboSystem"
 import { initEventSystem, getEventSystem } from "../systems/EventSystem"
@@ -100,6 +101,9 @@ export class GameScene extends Phaser.Scene {
     this.rerollLocked = false
     this.joystick = null
     resetDamageTotals()
+
+    // ── SoundManager: habilita sons .ogg via Phaser sound manager ──
+    SoundManager.initWithScene(this)
 
     this.physics.world.setBounds(0, 0, GAME.worldWidth, GAME.worldHeight)
 
@@ -738,6 +742,7 @@ export class GameScene extends Phaser.Scene {
   private gameOver(): void {
     this.isPaused = true
     this.physics.pause()
+    clearAllStatusOverlays(this.player)
     SoundManager.playGameOver()
 
     // Remove F5 save handler (coins serão salvos abaixo)

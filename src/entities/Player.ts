@@ -15,6 +15,7 @@ import { formIndex } from "../types"
 import { getPassive } from "../systems/PassiveSystem"
 import { setDamageSource, clearDamageSource, setFormDamageMultiplier } from "../systems/DamageTracker"
 import { getMegaSystem } from "../systems/MegaSystem"
+import { showStatusOverlay } from "../systems/StatusOverlay"
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   readonly stats: PlayerState
@@ -171,6 +172,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (time - this.lastConfuseApplied < Player.CONFUSE_COOLDOWN) return
     this.confusionUntil = time + durationMs
     this.lastConfuseApplied = time
+    showStatusOverlay(this.scene, this, 'confusion', durationMs)
   }
 
   isConfused(time: number): boolean {
@@ -180,6 +182,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   // ── Stun effect ──────────────────────────────────────────────────
   applyStun(durationMs: number, time: number): void {
     this.stunUntil = time + durationMs
+    showStatusOverlay(this.scene, this, 'paralysis', durationMs)
   }
 
   isStunned(time: number): boolean {
@@ -190,6 +193,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   applyPoison(dps: number, durationMs: number, time: number): void {
     this.poisonUntil = time + durationMs
     this.poisonDps = dps
+    showStatusOverlay(this.scene, this, 'poison', durationMs)
   }
 
   isPoisoned(time: number): boolean {

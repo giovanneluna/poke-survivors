@@ -85,7 +85,7 @@ export class SelectScene extends Phaser.Scene {
       this.createCharacterCard(starter, i, cx, cy, cardWidth, cardHeight);
     });
 
-    // Tema fixo: Emerald (seletor removido — biomas virão na Fase 2)
+    // Tema fixo: Emerald (FRLG tiles são inadequadas para geração procedural)
     this.selectedThemeId = 'emerald';
 
     // ── Botão "COMEÇAR" ──────────────────────────────────────────────
@@ -550,6 +550,7 @@ export class SelectScene extends Phaser.Scene {
     });
     this.difficultyOverlay.add(hitbox);
   }
+
 
   private startGame(debugMode: boolean, devConfig?: DevConfig, difficulty: Difficulty = 'hard'): void {
     const starterKey = devConfig?.starterKey ?? STARTERS[this.selectedIndex].key;
