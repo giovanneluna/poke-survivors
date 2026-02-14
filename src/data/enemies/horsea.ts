@@ -5,10 +5,10 @@ export const HORSEA: EnemyConfig = {
   key: 'horsea',
   name: 'Horsea',
   sprite: SPRITES.horsea,
-  hp: 14,
+  hp: 8,
   speed: 45,
   damage: 4,
-  xpValue: 4,
+  xpValue: 6,
   scale: 1.0,
   rangedAttack: {
     projectileKey: 'water-particle',

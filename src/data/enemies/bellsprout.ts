@@ -5,10 +5,10 @@ export const BELLSPROUT: EnemyConfig = {
   key: 'bellsprout',
   name: 'Bellsprout',
   sprite: SPRITES.bellsprout,
-  hp: 12,
+  hp: 7,
   speed: 45,
   damage: 3,
-  xpValue: 3,
+  xpValue: 5,
   scale: 1.0,
   behavior: 'healer',
 };

@@ -5,10 +5,10 @@ export const GOLDEEN: EnemyConfig = {
   key: 'goldeen',
   name: 'Goldeen',
   sprite: SPRITES.goldeen,
-  hp: 20,
+  hp: 11,
   speed: 70,
   damage: 6,
-  xpValue: 4,
+  xpValue: 6,
   scale: 1.0,
   behavior: 'swooper',
 };

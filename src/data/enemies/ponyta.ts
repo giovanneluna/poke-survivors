@@ -5,10 +5,10 @@ export const PONYTA: EnemyConfig = {
   key: 'ponyta',
   name: 'Ponyta',
   sprite: SPRITES.ponyta,
-  hp: 20,
+  hp: 11,
   speed: 80,
   damage: 6,
-  xpValue: 4,
+  xpValue: 6,
   scale: 1.0,
   behavior: 'swooper',
 };

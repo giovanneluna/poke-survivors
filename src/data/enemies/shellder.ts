@@ -5,10 +5,10 @@ export const SHELLDER: EnemyConfig = {
   key: 'shellder',
   name: 'Shellder',
   sprite: SPRITES.shellder,
-  hp: 40,
+  hp: 22,
   speed: 30,
   damage: 4,
-  xpValue: 4,
+  xpValue: 6,
   scale: 1.0,
   behavior: 'tank',
 };

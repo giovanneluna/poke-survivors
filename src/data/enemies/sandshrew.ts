@@ -5,10 +5,10 @@ export const SANDSHREW: EnemyConfig = {
   key: 'sandshrew',
   name: 'Sandshrew',
   sprite: SPRITES.sandshrew,
-  hp: 35,
+  hp: 20,
   speed: 40,
   damage: 4,
-  xpValue: 3,
+  xpValue: 5,
   scale: 1.0,
   behavior: 'tank',
 };

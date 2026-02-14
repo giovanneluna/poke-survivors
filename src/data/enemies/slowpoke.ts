@@ -5,10 +5,10 @@ export const SLOWPOKE: EnemyConfig = {
   key: 'slowpoke',
   name: 'Slowpoke',
   sprite: SPRITES.slowpoke,
-  hp: 50,
+  hp: 28,
   speed: 25,
   damage: 4,
-  xpValue: 5,
+  xpValue: 8,
   scale: 1.0,
   behavior: 'tank',
 };
