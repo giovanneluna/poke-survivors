@@ -47,6 +47,7 @@ export class GameScene extends Phaser.Scene {
   enemyGroup!: Phaser.Physics.Arcade.Group
   xpGems!: Phaser.Physics.Arcade.Group
   private destructibles!: Phaser.Physics.Arcade.StaticGroup
+  private treeObstacles!: Phaser.Physics.Arcade.StaticGroup
   private pickups!: Phaser.Physics.Arcade.Group
   private enemyProjectiles!: Phaser.Physics.Arcade.Group
 
@@ -152,6 +153,7 @@ export class GameScene extends Phaser.Scene {
     })
     this.xpGems = this.physics.add.group({ defaultKey: "xp-gem", maxSize: 500 })
     this.destructibles = this.physics.add.staticGroup()
+    this.treeObstacles = this.physics.add.staticGroup()
     this.pickups = this.physics.add.group()
     this.enemyProjectiles = this.physics.add.group({
       defaultKey: "atk-shadow-ball",
@@ -172,6 +174,7 @@ export class GameScene extends Phaser.Scene {
       devConfig: this.devConfig,
       difficulty: this.difficulty,
       tileThemeId: this.tileThemeId,
+      treeObstacles: this.treeObstacles,
       mapId: this.mapId,
       stageId: this.stageId,
     }
@@ -224,6 +227,11 @@ export class GameScene extends Phaser.Scene {
 
     // ── World generation ────────────────────────────────────────────
     this.worldSystem.generateWorld()
+    this.worldSystem.spawnTreeObstacles()
+
+    // ── Tree obstacle collisions (walls) ──────────────────────────
+    this.physics.add.collider(this.player, this.treeObstacles)
+    this.physics.add.collider(this.enemyGroup, this.treeObstacles)
 
     // ── Dev Mode setup ──────────────────────────────────────────────
     if (this.devConfig) {

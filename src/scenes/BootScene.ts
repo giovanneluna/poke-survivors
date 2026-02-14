@@ -105,6 +105,11 @@ export class BootScene extends Phaser.Scene {
       }
     }
 
+    // ── Tree obstacles (Phase 2) ────────────────────────────────
+    for (const name of ['tree-big-light', 'tree-big-green', 'tree-big-dark', 'tree-big-vdark']) {
+      this.load.image(name, `assets/trees/${name}.png`);
+    }
+
     // ── Editor tiles (Map Editor palette — all extracted tiles) ─
     for (const edTile of EDITOR_TILES) {
       this.load.image(edTile.id, edTile.path);

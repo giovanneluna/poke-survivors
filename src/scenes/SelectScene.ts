@@ -611,7 +611,7 @@ export class SelectScene extends Phaser.Scene {
   private startGame(debugMode: boolean, devConfig?: DevConfig, difficulty: Difficulty = 'hard'): void {
     const starterKey = devConfig?.starterKey ?? STARTERS[this.selectedIndex].key;
     const stageId = this.selectedStageId;
-    const tileThemeId = stageId === 'phase2' ? 'route' : this.selectedThemeId;
+    const tileThemeId = this.selectedThemeId;
     this.cameras.main.fade(500, 0, 0, 0, false, (_cam: Phaser.Cameras.Scene2D.Camera, progress: number) => {
       if (progress >= 1) {
         this.scene.start('GameScene', { debugMode, starterKey, devConfig, difficulty, tileThemeId, stageId });
