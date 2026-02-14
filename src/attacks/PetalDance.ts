@@ -25,6 +25,8 @@ export class PetalDance implements Attack {
 
   /** Sprite ativo da dança atual (null quando em cooldown) */
   private activeSprite: Phaser.GameObjects.Sprite | null = null;
+  private activeEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+  private pendingCleanup: (() => void) | null = null;
   private tickEvent: Phaser.Time.TimerEvent | null = null;
   private currentRadius = 30;
 
@@ -42,6 +44,9 @@ export class PetalDance implements Attack {
   }
 
   private dance(): void {
+    // Kill any previous dance that's still active (prevents sprite leak)
+    if (this.pendingCleanup) this.pendingCleanup();
+
     const startRadius = 30;
     this.currentRadius = startRadius;
 
@@ -61,9 +66,9 @@ export class PetalDance implements Attack {
     });
 
     // Partículas de pétalas
-    let petalEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
+    let emitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null;
     if (shouldShowVfx()) {
-      petalEmitter = this.scene.add.particles(this.player.x, this.player.y, 'fire-particle', {
+      emitter = this.scene.add.particles(this.player.x, this.player.y, 'fire-particle', {
         speed: { min: 20, max: 80 },
         lifespan: 600,
         quantity: 2,
@@ -73,12 +78,13 @@ export class PetalDance implements Attack {
         tint: [0xff88aa, 0xff66cc, 0xffaadd],
       });
     }
+    this.activeEmitter = emitter;
 
     // Tick de dano: 200ms, danifica todos no raio atual
     let elapsed = 0;
     const radiusGrowthRate = (this.maxRadius - startRadius) / this.duration;
 
-    this.tickEvent = this.scene.time.addEvent({
+    const tickEvent = this.scene.time.addEvent({
       delay: 200,
       loop: true,
       callback: () => {
@@ -102,26 +108,33 @@ export class PetalDance implements Attack {
         }
       },
     });
+    this.tickEvent = tickEvent;
+
+    // Local refs captured by closure — immune to race conditions
+    const localSprite = sprite;
+    const localEmitter = emitter;
+    const localTickEvent = tickEvent;
 
     let cleaned = false;
     const cleanup = (): void => {
       if (cleaned) return;
       cleaned = true;
-      if (this.tickEvent) {
-        this.tickEvent.destroy();
-        this.tickEvent = null;
-      }
-      petalEmitter?.destroy();
-      if (this.activeSprite && this.activeSprite.active) {
+      localTickEvent.destroy();
+      if (this.tickEvent === localTickEvent) this.tickEvent = null;
+      localEmitter?.destroy();
+      if (this.activeEmitter === localEmitter) this.activeEmitter = null;
+      if (this.pendingCleanup === cleanup) this.pendingCleanup = null;
+      if (localSprite.active) {
         this.scene.tweens.add({
-          targets: this.activeSprite, alpha: 0, duration: 300,
+          targets: localSprite, alpha: 0, duration: 300,
           onComplete: () => {
-            this.activeSprite?.destroy();
-            this.activeSprite = null;
+            if (localSprite.active) localSprite.destroy();
+            if (this.activeSprite === localSprite) this.activeSprite = null;
           },
         });
       }
     };
+    this.pendingCleanup = cleanup;
 
     // Safety cleanup
     this.scene.time.delayedCall(this.duration + 500, cleanup);
@@ -149,8 +162,10 @@ export class PetalDance implements Attack {
   }
 
   destroy(): void {
+    if (this.pendingCleanup) this.pendingCleanup();
     this.timer.destroy();
-    if (this.tickEvent) this.tickEvent.destroy();
-    if (this.activeSprite) this.activeSprite.destroy();
+    if (this.tickEvent) { this.tickEvent.destroy(); this.tickEvent = null; }
+    if (this.activeEmitter) { this.activeEmitter.destroy(); this.activeEmitter = null; }
+    if (this.activeSprite?.active) { this.activeSprite.destroy(); this.activeSprite = null; }
   }
 }

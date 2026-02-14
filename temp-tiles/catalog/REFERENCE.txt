@@ -1,0 +1,50 @@
+TILESET CATALOG REFERENCE
+========================
+
+Source: pokemon_tileset_from_public_tiles_32x32_by_chaoticcherrycake_dab2byf-fullview.png
+Grid: 8 columns × 651 rows (32px tiles)
+
+SECTIONS:
+  objects-small: rows 0-11 — Small trees & bushes (rows 0-11)
+  objects-misc: rows 12-35 — Cacti, rocks, snow, hedges (rows 12-35)
+  objects-large: rows 36-64 — Giant trees, vines, logs (rows 36-64)
+  tiles-terrain: rows 65-98 — Grass, dirt, sand, stone, paths (rows 65-98)
+  tiles-water: rows 99-130 — Brick, decorative, water (rows 99-130)
+
+COORDINATE SYSTEM:
+  Row 0 = top of tileset
+  Col 0 = left of tileset
+  Each tile = 32×32px
+  In catalog images: 2× scale, red grid lines between tiles
+
+HOW TO USE:
+  1. Open section images in an image viewer
+  2. Count tiles from top-left (row, col) using red grid
+  3. Add coordinates to extract-objects.cjs or extract-ground-tiles.cjs
+
+TILE MAP (from visual inspection):
+  Rows 0-1:   Small round trees (4 color variants, cols 0-3)
+  Rows 2-3:   Small round trees (4 color variants, same pattern)
+  Rows 4-5:   Small pointy trees (4 variants)
+  Rows 6-7:   Medium round trees (4 variants)
+  Rows 8-9:   Tall trees with trunks (4 variants)
+  Rows 10-11: Autumn trees (red, orange, green, dark)
+  Rows 12-14: Cacti, palms, decorative plants
+  Rows 15-25: Large trees with full canopy + shadows
+  Rows 25-30: Snow/ice rocks and formations
+  Rows 30-35: Snow bushes, small formations
+  Rows 36-42: Mixed vegetation (bushes, pines, hedges)
+  Rows 43-50: Giant tree trunks + canopy, hanging vines
+  Rows 50-55: Giant trees, fallen logs, stumps, boulders
+  Rows 55-64: Massive tree trunks, vine details
+  Rows 65-67: Terrain borders (grass/sand transitions)
+  Rows 68-72: Grass tiles (light, dark, flower, tall)
+  Rows 73-77: Sand/desert tiles
+  Rows 78-83: Dirt tiles (various patterns)
+  Rows 84-87: Cliff/ledge tiles
+  Rows 88-92: Rocky terrain, boulders
+  Rows 93-98: Stone paths (brick, cobble, walkway)
+  Rows 99-107: Red brick, decorative tiles
+  Rows 108-114: Beige/herringbone terrain
+  Rows 115-125: Water tiles (waves, edges, sand transitions)
+  Rows 126+: More terrain/water variants

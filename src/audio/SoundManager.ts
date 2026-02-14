@@ -15,7 +15,7 @@ interface ToneStep {
 class SoundManagerImpl {
   private ctx: AudioContext | null = null;
   private muted = false;
-  private masterVolume = 0.03;
+  private masterVolume = 0.012;
   private scene: Phaser.Scene | null = null;
 
   private getContext(): AudioContext {
@@ -111,7 +111,7 @@ class SoundManagerImpl {
   // ── Menu Sounds ────────────────────────────────────────────────────
 
   playClick(): void {
-    if (this.tryPlayOgg('sfx-click', 0.4)) return;
+    if (this.tryPlayOgg('sfx-click', 0.15)) return;
     this.playTones([
       { freq: 800, duration: 0.04, wave: 'square', volume: 0.6 },
       { freq: 1000, duration: 0.03, wave: 'square', volume: 0.4 },
@@ -119,14 +119,14 @@ class SoundManagerImpl {
   }
 
   playHover(): void {
-    if (this.tryPlayOgg('sfx-hover', 0.25)) return;
+    if (this.tryPlayOgg('sfx-hover', 0.1)) return;
     this.playTones([
       { freq: 600, duration: 0.03, wave: 'sine', volume: 0.25 },
     ]);
   }
 
   playStart(): void {
-    if (this.tryPlayOgg('sfx-start', 0.5)) return;
+    if (this.tryPlayOgg('sfx-start', 0.2)) return;
     this.playTones([
       { freq: 523, duration: 0.1, wave: 'square', volume: 0.5 },
       { freq: 659, duration: 0.1, wave: 'square', volume: 0.5 },
@@ -202,7 +202,7 @@ class SoundManagerImpl {
   }
 
   playEvolve(): void {
-    if (this.tryPlayOgg('sfx-evolve-t2', 0.5)) return;
+    if (this.tryPlayOgg('sfx-evolve-t2', 0.2)) return;
     this.playTones([
       { freq: 400, duration: 0.1, wave: 'sine', volume: 0.4 },
       { freq: 500, duration: 0.1, wave: 'sine', volume: 0.4 },
@@ -216,14 +216,14 @@ class SoundManagerImpl {
 
   /** Evolução tier 3 — usa sfx-evolve-t3, fallback para procedural */
   playEvolveT3(): void {
-    if (this.tryPlayOgg('sfx-evolve-t3', 0.5)) return;
+    if (this.tryPlayOgg('sfx-evolve-t3', 0.2)) return;
     this.playEvolve();
   }
 
   // ── Game State Sounds ──────────────────────────────────────────────
 
   playGameOver(): void {
-    if (this.tryPlayOgg('sfx-gameover', 0.5)) return;
+    if (this.tryPlayOgg('sfx-gameover', 0.2)) return;
     this.playTones([
       { freq: 400, duration: 0.15, wave: 'square', volume: 0.5 },
       { freq: 350, duration: 0.15, wave: 'square', volume: 0.45 },
@@ -235,7 +235,7 @@ class SoundManagerImpl {
   }
 
   playVictory(): void {
-    if (this.tryPlayOgg('sfx-victory', 0.5)) return;
+    if (this.tryPlayOgg('sfx-victory', 0.2)) return;
     this.playTones([
       { freq: 523, duration: 0.1, wave: 'square', volume: 0.5 },
       { freq: 659, duration: 0.1, wave: 'square', volume: 0.5 },

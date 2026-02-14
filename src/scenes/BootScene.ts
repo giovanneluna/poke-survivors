@@ -96,7 +96,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('coin-large', 'assets/items/big-nugget.png');
 
     // ── Tile themes (game world tiles — used by WorldSystem) ─────
-    const tileThemes = ['emerald', 'frlg', 'pmd', 'crystal', 'magma', 'sky', 'dark'] as const;
+    const tileThemes = ['emerald', 'frlg', 'pmd', 'crystal', 'magma', 'sky', 'dark', 'route'] as const;
     const tileNames = ['grass-light', 'grass-dark', 'grass-flower', 'dirt', 'water', 'water-edge', 'tree', 'rock', 'path'] as const;
     for (const theme of tileThemes) {
       this.load.image(`theme-preview-${theme}`, `assets/tiles/${theme}/preview.png`);

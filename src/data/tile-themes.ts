@@ -136,6 +136,23 @@ export const TILE_THEMES: readonly TileTheme[] = [
       path: 'tile-dark-path',
     },
   },
+  {
+    id: 'route',
+    name: 'Kanto Route',
+    previewKey: 'theme-preview-route',
+    tileSize: 24,
+    tiles: {
+      grassLight: 'tile-route-grass-light',
+      grassDark: 'tile-route-grass-dark',
+      grassFlower: 'tile-route-grass-flower',
+      dirt: 'tile-route-dirt',
+      water: 'tile-route-water',
+      waterEdge: 'tile-route-water-edge',
+      tree: 'tile-route-tree',
+      rock: 'tile-route-rock',
+      path: 'tile-route-path',
+    },
+  },
 ] as const;
 
 export function getThemeById(id: string): TileTheme {
