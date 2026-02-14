@@ -14,9 +14,39 @@ export interface VersionLog {
   readonly entries: readonly ChangeEntry[];
 }
 
-export const CURRENT_VERSION = '0.51';
+export const CURRENT_VERSION = '0.60';
 
 export const CHANGELOG: readonly VersionLog[] = [
+  {
+    version: '0.60',
+    date: '2026-02-13',
+    entries: [
+      // ── Stage 2: Kanto Coast ──────────────────────────────────────
+      { tag: 'NEW', text: 'Nova Stage: Kanto Coast (Phase 2) com 52 minutos de gameplay' },
+      { tag: 'NEW', text: '22 Pokémon comuns: Pikachu, Sandshrew, Vulpix, Diglett, Meowth, Psyduck, Growlithe e mais' },
+      { tag: 'NEW', text: '11 Bosses: Arcanine, Ninetales, Victreebel, Golduck, Cloyster, Muk, Rapidash, Starmie, Slowbro, Poliwrath, Lapras' },
+      { tag: 'NEW', text: 'Árvores-obstáculo com colisão no mapa da Phase 2' },
+      // ── Progressão ────────────────────────────────────────────────
+      { tag: 'NEW', text: 'Complete a Phase 1 para desbloquear Squirtle + Phase 2' },
+      { tag: 'NEW', text: 'Seletor de Stage na tela de seleção (Phase 1 / Phase 2)' },
+      // ── Eventos Phase 2 ───────────────────────────────────────────
+      { tag: 'NEW', text: 'SafariZone — 3x XP por tempo limitado' },
+      { tag: 'NEW', text: 'Tempestade — lightning + chuva com overlay visual' },
+      { tag: 'NEW', text: 'Team Rocket — Meowth elite que dropa moedas extras' },
+      { tag: 'NEW', text: 'Day Care — heal + buff de companion' },
+      { tag: 'NEW', text: 'Maré Alta — chuva + tint azul no mapa' },
+      { tag: 'NEW', text: 'Berry Garden — 8 arbustos de berry pelo mapa' },
+      // ── Auto-Aim ──────────────────────────────────────────────────
+      { tag: 'NEW', text: 'Auto-aim inteligente: ataques miram no inimigo mais próximo automaticamente' },
+      // ── Visual & Áudio ────────────────────────────────────────────
+      { tag: 'NEW', text: '31 walk sprites novos para todos os Pokémon da Kanto Coast' },
+      { tag: 'NEW', text: '38 novas animações de ataque (fairy, electric, ice, steel, fighting, sound...)' },
+      { tag: 'NEW', text: '7 overlays de status animados: burn, poison, paralysis, confusion, freeze, sleep, protect' },
+      { tag: 'NEW', text: 'WeatherOverlay: chuva, neblina e areia como efeito visual' },
+      { tag: 'NEW', text: '4 temas de mapa extras: Crystal Cave, Magma Cavern, Sky Tower, Dark Crater' },
+      { tag: 'NEW', text: '7 sons reais (.ogg): click, hover, start, evolução, vitória, game over' },
+    ],
+  },
   {
     version: '0.51',
     date: '2026-02-12',
