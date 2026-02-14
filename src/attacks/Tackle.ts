@@ -36,7 +36,7 @@ export class Tackle implements Attack {
   }
 
   private strike(): void {
-    const dir = this.player.getAimDirection();
+    const dir = this.player.getAttackDirection();
     const dirAngleRad = Math.atan2(dir.y, dir.x);
 
     // Visual: flash branco circular no ponto de impacto
@@ -46,17 +46,10 @@ export class Tackle implements Attack {
     const py = this.player.y + offsetY;
 
     if (shouldShowVfx()) {
-      const flash = this.scene.add.circle(px, py, 20, 0xffffff, 0.7);
-      flash.setDepth(10);
-      this.scene.tweens.add({
-        targets: flash,
-        alpha: 0,
-        scaleX: 1.8,
-        scaleY: 1.8,
-        duration: 200,
-        ease: 'Sine.Out',
-        onComplete: () => flash.destroy(),
-      });
+      const sprite = this.scene.add.sprite(px, py, 'atk-scratch');
+      sprite.setDepth(10).setRotation(dirAngleRad).setScale(0.9);
+      sprite.play('anim-scratch');
+      sprite.once('animationcomplete', () => sprite.destroy());
     }
 
     // Dano em arco

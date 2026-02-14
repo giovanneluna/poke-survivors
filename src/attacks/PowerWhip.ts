@@ -46,7 +46,7 @@ export class PowerWhip implements Attack {
   }
 
   private whip(): void {
-    const dir = this.player.getAimDirection();
+    const dir = this.player.getAttackDirection();
     const dirAngleRad = Math.atan2(dir.y, dir.x);
 
     // Visual: sprite do power whip na direcao

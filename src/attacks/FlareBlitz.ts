@@ -36,7 +36,7 @@ export class FlareBlitz implements Attack {
   }
 
   private blitz(): void {
-    const dir = this.player.getAimDirection();
+    const dir = this.player.getAttackDirection();
     const angle = Math.atan2(dir.y, dir.x);
 
     const startX = this.player.x;

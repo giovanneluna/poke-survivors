@@ -26,6 +26,23 @@ const BIOME_NAME_TO_HINT: Record<string, BiomeHint> = {
   path: 'path',
 };
 
+/** Tree obstacle textures loaded in BootScene */
+const TREE_KEYS = [
+  'tree-big-light',
+  'tree-big-green',
+  'tree-big-dark',
+  'tree-big-vdark',
+] as const;
+
+/** Number of tree obstacles to spawn in Phase 2 */
+const TREE_COUNT = 30;
+/** Minimum distance between any two trees (px) */
+const TREE_MIN_DIST = 120;
+/** Margin from world border (px) */
+const TREE_MARGIN = 250;
+/** Min distance from player spawn (center of map) */
+const TREE_PLAYER_SAFE = 200;
+
 export class WorldSystem {
   constructor(private readonly ctx: GameContext) {}
 
@@ -41,11 +58,68 @@ export class WorldSystem {
       for (let row = 0; row < rows; row++) {
         const hint = this.resolveHint(col, row, cols, rows, mapData);
         const textureKey = theme.tiles[hint];
+
         this.ctx.scene.add.image(col * T, row * T, textureKey)
           .setOrigin(0, 0)
           .setDepth(0)
           .setScale(tileScale);
       }
+    }
+  }
+
+  /**
+   * Spawn large tree obstacles that act as walls (Phase 2 only).
+   * Trees have static physics bodies — player and enemies collide with them.
+   */
+  spawnTreeObstacles(): void {
+    if (this.ctx.stageId !== 'phase2') return;
+
+    const W = GAME.worldWidth;
+    const H = GAME.worldHeight;
+    const cx = W / 2;
+    const cy = H / 2;
+    const placed: { x: number; y: number }[] = [];
+
+    let attempts = 0;
+    while (placed.length < TREE_COUNT && attempts < TREE_COUNT * 10) {
+      attempts++;
+      const x = Phaser.Math.Between(TREE_MARGIN, W - TREE_MARGIN);
+      const y = Phaser.Math.Between(TREE_MARGIN, H - TREE_MARGIN);
+
+      // Keep away from player spawn (center)
+      const dx = x - cx;
+      const dy = y - cy;
+      if (dx * dx + dy * dy < TREE_PLAYER_SAFE * TREE_PLAYER_SAFE) continue;
+
+      // Keep away from other trees
+      const tooClose = placed.some(p => {
+        const px = x - p.x;
+        const py = y - p.y;
+        return px * px + py * py < TREE_MIN_DIST * TREE_MIN_DIST;
+      });
+      if (tooClose) continue;
+
+      placed.push({ x, y });
+
+      // Pick a random tree variant
+      const key = TREE_KEYS[Phaser.Math.Between(0, TREE_KEYS.length - 1)];
+
+      const tree = this.ctx.scene.physics.add.staticImage(x, y, key);
+      tree.setOrigin(0.5, 0.9);
+      tree.setScale(2.0);
+      tree.refreshBody();
+      // Depth: Y-sorted so southern trees render in front
+      tree.setDepth(2 + Math.min(y / H * 0.89, 0.89));
+
+      // Collision body: small rectangle at trunk base (~40% width, ~25% height)
+      const dw = tree.displayWidth;
+      const dh = tree.displayHeight;
+      const bw = Math.round(dw * 0.4);
+      const bh = Math.round(dh * 0.25);
+      tree.body.setSize(bw, bh);
+      tree.body.setOffset(Math.round((dw - bw) / 2), dh - bh);
+
+      this.ctx.treeObstacles.add(tree);
     }
   }
 
@@ -66,16 +140,11 @@ export class WorldSystem {
       const terrainValue = mapData.terrain[key];
       if (terrainValue !== undefined) {
         // Value with source prefix (e.g. 'emerald:ground-grass-light') = exact tile ID
-        // Currently we resolve it to the closest biome hint
         if (terrainValue.includes(':')) {
-          // Extract the tile name after the category prefix
-          // Format: 'source:category-name' e.g. 'emerald:ground-grass-light'
           const afterColon = terrainValue.split(':')[1];
           const tileName = afterColon.replace(/^[^-]+-/, '');
-          // Try to map common tile names to biome hints
           const mapped = BIOME_NAME_TO_HINT[tileName];
           if (mapped) return mapped;
-          // Fallback: try the full value after colon
           const mapped2 = BIOME_NAME_TO_HINT[afterColon];
           if (mapped2) return mapped2;
         }

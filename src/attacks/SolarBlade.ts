@@ -44,7 +44,7 @@ export class SolarBlade implements Attack {
   }
 
   private slash(): void {
-    const dir = this.player.getAimDirection();
+    const dir = this.player.getAttackDirection();
     const dirAngleRad = Math.atan2(dir.y, dir.x);
 
     const isCrit = Math.random() < this.critChance;

@@ -42,7 +42,7 @@ export class DragonClaw implements Attack {
   }
 
   private strike(): void {
-    const dir = this.player.getAimDirection();
+    const dir = this.player.getAttackDirection();
     const baseAngleRad = Math.atan2(dir.y, dir.x);
 
     for (let hit = 0; hit < this.hitCount; hit++) {

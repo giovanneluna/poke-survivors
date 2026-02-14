@@ -27,9 +27,9 @@ export const NIDOKING: BossConfig = {
     damage: 45,
     cooldownMs: 8000,
     aoeRadius: 300,
-    spriteKey: 'atk-rock-slide',
-    animKey: 'anim-rock-slide',
-    spriteScale: 2,
+    spriteKey: 'atk-precipice-blades',
+    animKey: 'anim-precipice-blades',
+    spriteScale: 4,
     tintColor: 0x886644,
     aoeColor: 0x886644,
   }, {

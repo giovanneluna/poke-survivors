@@ -24,6 +24,7 @@ import {
   setRunRecordDamage,
 } from "../systems/DamageTracker"
 import { safeExplode } from "../utils/particles"
+import { clearAllStatusOverlays } from "../systems/StatusOverlay"
 import { initStatsTracker, getStatsTracker } from "../systems/RunRecorder"
 import { initComboSystem, getComboSystem } from "../systems/ComboSystem"
 import { initEventSystem, getEventSystem } from "../systems/EventSystem"
@@ -37,6 +38,7 @@ import {
   accumulateRunStats,
   saveLastRun,
   getPowerUpLevel,
+  unlockStarter,
 } from "../systems/SaveSystem"
 import { Boss } from "../entities/Boss"
 
@@ -45,6 +47,7 @@ export class GameScene extends Phaser.Scene {
   enemyGroup!: Phaser.Physics.Arcade.Group
   xpGems!: Phaser.Physics.Arcade.Group
   private destructibles!: Phaser.Physics.Arcade.StaticGroup
+  private treeObstacles!: Phaser.Physics.Arcade.StaticGroup
   private pickups!: Phaser.Physics.Arcade.Group
   private enemyProjectiles!: Phaser.Physics.Arcade.Group
 
@@ -61,6 +64,7 @@ export class GameScene extends Phaser.Scene {
   private difficulty: Difficulty = "hard"
   private tileThemeId = "emerald"
   private mapId: string | null = null
+  private stageId = "phase1"
   private starterConfig!: StarterConfig
   private devConfig?: DevConfig
 
@@ -83,12 +87,14 @@ export class GameScene extends Phaser.Scene {
     difficulty?: Difficulty
     tileThemeId?: string
     mapId?: string | null
+    stageId?: string
   }): void {
     this.debugMode = data?.debugMode ?? false
     this.devConfig = data?.devConfig
     this.difficulty = data?.difficulty ?? "hard"
     this.tileThemeId = data?.tileThemeId ?? "emerald"
     this.mapId = data?.mapId ?? null
+    this.stageId = data?.stageId ?? "phase1"
     this.starterKey =
       this.devConfig?.starterKey ?? data?.starterKey ?? "charmander"
   }
@@ -100,6 +106,9 @@ export class GameScene extends Phaser.Scene {
     this.rerollLocked = false
     this.joystick = null
     resetDamageTotals()
+
+    // ── SoundManager: habilita sons .ogg via Phaser sound manager ──
+    SoundManager.initWithScene(this)
 
     this.physics.world.setBounds(0, 0, GAME.worldWidth, GAME.worldHeight)
 
@@ -144,6 +153,7 @@ export class GameScene extends Phaser.Scene {
     })
     this.xpGems = this.physics.add.group({ defaultKey: "xp-gem", maxSize: 500 })
     this.destructibles = this.physics.add.staticGroup()
+    this.treeObstacles = this.physics.add.staticGroup()
     this.pickups = this.physics.add.group()
     this.enemyProjectiles = this.physics.add.group({
       defaultKey: "atk-shadow-ball",
@@ -164,7 +174,9 @@ export class GameScene extends Phaser.Scene {
       devConfig: this.devConfig,
       difficulty: this.difficulty,
       tileThemeId: this.tileThemeId,
+      treeObstacles: this.treeObstacles,
       mapId: this.mapId,
+      stageId: this.stageId,
     }
 
     // ── Persistent systems ───────────────────────────────────────────
@@ -215,6 +227,11 @@ export class GameScene extends Phaser.Scene {
 
     // ── World generation ────────────────────────────────────────────
     this.worldSystem.generateWorld()
+    this.worldSystem.spawnTreeObstacles()
+
+    // ── Tree obstacle collisions (walls) ──────────────────────────
+    this.physics.add.collider(this.player, this.treeObstacles)
+    this.physics.add.collider(this.enemyGroup, this.treeObstacles)
 
     // ── Dev Mode setup ──────────────────────────────────────────────
     if (this.devConfig) {
@@ -536,6 +553,9 @@ export class GameScene extends Phaser.Scene {
       addCoins(coinsEarned)
       this.pickupSystem.resetRunCoins()
 
+      // Unlock Squirtle ao completar a primeira fase
+      const newlyUnlocked = unlockStarter('squirtle')
+
       const bestCombo = getComboSystem().getBestCombo()
       const formName =
         (this.starterConfig.forms ?? []).find(
@@ -551,6 +571,7 @@ export class GameScene extends Phaser.Scene {
         bestCombo,
         starterKey: this.starterKey,
         formName,
+        unlockedSquirtle: newlyUnlocked,
       })
     })
 
@@ -738,6 +759,7 @@ export class GameScene extends Phaser.Scene {
   private gameOver(): void {
     this.isPaused = true
     this.physics.pause()
+    clearAllStatusOverlays(this.player)
     SoundManager.playGameOver()
 
     // Remove F5 save handler (coins serão salvos abaixo)

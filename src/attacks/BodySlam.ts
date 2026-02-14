@@ -60,33 +60,12 @@ export class BodySlam implements Attack {
         const slamX = this.player.x + offsetX;
         const slamY = this.player.y + offsetY;
 
-        // Circulo branco/azul de impacto
+        // Sprite de impacto heavy-slam
         if (shouldShowVfx()) {
-          const flash = this.scene.add.circle(slamX, slamY, 22, 0xccddff, 0.7);
-          flash.setDepth(10);
-          this.scene.tweens.add({
-            targets: flash,
-            alpha: 0,
-            scaleX: 2.0,
-            scaleY: 2.0,
-            duration: 200,
-            ease: 'Sine.Out',
-            onComplete: () => flash.destroy(),
-          });
-
-          // Anel de impacto azulado
-          const ring = this.scene.add.circle(slamX, slamY, 8, 0x6699cc, 0.5);
-          ring.setDepth(10);
-          ring.setStrokeStyle(2, 0x88bbff, 0.6);
-          this.scene.tweens.add({
-            targets: ring,
-            alpha: 0,
-            scaleX: 2.5,
-            scaleY: 2.5,
-            duration: 250,
-            ease: 'Sine.Out',
-            onComplete: () => ring.destroy(),
-          });
+          const slamSprite = this.scene.add.sprite(slamX, slamY, 'atk-heavy-slam');
+          slamSprite.setDepth(10).setScale(2).setRotation(sectorAngle);
+          slamSprite.play('anim-heavy-slam');
+          slamSprite.once('animationcomplete', () => slamSprite.destroy());
         }
 
         // Particulas de impacto

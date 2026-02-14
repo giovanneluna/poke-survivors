@@ -83,6 +83,43 @@ export const ENEMY_SPRITES: Readonly<Record<string, SpriteConfig>> = {
   pidgeot:   { key: 'pidgeot-walk',   path: 'assets/pokemon/pidgeot-walk.png',   frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
   machamp:   { key: 'machamp-walk',   path: 'assets/pokemon/machamp-walk.png',   frameWidth: 32, frameHeight: 48, frameCount: 4,  directions: 8 },
   golem:     { key: 'golem-walk',     path: 'assets/pokemon/golem-walk.png',     frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+
+  // ── Stage 2 — Kanto Coast: commons ──────────────────────────────────
+  pikachu:    { key: 'pikachu-walk',    path: 'assets/pokemon/pikachu-walk.png',    frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+  sandshrew:  { key: 'sandshrew-walk',  path: 'assets/pokemon/sandshrew-walk.png',  frameWidth: 32, frameHeight: 32, frameCount: 4,  directions: 8 },
+  vulpix:     { key: 'vulpix-walk',     path: 'assets/pokemon/vulpix-walk.png',     frameWidth: 32, frameHeight: 40, frameCount: 5,  directions: 8 },
+  diglett:    { key: 'diglett-walk',    path: 'assets/pokemon/diglett-walk.png',    frameWidth: 40, frameHeight: 40, frameCount: 3,  directions: 8 },
+  meowth:     { key: 'meowth-walk',     path: 'assets/pokemon/meowth-walk.png',     frameWidth: 24, frameHeight: 32, frameCount: 4,  directions: 8 },
+  psyduck:    { key: 'psyduck-walk',    path: 'assets/pokemon/psyduck-walk.png',    frameWidth: 24, frameHeight: 40, frameCount: 4,  directions: 8 },
+  growlithe:  { key: 'growlithe-walk',  path: 'assets/pokemon/growlithe-walk.png',  frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+  poliwag:    { key: 'poliwag-walk',    path: 'assets/pokemon/poliwag-walk.png',    frameWidth: 32, frameHeight: 40, frameCount: 5,  directions: 8 },
+  bellsprout: { key: 'bellsprout-walk', path: 'assets/pokemon/bellsprout-walk.png', frameWidth: 24, frameHeight: 32, frameCount: 4,  directions: 8 },
+  ponyta:     { key: 'ponyta-walk',     path: 'assets/pokemon/ponyta-walk.png',     frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+  slowpoke:   { key: 'slowpoke-walk',   path: 'assets/pokemon/slowpoke-walk.png',   frameWidth: 24, frameHeight: 32, frameCount: 4,  directions: 8 },
+  farfetchd:  { key: 'farfetchd-walk',  path: 'assets/pokemon/farfetchd-walk.png',  frameWidth: 24, frameHeight: 32, frameCount: 4,  directions: 8 },
+  doduo:      { key: 'doduo-walk',      path: 'assets/pokemon/doduo-walk.png',      frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+  seel:       { key: 'seel-walk',       path: 'assets/pokemon/seel-walk.png',       frameWidth: 32, frameHeight: 40, frameCount: 7,  directions: 8 },
+  grimer_p2:  { key: 'grimer-p2-walk',  path: 'assets/pokemon/grimer-walk.png',     frameWidth: 32, frameHeight: 32, frameCount: 6,  directions: 8 },
+  shellder:   { key: 'shellder-walk',   path: 'assets/pokemon/shellder-walk.png',   frameWidth: 24, frameHeight: 32, frameCount: 6,  directions: 8 },
+  krabby:     { key: 'krabby-walk',     path: 'assets/pokemon/krabby-walk.png',     frameWidth: 32, frameHeight: 32, frameCount: 4,  directions: 8 },
+  exeggcute:  { key: 'exeggcute-walk',  path: 'assets/pokemon/exeggcute-walk.png',  frameWidth: 32, frameHeight: 32, frameCount: 4,  directions: 8 },
+  horsea:     { key: 'horsea-walk',     path: 'assets/pokemon/horsea-walk.png',     frameWidth: 24, frameHeight: 48, frameCount: 4,  directions: 8 },
+  goldeen:    { key: 'goldeen-walk',    path: 'assets/pokemon/goldeen-walk.png',    frameWidth: 32, frameHeight: 40, frameCount: 8,  directions: 8 },
+  staryu:     { key: 'staryu-walk',     path: 'assets/pokemon/staryu-walk.png',     frameWidth: 24, frameHeight: 32, frameCount: 4,  directions: 8 },
+  jigglypuff: { key: 'jigglypuff-walk', path: 'assets/pokemon/jigglypuff-walk.png', frameWidth: 32, frameHeight: 40, frameCount: 5,  directions: 8 },
+
+  // ── Stage 2 — Kanto Coast: bosses ───────────────────────────────────
+  arcanine:   { key: 'arcanine-walk',   path: 'assets/pokemon/arcanine-walk.png',   frameWidth: 32, frameHeight: 48, frameCount: 4,  directions: 8 },
+  ninetales:  { key: 'ninetales-walk',  path: 'assets/pokemon/ninetales-walk.png',  frameWidth: 40, frameHeight: 40, frameCount: 4,  directions: 8 },
+  victreebel: { key: 'victreebel-walk', path: 'assets/pokemon/victreebel-walk.png', frameWidth: 32, frameHeight: 56, frameCount: 4,  directions: 8 },
+  golduck:    { key: 'golduck-walk',    path: 'assets/pokemon/golduck-walk.png',    frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+  cloyster:   { key: 'cloyster-walk',   path: 'assets/pokemon/cloyster-walk.png',   frameWidth: 32, frameHeight: 48, frameCount: 6,  directions: 8 },
+  muk:        { key: 'muk-walk',        path: 'assets/pokemon/muk-walk.png',        frameWidth: 48, frameHeight: 40, frameCount: 5,  directions: 8 },
+  rapidash:   { key: 'rapidash-walk',   path: 'assets/pokemon/rapidash-walk.png',   frameWidth: 40, frameHeight: 56, frameCount: 4,  directions: 8 },
+  starmie:    { key: 'starmie-walk',    path: 'assets/pokemon/starmie-walk.png',    frameWidth: 24, frameHeight: 40, frameCount: 4,  directions: 8 },
+  slowbro:    { key: 'slowbro-walk',    path: 'assets/pokemon/slowbro-walk.png',    frameWidth: 32, frameHeight: 40, frameCount: 4,  directions: 8 },
+  poliwrath:  { key: 'poliwrath-walk',  path: 'assets/pokemon/poliwrath-walk.png',  frameWidth: 40, frameHeight: 40, frameCount: 4,  directions: 8 },
+  lapras:     { key: 'lapras-walk',     path: 'assets/pokemon/lapras-walk.png',     frameWidth: 48, frameHeight: 56, frameCount: 4,  directions: 8 },
 } as const;
 
 /** Attack/Shoot/Charge animation sprites (PMDCollab) — auto-generated */

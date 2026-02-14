@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ENEMIES, WAVES, SPAWN, BOSS_SCHEDULE, DIFFICULTY } from '../config';
+import { ENEMIES, SPAWN, STAGES, DIFFICULTY } from '../config';
 import type { EnemyConfig, BossConfig, BossAttackConfig, BossSpawnConfig, WaveConfig, EnemyRangedConfig, EnemyBoomerangConfig, EnemyType } from '../types';
 import { Enemy } from '../entities/Enemy';
 import { Boss } from '../entities/Boss';
@@ -29,7 +29,15 @@ export class SpawnSystem {
   private readonly healTintedEnemies = new Set<Phaser.Physics.Arcade.Sprite>();
   private healTintClearTime = 0;
 
-  constructor(private readonly ctx: GameContext) {}
+  // ── Stage-resolved data ────────────────────────────────────────────
+  private readonly stageWaves: readonly WaveConfig[];
+  private readonly stageBosses: readonly BossSpawnConfig[];
+
+  constructor(private readonly ctx: GameContext) {
+    const stage = STAGES[ctx.stageId] ?? STAGES['phase1'];
+    this.stageWaves = stage.waves;
+    this.stageBosses = stage.bosses;
+  }
 
   // ── Iniciar spawning (modo normal) ────────────────────────────────
   startSpawning(): void {
@@ -38,7 +46,7 @@ export class SpawnSystem {
 
     const spawnMult = DIFFICULTY[this.ctx.difficulty].spawnRateMultiplier;
     this.spawnTimer = scene.time.addEvent({
-      delay: Math.round(WAVES[0].spawnRate * spawnMult), loop: true, callback: () => this.spawnEnemy(),
+      delay: Math.round(this.stageWaves[0].spawnRate * spawnMult), loop: true, callback: () => this.spawnEnemy(),
     });
 
     scene.time.addEvent({
@@ -163,7 +171,7 @@ export class SpawnSystem {
   }
 
   private getCurrentWave(): WaveConfig {
-    return WAVES[Math.min(this.difficultyLevel, WAVES.length - 1)];
+    return this.stageWaves[Math.min(this.difficultyLevel, this.stageWaves.length - 1)];
   }
 
   private pickEnemyType(wave: WaveConfig): EnemyConfig {
@@ -321,7 +329,7 @@ export class SpawnSystem {
     }
 
     // ── Phase-complete: todos os bosses derrotados ────────────────
-    if (this.bossQueueIndex >= BOSS_SCHEDULE.length
+    if (this.bossQueueIndex >= this.stageBosses.length
         && this.activeBosses.size === 0
         && !this.waitingForSpawn
         && !this.allBossesDefeated) {
@@ -361,9 +369,9 @@ export class SpawnSystem {
     }
 
     // ── Sem boss vivo — verifica se é hora do próximo ─────────────
-    if (this.bossQueueIndex >= BOSS_SCHEDULE.length) return;
+    if (this.bossQueueIndex >= this.stageBosses.length) return;
 
-    const nextBoss = BOSS_SCHEDULE[this.bossQueueIndex];
+    const nextBoss = this.stageBosses[this.bossQueueIndex];
     const scheduledMs = nextBoss.timeSeconds * 1000;
     const minGapMs = this.lastBossDeathElapsed > 0
       ? this.lastBossDeathElapsed + SpawnSystem.BOSS_MIN_GAP_MS
@@ -775,6 +783,16 @@ export class SpawnSystem {
         const tpDist = Phaser.Math.FloatBetween(140, teleRange);
         const destX = playerX + Math.cos(tpAngle) * tpDist;
         const destY = playerY + Math.sin(tpAngle) * tpDist;
+
+        // Portal VFX na posição de destino
+        if (scene.anims.exists('anim-portal')) {
+          const portal = scene.add.sprite(destX, destY, 'env-portal');
+          portal.setScale(2.5).setAlpha(0.8).setDepth(6);
+          portal.play('anim-portal');
+          // Destrói após 1 ciclo completo da animação
+          const animDuration = scene.anims.get('anim-portal')?.duration ?? 800;
+          scene.time.delayedCall(animDuration, () => { if (portal.active) portal.destroy(); });
+        }
 
         scene.time.delayedCall(300, () => {
           if (!boss.active) return;

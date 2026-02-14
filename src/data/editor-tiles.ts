@@ -5,7 +5,7 @@
  * Each tile has metadata for rendering, collision, and categorization.
  */
 
-export type TileSource = 'emerald' | 'frlg' | 'pmd';
+export type TileSource = 'emerald' | 'frlg' | 'pmd' | 'crystal' | 'magma' | 'sky' | 'dark';
 export type TileCategory = 'ground' | 'water' | 'nature' | 'buildings' | 'decoration';
 
 export interface EditorTile {
@@ -81,6 +81,31 @@ function pmd(
     category,
     name,
     path: `assets/tiles/pmd/${tileset}/${file}`,
+    width: 1,
+    height: 1,
+    tileSize: 24,
+    collision: opts?.collision ?? false,
+    destructible: false,
+  };
+}
+
+/** Helper for extracted PMD themes (24×24, flat directory with semantic names) */
+function pmdTheme(
+  source: 'crystal' | 'magma' | 'sky' | 'dark',
+  file: string,
+  name: string,
+  opts?: { collision?: boolean },
+): EditorTile {
+  const base = file.replace('.png', '');
+  const category: TileCategory = file.includes('water') ? 'water'
+    : file.includes('tree') || file.includes('rock') ? 'nature'
+    : 'ground';
+  return {
+    id: `${source}:${category}-${base}`,
+    source,
+    category,
+    name,
+    path: `assets/tiles/${source}/${file}`,
     width: 1,
     height: 1,
     tileSize: 24,
@@ -223,14 +248,72 @@ export const EDITOR_TILES: readonly EditorTile[] = [
   pmd('forest-path', 'floor-2.png', 'FP Floor Alt'),
   pmd('forest-path', 'water.png', 'FP Water'),
   pmd('forest-path', 'wall.png', 'FP Wall', { collision: true }),
+
+  // ═══════════════════════════════════════════════════════════════════
+  // CRYSTAL CAVE (24x24) — Icy blue cave
+  // ═══════════════════════════════════════════════════════════════════
+  pmdTheme('crystal', 'grass-light.png', 'Crystal Floor'),
+  pmdTheme('crystal', 'grass-dark.png', 'Crystal Floor Dark'),
+  pmdTheme('crystal', 'grass-flower.png', 'Crystal Decor'),
+  pmdTheme('crystal', 'dirt.png', 'Crystal Dirt'),
+  pmdTheme('crystal', 'path.png', 'Crystal Path'),
+  pmdTheme('crystal', 'water.png', 'Crystal Water'),
+  pmdTheme('crystal', 'water-edge.png', 'Crystal Water Edge'),
+  pmdTheme('crystal', 'tree.png', 'Crystal Pillar', { collision: true }),
+  pmdTheme('crystal', 'rock.png', 'Crystal Rock', { collision: true }),
+
+  // ═══════════════════════════════════════════════════════════════════
+  // MAGMA CAVERN (24x24) — Volcanic fiery cave
+  // ═══════════════════════════════════════════════════════════════════
+  pmdTheme('magma', 'grass-light.png', 'Magma Floor'),
+  pmdTheme('magma', 'grass-dark.png', 'Magma Floor Dark'),
+  pmdTheme('magma', 'grass-flower.png', 'Magma Decor'),
+  pmdTheme('magma', 'dirt.png', 'Magma Dirt'),
+  pmdTheme('magma', 'path.png', 'Magma Path'),
+  pmdTheme('magma', 'water.png', 'Magma Lava'),
+  pmdTheme('magma', 'water-edge.png', 'Magma Lava Edge'),
+  pmdTheme('magma', 'tree.png', 'Magma Stalagmite', { collision: true }),
+  pmdTheme('magma', 'rock.png', 'Magma Rock', { collision: true }),
+
+  // ═══════════════════════════════════════════════════════════════════
+  // SKY TOWER (24x24) — Celestial tower
+  // ═══════════════════════════════════════════════════════════════════
+  pmdTheme('sky', 'grass-light.png', 'Sky Floor'),
+  pmdTheme('sky', 'grass-dark.png', 'Sky Floor Dark'),
+  pmdTheme('sky', 'grass-flower.png', 'Sky Decor'),
+  pmdTheme('sky', 'dirt.png', 'Sky Dirt'),
+  pmdTheme('sky', 'path.png', 'Sky Path'),
+  pmdTheme('sky', 'water.png', 'Sky Cloud'),
+  pmdTheme('sky', 'water-edge.png', 'Sky Cloud Edge'),
+  pmdTheme('sky', 'tree.png', 'Sky Column', { collision: true }),
+  pmdTheme('sky', 'rock.png', 'Sky Rock', { collision: true }),
+
+  // ═══════════════════════════════════════════════════════════════════
+  // DARK CRATER (24x24) — Dark sinister crater
+  // ═══════════════════════════════════════════════════════════════════
+  pmdTheme('dark', 'grass-light.png', 'Dark Floor'),
+  pmdTheme('dark', 'grass-dark.png', 'Dark Floor Dark'),
+  pmdTheme('dark', 'grass-flower.png', 'Dark Decor'),
+  pmdTheme('dark', 'dirt.png', 'Dark Dirt'),
+  pmdTheme('dark', 'path.png', 'Dark Path'),
+  pmdTheme('dark', 'water.png', 'Dark Water'),
+  pmdTheme('dark', 'water-edge.png', 'Dark Water Edge'),
+  pmdTheme('dark', 'tree.png', 'Dark Pillar', { collision: true }),
+  pmdTheme('dark', 'rock.png', 'Dark Rock', { collision: true }),
 ] as const;
 
 // ── Lookup Functions ──────────────────────────────────────────────────
 
 const tileById = new Map<string, EditorTile>();
 for (const tile of EDITOR_TILES) {
+  if (tileById.has(tile.id)) {
+    console.error(`[editor-tiles] Duplicate ID: ${tile.id}`);
+  }
   tileById.set(tile.id, tile);
 }
+
+/** All unique tile sources present in the registry */
+export const TILE_SOURCES: readonly TileSource[] = [...new Set(EDITOR_TILES.map(t => t.source))];
 
 export function getTileById(id: string): EditorTile | undefined {
   return tileById.get(id);

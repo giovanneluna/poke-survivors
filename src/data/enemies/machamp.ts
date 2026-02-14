@@ -58,6 +58,9 @@ export const MACHAMP: BossConfig = {
     buffType: 'speed',
     buffValue: 0.3,
     buffDuration: 6000,
+    spriteKey: 'atk-bulk-up-pac',
+    animKey: 'anim-bulk-up-pac',
+    spriteScale: 2,
     tintColor: 0xffdd44,
     aoeColor: 0xffdd44,
   }, {

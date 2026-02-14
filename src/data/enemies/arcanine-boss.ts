@@ -1,0 +1,47 @@
+import type { BossConfig } from '../../types';
+import { SPRITES } from '../sprites';
+
+export const ARCANINE_BOSS: BossConfig = {
+  key: 'arcanine',
+  name: 'Arcanine',
+  sprite: SPRITES.arcanine,
+  hp: 3500,
+  speed: 70,
+  damage: 30,
+  xpValue: 200,
+  scale: 1.6,
+  isBoss: true,
+  resistance: 0.15,
+  hpRegenPerSec: 15,
+  archetype: 'striker',
+  bossAttacks: [{
+    name: 'Flamethrower',
+    pattern: 'beam',
+    damage: 35,
+    cooldownMs: 5000,
+    range: 200,
+    beamDuration: 1200,
+    beamWidth: 24,
+    spriteKey: 'atk-flamethrower',
+    animKey: 'anim-flamethrower',
+    tintColor: 0xff4400,
+    aoeColor: 0xff6600,
+  }, {
+    name: 'Extreme Speed',
+    pattern: 'charge',
+    damage: 40,
+    cooldownMs: 4000,
+    range: 200,
+    tintColor: 0xffaa00,
+  }, {
+    name: 'Fire Blast',
+    pattern: 'aoe-land',
+    damage: 45,
+    cooldownMs: 7000,
+    aoeRadius: 150,
+    spriteKey: 'atk-fire-blast',
+    animKey: 'anim-fire-blast',
+    spriteScale: 2,
+    aoeColor: 0xff2200,
+  }],
+};

@@ -15,6 +15,8 @@ import { formIndex } from "../types"
 import { getPassive } from "../systems/PassiveSystem"
 import { setDamageSource, clearDamageSource, setFormDamageMultiplier } from "../systems/DamageTracker"
 import { getMegaSystem } from "../systems/MegaSystem"
+import { showStatusOverlay } from "../systems/StatusOverlay"
+import { getSpatialGrid } from "../systems/SpatialHashGrid"
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   readonly stats: PlayerState
@@ -171,6 +173,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (time - this.lastConfuseApplied < Player.CONFUSE_COOLDOWN) return
     this.confusionUntil = time + durationMs
     this.lastConfuseApplied = time
+    showStatusOverlay(this.scene, this, 'confusion', durationMs)
   }
 
   isConfused(time: number): boolean {
@@ -180,6 +183,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   // ── Stun effect ──────────────────────────────────────────────────
   applyStun(durationMs: number, time: number): void {
     this.stunUntil = time + durationMs
+    showStatusOverlay(this.scene, this, 'paralysis', durationMs)
   }
 
   isStunned(time: number): boolean {
@@ -190,6 +194,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   applyPoison(dps: number, durationMs: number, time: number): void {
     this.poisonUntil = time + durationMs
     this.poisonDps = dps
+    showStatusOverlay(this.scene, this, 'poison', durationMs)
   }
 
   isPoisoned(time: number): boolean {
@@ -253,6 +258,27 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const len = Math.sqrt(dx * dx + dy * dy)
     if (len < 10) return this.lastDirection.clone()
     return new Phaser.Math.Vector2(dx / len, dy / len)
+  }
+
+  /** Smart aim for cone/melee attacks: nearest enemy → cursor → movement dir */
+  getAttackDirection(): Phaser.Math.Vector2 {
+    // Manual aim mode: aim at cursor
+    if (this.manualAimEnabled) {
+      const dx = this.cursorWorldX - this.x
+      const dy = this.cursorWorldY - this.y
+      const len = Math.sqrt(dx * dx + dy * dy)
+      if (len >= 10) return new Phaser.Math.Vector2(dx / len, dy / len)
+    }
+    // Auto-aim: nearest enemy within 250px
+    const nearest = getSpatialGrid().queryNearest(this.x, this.y, 250)
+    if (nearest) {
+      const dx = nearest.x - this.x
+      const dy = nearest.y - this.y
+      const len = Math.sqrt(dx * dx + dy * dy)
+      if (len > 1) return new Phaser.Math.Vector2(dx / len, dy / len)
+    }
+    // Fallback: last movement direction
+    return this.lastDirection.clone()
   }
 
   /** Para projectiles: retorna ponto do cursor, ou null se auto-aim */

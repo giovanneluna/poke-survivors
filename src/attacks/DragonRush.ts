@@ -37,7 +37,7 @@ export class DragonRush implements Attack {
 
   private charge(): void {
     if (!this.player.active) return;
-    const dir = this.player.getAimDirection();
+    const dir = this.player.getAttackDirection();
     const angle = Math.atan2(dir.y, dir.x);
 
     const startX = this.player.x;

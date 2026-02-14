@@ -24,6 +24,9 @@ export class BootScene extends Phaser.Scene {
 
     this.load.on('progress', (value: number) => { bar.width = 296 * value; });
     this.load.on('complete', () => { barBg.destroy(); bar.destroy(); loadingText.destroy(); });
+    this.load.on('loaderror', (file: Phaser.Loader.File) => {
+      console.error(`[BootScene] Failed to load: ${file.key} (${file.url})`);
+    });
 
     // Carrega starters (Charmander, Squirtle, Bulbasaur)
     for (const starter of STARTERS) {
@@ -93,13 +96,18 @@ export class BootScene extends Phaser.Scene {
     this.load.image('coin-large', 'assets/items/big-nugget.png');
 
     // ── Tile themes (game world tiles — used by WorldSystem) ─────
-    const tileThemes = ['emerald', 'frlg', 'pmd'] as const;
+    const tileThemes = ['emerald', 'frlg', 'pmd', 'crystal', 'magma', 'sky', 'dark', 'route'] as const;
     const tileNames = ['grass-light', 'grass-dark', 'grass-flower', 'dirt', 'water', 'water-edge', 'tree', 'rock', 'path'] as const;
     for (const theme of tileThemes) {
       this.load.image(`theme-preview-${theme}`, `assets/tiles/${theme}/preview.png`);
       for (const tile of tileNames) {
         this.load.image(`tile-${theme}-${tile}`, `assets/tiles/${theme}/${tile}.png`);
       }
+    }
+
+    // ── Tree obstacles (Phase 2) ────────────────────────────────
+    for (const name of ['tree-big-light', 'tree-big-green', 'tree-big-dark', 'tree-big-vdark']) {
+      this.load.image(name, `assets/trees/${name}.png`);
     }
 
     // ── Editor tiles (Map Editor palette — all extracted tiles) ─
@@ -328,6 +336,75 @@ export class BootScene extends Phaser.Scene {
     this.load.spritesheet('atk-poison-range', 'assets/attacks/poison/poison-range-sheet.png', { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet('atk-screech', 'assets/attacks/poison/screech-sheet.png', { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet('atk-dark-range', 'assets/attacks/dark/dark-range-sheet.png', { frameWidth: 32, frameHeight: 32 });
+
+    // ── PAC (pokemonAutoChess) Boss Attack Upgrades ──────────────
+    this.load.spritesheet('atk-super-fang', 'assets/attacks/normal/super-fang-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-precipice-blades', 'assets/attacks/ground/precipice-blades-sheet.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('atk-dynamax-cannon', 'assets/attacks/normal/dynamax-cannon-sheet.png', { frameWidth: 32, frameHeight: 240 });
+    this.load.spritesheet('atk-heavy-slam', 'assets/attacks/fighting/heavy-slam-sheet.png', { frameWidth: 31, frameHeight: 16 });
+    this.load.spritesheet('atk-petal-dance-pac', 'assets/attacks/grass/petal-dance-pac-sheet.png', { frameWidth: 64, frameHeight: 88 });
+    this.load.spritesheet('atk-stun-spore-pac', 'assets/attacks/grass/stun-spore-pac-sheet.png', { frameWidth: 40, frameHeight: 64 });
+    this.load.spritesheet('atk-close-combat-pac', 'assets/attacks/fighting/close-combat-pac-sheet.png', { frameWidth: 65, frameHeight: 64 });
+    this.load.spritesheet('atk-seismic-toss-pac', 'assets/attacks/fighting/seismic-toss-pac-sheet.png', { frameWidth: 80, frameHeight: 64 });
+    this.load.spritesheet('atk-dream-eater-pac', 'assets/attacks/ghost/dream-eater-pac-sheet.png', { frameWidth: 56, frameHeight: 56 });
+    this.load.spritesheet('atk-night-shade-pac', 'assets/attacks/ghost/night-shade-pac-sheet.png', { frameWidth: 64, frameHeight: 57 });
+    this.load.spritesheet('atk-rock-slide-pac', 'assets/attacks/rock/rock-slide-pac-sheet.png', { frameWidth: 80, frameHeight: 256 });
+    this.load.spritesheet('atk-explosion-pac', 'assets/attacks/normal/explosion-pac-sheet.png', { frameWidth: 168, frameHeight: 128 });
+    this.load.spritesheet('atk-bulk-up-pac', 'assets/attacks/fighting/bulk-up-pac-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-future-sight-pac', 'assets/attacks/psychic/future-sight-pac-sheet.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('atk-psystrike-pac', 'assets/attacks/psychic/psystrike-pac-sheet.png', { frameWidth: 64, frameHeight: 64 });
+
+    // ── PAC Status Effects ───────────────────────────────────────
+    this.load.spritesheet('status-burn', 'assets/attacks/status/burn-sheet.png', { frameWidth: 13, frameHeight: 16 });
+    this.load.spritesheet('status-poison', 'assets/attacks/status/poison-sheet.png', { frameWidth: 14, frameHeight: 15 });
+    this.load.spritesheet('status-paralysis', 'assets/attacks/status/paralysis-sheet.png', { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet('status-confusion', 'assets/attacks/status/confusion-sheet.png', { frameWidth: 32, frameHeight: 15 });
+    this.load.spritesheet('status-freeze', 'assets/attacks/status/freeze-sheet.png', { frameWidth: 31, frameHeight: 31 });
+    this.load.spritesheet('status-sleep', 'assets/attacks/status/sleep-sheet.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('status-protect', 'assets/attacks/status/protect-sheet.png', { frameWidth: 12, frameHeight: 13 });
+
+    // ── PAC Generic Type Attacks ─────────────────────────────────
+    this.load.spritesheet('atk-fairy-hit', 'assets/attacks/fairy/fairy-hit-sheet.png', { frameWidth: 40, frameHeight: 32 });
+    this.load.spritesheet('atk-fairy-melee', 'assets/attacks/fairy/fairy-melee-sheet.png', { frameWidth: 48, frameHeight: 32 });
+    this.load.spritesheet('atk-fairy-range', 'assets/attacks/fairy/fairy-range-sheet.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('atk-electric-hit', 'assets/attacks/electric/electric-hit-sheet.png', { frameWidth: 88, frameHeight: 48 });
+    this.load.spritesheet('atk-electric-melee', 'assets/attacks/electric/electric-melee-sheet.png', { frameWidth: 72, frameHeight: 64 });
+    this.load.spritesheet('atk-electric-range', 'assets/attacks/electric/electric-range-sheet.png', { frameWidth: 16, frameHeight: 16 });
+    this.load.spritesheet('atk-ice-hit', 'assets/attacks/ice/ice-hit-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-ice-melee', 'assets/attacks/ice/ice-melee-sheet.png', { frameWidth: 96, frameHeight: 96 });
+    this.load.spritesheet('atk-ice-cell', 'assets/attacks/ice/ice-cell-sheet.png', { frameWidth: 40, frameHeight: 48 });
+    this.load.spritesheet('atk-steel-hit', 'assets/attacks/steel/steel-hit-sheet.png', { frameWidth: 48, frameHeight: 48 });
+    this.load.spritesheet('atk-steel-melee', 'assets/attacks/steel/steel-melee-sheet.png', { frameWidth: 64, frameHeight: 56 });
+    this.load.spritesheet('atk-steel-range', 'assets/attacks/steel/steel-range-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-fighting-hit', 'assets/attacks/fighting/fighting-hit-sheet.png', { frameWidth: 72, frameHeight: 72 });
+    this.load.spritesheet('atk-fighting-range', 'assets/attacks/fighting/fighting-range-sheet.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('atk-sound-hit', 'assets/attacks/sound/sound-hit-sheet.png', { frameWidth: 88, frameHeight: 88 });
+    this.load.spritesheet('atk-sound-range', 'assets/attacks/sound/sound-range-sheet.png', { frameWidth: 32, frameHeight: 24 });
+
+    // ── PAC Environment Atlases ──────────────────────────────────
+    this.load.atlas('env-portal', 'assets/pokeautochess-content/environment/portal.png', 'assets/pokeautochess-content/environment/portal.json');
+    this.load.atlas('env-chest', 'assets/pokeautochess-content/environment/chest.png', 'assets/pokeautochess-content/environment/chest.json');
+    this.load.atlas('env-shine', 'assets/pokeautochess-content/environment/shine.png', 'assets/pokeautochess-content/environment/shine.json');
+
+    // ── Weather Overlays ───────────────────────────────────────
+    this.load.image('weather-rain', 'assets/pokeautochess-content/environment/rain.png');
+    this.load.image('weather-fog', 'assets/pokeautochess-content/environment/fog.png');
+    this.load.image('weather-sand', 'assets/pokeautochess-content/environment/sand.png');
+
+    // ── PAC Item Sprites HD ──────────────────────────────────────
+    this.load.image('item-mystery-box', 'assets/pokeautochess-content/item{tps}/MYSTERY_BOX.png');
+    this.load.image('item-treasure-box', 'assets/pokeautochess-content/item{tps}/TREASURE_BOX.png');
+    this.load.image('item-rare-candy-pac', 'assets/pokeautochess-content/item{tps}/RARE_CANDY.png');
+    this.load.image('item-coin-pac', 'assets/pokeautochess-content/item{tps}/COIN.png');
+
+    // ── PAC Sound Effects ────────────────────────────────────────
+    this.load.audio('sfx-click', 'assets/sounds/click.ogg');
+    this.load.audio('sfx-hover', 'assets/sounds/hover.ogg');
+    this.load.audio('sfx-evolve-t2', 'assets/sounds/evolve-t2.ogg');
+    this.load.audio('sfx-evolve-t3', 'assets/sounds/evolve-t3.ogg');
+    this.load.audio('sfx-start', 'assets/sounds/start.ogg');
+    this.load.audio('sfx-victory', 'assets/sounds/victory.ogg');
+    this.load.audio('sfx-gameover', 'assets/sounds/gameover.ogg');
   }
 
   private loadSpritesheet(sprite: SpriteConfig): void {
@@ -909,6 +986,60 @@ export class BootScene extends Phaser.Scene {
     this.anims.create({ key: 'anim-extreme-speed', frames: this.anims.generateFrameNumbers('atk-extreme-speed', { start: 0, end: 10 }), frameRate: 16, repeat: 0 });
     // Recover healing effect (7 frames, play once)
     this.anims.create({ key: 'anim-recover', frames: this.anims.generateFrameNumbers('atk-recover', { start: 0, end: 6 }), frameRate: 10, repeat: 0 });
+
+    // ══════════════════════════════════════════════════════════════
+    // PAC (pokemonAutoChess) Boss Attack Upgrade Animations
+    // ══════════════════════════════════════════════════════════════
+    this.anims.create({ key: 'anim-super-fang', frames: this.anims.generateFrameNumbers('atk-super-fang', { start: 0, end: 3 }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: 'anim-precipice-blades', frames: this.anims.generateFrameNumbers('atk-precipice-blades', { start: 0, end: 10 }), frameRate: 14, repeat: 0 });
+    this.anims.create({ key: 'anim-dynamax-cannon', frames: this.anims.generateFrameNumbers('atk-dynamax-cannon', { start: 0, end: 38 }), frameRate: 20, repeat: 0 });
+    this.anims.create({ key: 'anim-heavy-slam', frames: this.anims.generateFrameNumbers('atk-heavy-slam', { start: 0, end: 11 }), frameRate: 14, repeat: 0 });
+    this.anims.create({ key: 'anim-petal-dance-pac', frames: this.anims.generateFrameNumbers('atk-petal-dance-pac', { start: 0, end: 53 }), frameRate: 20, repeat: -1 });
+    this.anims.create({ key: 'anim-stun-spore-pac', frames: this.anims.generateFrameNumbers('atk-stun-spore-pac', { start: 0, end: 21 }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: 'anim-close-combat-pac', frames: this.anims.generateFrameNumbers('atk-close-combat-pac', { start: 0, end: 6 }), frameRate: 14, repeat: 0 });
+    this.anims.create({ key: 'anim-seismic-toss-pac', frames: this.anims.generateFrameNumbers('atk-seismic-toss-pac', { start: 0, end: 12 }), frameRate: 14, repeat: 0 });
+    this.anims.create({ key: 'anim-dream-eater-pac', frames: this.anims.generateFrameNumbers('atk-dream-eater-pac', { start: 0, end: 33 }), frameRate: 16, repeat: 0 });
+    this.anims.create({ key: 'anim-night-shade-pac', frames: this.anims.generateFrameNumbers('atk-night-shade-pac', { start: 0, end: 33 }), frameRate: 16, repeat: 0 });
+    this.anims.create({ key: 'anim-rock-slide-pac', frames: this.anims.generateFrameNumbers('atk-rock-slide-pac', { start: 0, end: 78 }), frameRate: 24, repeat: 0 });
+    this.anims.create({ key: 'anim-explosion-pac', frames: this.anims.generateFrameNumbers('atk-explosion-pac', { start: 0, end: 36 }), frameRate: 20, repeat: 0 });
+    this.anims.create({ key: 'anim-bulk-up-pac', frames: this.anims.generateFrameNumbers('atk-bulk-up-pac', { start: 0, end: 8 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: 'anim-future-sight-pac', frames: this.anims.generateFrameNumbers('atk-future-sight-pac', { start: 0, end: 10 }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: 'anim-psystrike-pac', frames: this.anims.generateFrameNumbers('atk-psystrike-pac', { start: 0, end: 3 }), frameRate: 10, repeat: 0 });
+
+    // PAC Status Effect Animations (all loop)
+    this.anims.create({ key: 'anim-status-burn', frames: this.anims.generateFrameNumbers('status-burn', { start: 0, end: 6 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: 'anim-status-poison', frames: this.anims.generateFrameNumbers('status-poison', { start: 0, end: 14 }), frameRate: 12, repeat: -1 });
+    this.anims.create({ key: 'anim-status-paralysis', frames: this.anims.generateFrameNumbers('status-paralysis', { start: 0, end: 3 }), frameRate: 8, repeat: -1 });
+    this.anims.create({ key: 'anim-status-confusion', frames: this.anims.generateFrameNumbers('status-confusion', { start: 0, end: 3 }), frameRate: 8, repeat: -1 });
+    this.anims.create({ key: 'anim-status-freeze', frames: this.anims.generateFrameNumbers('status-freeze', { start: 0, end: 5 }), frameRate: 8, repeat: -1 });
+    this.anims.create({ key: 'anim-status-sleep', frames: this.anims.generateFrameNumbers('status-sleep', { start: 0, end: 9 }), frameRate: 8, repeat: -1 });
+    this.anims.create({ key: 'anim-status-protect', frames: this.anims.generateFrameNumbers('status-protect', { start: 0, end: 9 }), frameRate: 10, repeat: -1 });
+
+    // PAC Generic Type Attack Animations
+    this.anims.create({ key: 'anim-fairy-hit', frames: this.anims.generateFrameNumbers('atk-fairy-hit', { start: 0, end: 10 }), frameRate: 14, repeat: 0 });
+    this.anims.create({ key: 'anim-fairy-melee', frames: this.anims.generateFrameNumbers('atk-fairy-melee', { start: 0, end: 25 }), frameRate: 18, repeat: 0 });
+    this.anims.create({ key: 'anim-fairy-range', frames: this.anims.generateFrameNumbers('atk-fairy-range', { start: 0, end: 5 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: 'anim-electric-hit', frames: this.anims.generateFrameNumbers('atk-electric-hit', { start: 0, end: 5 }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: 'anim-electric-melee', frames: this.anims.generateFrameNumbers('atk-electric-melee', { start: 0, end: 3 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-electric-range', frames: this.anims.generateFrameNumbers('atk-electric-range', { start: 0, end: 5 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: 'anim-ice-hit', frames: this.anims.generateFrameNumbers('atk-ice-hit', { start: 0, end: 4 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-ice-melee', frames: this.anims.generateFrameNumbers('atk-ice-melee', { start: 0, end: 5 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-ice-cell', frames: this.anims.generateFrameNumbers('atk-ice-cell', { start: 0, end: 14 }), frameRate: 12, repeat: -1 });
+    this.anims.create({ key: 'anim-steel-hit', frames: this.anims.generateFrameNumbers('atk-steel-hit', { start: 0, end: 13 }), frameRate: 16, repeat: 0 });
+    this.anims.create({ key: 'anim-steel-melee', frames: this.anims.generateFrameNumbers('atk-steel-melee', { start: 0, end: 7 }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: 'anim-steel-range', frames: this.anims.generateFrameNumbers('atk-steel-range', { start: 0, end: 7 }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: 'anim-fighting-hit', frames: this.anims.generateFrameNumbers('atk-fighting-hit', { start: 0, end: 2 }), frameRate: 10, repeat: 0 });
+    this.anims.create({ key: 'anim-fighting-range', frames: this.anims.generateFrameNumbers('atk-fighting-range', { start: 0, end: 28 }), frameRate: 20, repeat: -1 });
+    this.anims.create({ key: 'anim-sound-hit', frames: this.anims.generateFrameNumbers('atk-sound-hit', { start: 0, end: 17 }), frameRate: 16, repeat: 0 });
+    this.anims.create({ key: 'anim-sound-range', frames: this.anims.generateFrameNumbers('atk-sound-range', { start: 0, end: 13 }), frameRate: 12, repeat: -1 });
+
+    // Environment Animations (atlas-based)
+    this.anims.create({ key: 'anim-portal', frames: this.anims.generateFrameNames('env-portal', { prefix: '', start: 0, end: 7, zeroPad: 3 }), frameRate: 12, repeat: -1 });
+    this.anims.create({ key: 'anim-chest-open', frames: [
+      { key: 'env-chest', frame: '1.png' }, { key: 'env-chest', frame: '2.png' },
+      { key: 'env-chest', frame: '3.png' }, { key: 'env-chest', frame: '4.png' },
+    ], frameRate: 6, repeat: 0 });
+    this.anims.create({ key: 'anim-shine', frames: this.anims.generateFrameNames('env-shine', { prefix: '', suffix: '.png', start: 0, end: 15 }), frameRate: 14, repeat: -1 });
   }
 
   private createWalkAnims(sprite: SpriteConfig): void {

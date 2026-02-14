@@ -21,6 +21,9 @@ export const RATICATE: BossConfig = {
     damage: 70,
     cooldownMs: 3500,
     range: 450,
+    spriteKey: 'atk-super-fang',
+    animKey: 'anim-super-fang',
+    spriteScale: 2,
   }, {
     name: 'Quick Attack',
     pattern: 'charge',
