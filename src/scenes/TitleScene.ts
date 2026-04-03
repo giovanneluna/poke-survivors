@@ -1064,7 +1064,7 @@ export class TitleScene extends Phaser.Scene {
     this.contributeOverlay.push(backdrop)
 
     const pw = Math.min(width * 0.85, scaled(440))
-    const ph = scaled(340)
+    const ph = scaled(380)
     const px = (width - pw) / 2
     const py = (height - ph) / 2
 
@@ -1115,10 +1115,81 @@ export class TitleScene extends Phaser.Scene {
       .setDepth(52)
     this.contributeOverlay.push(desc)
 
+    // Botão GitHub
+    const githubY = py + ph - scaled(100)
+    const btnW = scaled(200)
+    const btnH = scaled(34)
+
+    const githubGfx = this.add.graphics().setDepth(52)
+    const drawGithub = (hover: boolean): void => {
+      githubGfx.clear()
+      githubGfx.fillStyle(0x000000, 0.4)
+      githubGfx.fillRoundedRect(
+        width / 2 - btnW / 2 + 2,
+        githubY - btnH / 2 + 2,
+        btnW,
+        btnH,
+        8,
+      )
+      githubGfx.fillStyle(hover ? 0x333333 : 0x222222, 0.95)
+      githubGfx.fillRoundedRect(
+        width / 2 - btnW / 2,
+        githubY - btnH / 2,
+        btnW,
+        btnH,
+        8,
+      )
+      githubGfx.lineStyle(2, hover ? 0xffffff : 0x888888)
+      githubGfx.strokeRoundedRect(
+        width / 2 - btnW / 2,
+        githubY - btnH / 2,
+        btnW,
+        btnH,
+        8,
+      )
+    }
+    drawGithub(false)
+    this.contributeOverlay.push(githubGfx)
+
+    const githubText = this.add
+      .text(width / 2, githubY, t("contribute.github"), {
+        fontSize: fontSize(13),
+        color: "#ffffff",
+        fontFamily: "monospace",
+        fontStyle: "bold",
+        stroke: "#000000",
+        strokeThickness: 2,
+      })
+      .setOrigin(0.5)
+      .setDepth(53)
+    this.contributeOverlay.push(githubText)
+
+    const githubHit = this.add
+      .rectangle(width / 2, githubY, btnW, btnH, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(54)
+    githubHit.on("pointerover", () => {
+      drawGithub(true)
+      githubText.setColor("#ffcc00")
+      SoundManager.playHover()
+    })
+    githubHit.on("pointerout", () => {
+      drawGithub(false)
+      githubText.setColor("#ffffff")
+    })
+    githubHit.on("pointerdown", () => {
+      SoundManager.playClick()
+      const url = "https://github.com/giovanneluna/poke-survivors"
+      import("@tauri-apps/plugin-shell")
+        .then(({ open }) => open(url))
+        .catch(() => window.open(url, "_blank"))
+    })
+    this.contributeOverlay.push(githubHit)
+
     // Botão Discord
-    const discordY = py + ph - scaled(75)
-    const discordW = scaled(200)
-    const discordH = scaled(38)
+    const discordY = py + ph - scaled(58)
+    const discordW = btnW
+    const discordH = btnH
 
     const discordGfx = this.add.graphics().setDepth(52)
     const drawDiscord = (hover: boolean): void => {
@@ -1153,7 +1224,7 @@ export class TitleScene extends Phaser.Scene {
 
     const discordText = this.add
       .text(width / 2, discordY, t("contribute.discord"), {
-        fontSize: fontSize(14),
+        fontSize: fontSize(13),
         color: "#ffffff",
         fontFamily: "monospace",
         fontStyle: "bold",

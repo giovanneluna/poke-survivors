@@ -305,8 +305,9 @@ export const en: Record<string, string> = {
 
   // ── Contribute ──────────────────────────────────────────────────
   'contribute.title': 'WANT TO CONTRIBUTE?',
-  'contribute.desc': 'Poké World Survivors is a free, non-commercial\nproject made for fun! The goal is to bring multiple\nphases, pokémon, events and quests.\n\nIdeas are not lacking! What we need:\n• Pokémon sprites and art\n• Ground and map textures\n• Attack animations\n• Collision objects and scenery\n\nIf you are an artist, spriter or want to help\nin any way, join the Discord!',
+  'contribute.desc': 'Poké World Survivors is an open source, free,\nnon-commercial project made for fun! The goal is to\nbring multiple phases, pokémon, events and quests.\n\nIdeas are not lacking! What we need:\n• Pokémon sprites and art\n• Ground and map textures\n• Attack animations\n• Collision objects and scenery\n• TypeScript / Phaser devs\n\nIf you are an artist, spriter, dev or want to help\nin any way, contribute on GitHub or join the Discord!',
   'contribute.discord': 'JOIN DISCORD',
+  'contribute.github': 'VIEW ON GITHUB',
   'contribute.close': 'CLOSE',
-  'contribute.endgame': 'Want to contribute? Check "Want to Contribute?" on the main menu!',
+  'contribute.endgame': 'Enjoying the game? Contribute! Check "Want to Contribute?" on the menu.',
 };

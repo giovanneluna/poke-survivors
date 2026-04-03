@@ -305,8 +305,9 @@ export const pt: Record<string, string> = {
 
   // ── Contribute ──────────────────────────────────────────────────
   'contribute.title': 'QUERO CONTRIBUIR',
-  'contribute.desc': 'Poké World Survivors é um projeto gratuito e sem\nfins comerciais, feito por diversão! O objetivo é trazer\nvárias fases, pokémons, eventos e quests.\n\nIdeias não faltam! O que precisamos são:\n• Sprites e artes de Pokémon\n• Texturas de chão e mapa\n• Animações de ataques\n• Objetos de colisão e cenário\n\nSe você é artista, spriter ou quer ajudar de\nqualquer forma, entre no Discord!',
+  'contribute.desc': 'Poké World Survivors é um projeto open source,\ngratuito e sem fins comerciais, feito por diversão!\nO objetivo é trazer várias fases, pokémons, eventos e quests.\n\nIdeias não faltam! O que precisamos são:\n• Sprites e artes de Pokémon\n• Texturas de chão e mapa\n• Animações de ataques\n• Objetos de colisão e cenário\n• Devs TypeScript / Phaser\n\nSe você é artista, spriter, dev ou quer ajudar\nde qualquer forma, contribua no GitHub ou entre no Discord!',
   'contribute.discord': 'ENTRAR NO DISCORD',
+  'contribute.github': 'VER NO GITHUB',
   'contribute.close': 'FECHAR',
-  'contribute.endgame': 'Quer contribuir? Acesse "Quero Contribuir" no menu principal!',
+  'contribute.endgame': 'Gostou do jogo? Contribua com ele! Acesse "Quero Contribuir" no menu.',
 };
