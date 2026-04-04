@@ -877,8 +877,21 @@ export class BootScene extends Phaser.Scene {
     this.anims.create({ key: 'anim-stun-spore', frames: this.anims.generateFrameNumbers('atk-stun-spore', { start: 0, end: 21 }), frameRate: 15, repeat: 0 });
     // Leaf Blade (26 frames, play once)
     this.anims.create({ key: 'anim-leaf-blade', frames: this.anims.generateFrameNumbers('atk-leaf-blade', { start: 0, end: 25 }), frameRate: 20, repeat: 0 });
-    // Solar Beam (4 frames, play once)
-    this.anims.create({ key: 'anim-solar-beam', frames: this.anims.generateFrameNumbers('atk-solar-beam', { start: 0, end: 3 }), frameRate: 8, repeat: 0 });
+    // Solar Beam (8 frames, play once — slow charge, fast beam, slow dissipate)
+    this.anims.create({
+      key: 'anim-solar-beam',
+      frames: [
+        { key: 'atk-solar-beam', frame: 0, duration: 400 },  // charge 1 (lento)
+        { key: 'atk-solar-beam', frame: 1, duration: 350 },  // charge 2 (lento)
+        { key: 'atk-solar-beam', frame: 2, duration: 150 },  // beam start
+        { key: 'atk-solar-beam', frame: 3, duration: 150 },  // beam grow
+        { key: 'atk-solar-beam', frame: 4, duration: 150 },  // beam amplify
+        { key: 'atk-solar-beam', frame: 5, duration: 200 },  // FULL POWER (mais tempo)
+        { key: 'atk-solar-beam', frame: 6, duration: 250 },  // dissipate
+        { key: 'atk-solar-beam', frame: 7, duration: 300 },  // end (lento)
+      ],
+      repeat: 0,
+    });
     // Petal Dance (54 frames, loop)
     this.anims.create({ key: 'anim-petal-dance', frames: this.anims.generateFrameNumbers('atk-petal-dance', { start: 0, end: 53 }), frameRate: 20, repeat: -1 });
     // Leech Life / Giga Drain (20 frames, play once)
